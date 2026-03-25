@@ -6,7 +6,7 @@
  * ============================================================================
  */
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useBarterStore } from "@/lib/store";
 import { 
   Search, SlidersHorizontal, Package, MoreHorizontal, X, Eye, Plus, 
@@ -88,11 +88,18 @@ export function ProductsTab({ productType = "cross-product" }: Props) {
     auth,
     productFilters,
     setProductFilters,
+    setActiveProductTypeForFilters,
     getMyOffers,
     getOfferById,
     hooks,
     offers,
   } = useBarterStore();
+
+  // Sync the active product type with the store when it changes
+  // This ensures filters are stored/retrieved per exchange type
+  useEffect(() => {
+    setActiveProductTypeForFilters(productType);
+  }, [productType, setActiveProductTypeForFilters]);
 
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [inlineAddProduct, setInlineAddProduct] = useState<Product | null>(null);

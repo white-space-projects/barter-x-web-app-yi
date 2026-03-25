@@ -31,6 +31,10 @@ import type {
   Hook,
   DashboardStats,
   ProductFilters,
+  GlobalFilters,
+  ExchangeTypeFilters,
+  AllExchangeTypeFilters,
+  ProductType,
   ChatMessage,
   Conversation,
   Notification,
@@ -146,6 +150,8 @@ type BarterStore = {
   // Filters
   productFilters: ProductFilters;
   setProductFilters: (filters: Partial<ProductFilters>) => void;
+  setActiveProductTypeForFilters: (productType: ProductType) => void;
+  getFiltersForProductType: (productType: ProductType) => ProductFilters;
 
   // Derived
   getCategories: () => string[];
@@ -172,15 +178,30 @@ export function BarterProvider({ children }: { children: ReactNode }) {
   const [hooks, setHooks] = useState<Hook[]>(() => MOCK_HOOKS);
   const [dashboardStats] = useState<DashboardStats>(() => MOCK_DASHBOARD_STATS);
   
-  const [productFilters, setProductFiltersState] = useState<ProductFilters>({
+  // Global filters shared across all exchange types
+  const [globalFilters, setGlobalFiltersState] = useState<GlobalFilters>({
     searchQuery: "",
     onlyWithOffers: false,
-    categories: [],
-    subcategories: [],
-    brand: "",
     directExchangeOpportunities: false,
     onlyMyLocation: false,
   });
+
+  // Default empty filters for each exchange type
+  const defaultExchangeTypeFilters: ExchangeTypeFilters = {
+    categories: [],
+    subcategories: [],
+    brand: "",
+  };
+
+  // Filters stored per exchange type
+  const [exchangeTypeFilters, setExchangeTypeFiltersState] = useState<AllExchangeTypeFilters>({
+    "cross-product": { ...defaultExchangeTypeFilters },
+    "automobile": { ...defaultExchangeTypeFilters },
+    "home-spaces": { ...defaultExchangeTypeFilters },
+  });
+
+  // Current active product type (for getting the right filters)
+  const [activeProductType, setActiveProductTypeState] = useState<ProductType>("cross-product");
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -483,9 +504,52 @@ export function BarterProvider({ children }: { children: ReactNode }) {
   // ---------------------------------------------------------------------------
   // FILTER ACTIONS
   // ---------------------------------------------------------------------------
-  const setProductFilters = useCallback((filters: Partial<ProductFilters>) => {
-    setProductFiltersState((prev) => ({ ...prev, ...filters }));
+  const setActiveProductTypeForFilters = useCallback((productType: ProductType) => {
+    setActiveProductTypeState(productType);
   }, []);
+
+  const getFiltersForProductType = useCallback((productType: ProductType): ProductFilters => {
+    return {
+      ...globalFilters,
+      ...exchangeTypeFilters[productType],
+    };
+  }, [globalFilters, exchangeTypeFilters]);
+
+  // Combined productFilters for current active product type
+  const productFilters = useMemo<ProductFilters>(() => ({
+    ...globalFilters,
+    ...exchangeTypeFilters[activeProductType],
+  }), [globalFilters, exchangeTypeFilters, activeProductType]);
+
+  const setProductFilters = useCallback((filters: Partial<ProductFilters>) => {
+    // Separate global and exchange-type-specific filters
+    const globalKeys: (keyof GlobalFilters)[] = ["searchQuery", "onlyWithOffers", "directExchangeOpportunities", "onlyMyLocation"];
+    const exchangeTypeKeys: (keyof ExchangeTypeFilters)[] = ["categories", "subcategories", "brand"];
+
+    const globalUpdates: Partial<GlobalFilters> = {};
+    const exchangeTypeUpdates: Partial<ExchangeTypeFilters> = {};
+
+    for (const key of Object.keys(filters) as (keyof ProductFilters)[]) {
+      if (globalKeys.includes(key as keyof GlobalFilters)) {
+        (globalUpdates as any)[key] = (filters as any)[key];
+      } else if (exchangeTypeKeys.includes(key as keyof ExchangeTypeFilters)) {
+        (exchangeTypeUpdates as any)[key] = (filters as any)[key];
+      }
+    }
+
+    // Update global filters
+    if (Object.keys(globalUpdates).length > 0) {
+      setGlobalFiltersState((prev) => ({ ...prev, ...globalUpdates }));
+    }
+
+    // Update exchange-type-specific filters for the current active type
+    if (Object.keys(exchangeTypeUpdates).length > 0) {
+      setExchangeTypeFiltersState((prev) => ({
+        ...prev,
+        [activeProductType]: { ...prev[activeProductType], ...exchangeTypeUpdates },
+      }));
+    }
+  }, [activeProductType]);
 
   // ---------------------------------------------------------------------------
   // DERIVED DATA
@@ -555,6 +619,8 @@ export function BarterProvider({ children }: { children: ReactNode }) {
     dashboardStats,
     productFilters,
     setProductFilters,
+    setActiveProductTypeForFilters,
+    getFiltersForProductType,
     getCategories,
     getSubcategories,
     getBrands,
@@ -598,6 +664,8 @@ export function BarterProvider({ children }: { children: ReactNode }) {
     dashboardStats,
     productFilters,
     setProductFilters,
+    setActiveProductTypeForFilters,
+    getFiltersForProductType,
     getCategories,
     getSubcategories,
     getBrands,

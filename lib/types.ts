@@ -136,14 +136,29 @@ export type FeedbackPayload = {
   message: string;
 };
 
-export type ProductFilters = {
-  searchQuery: string;
-  onlyWithOffers: boolean;
+// Filters specific to each exchange type (stored per type)
+export type ExchangeTypeFilters = {
   categories: string[]; // Multi-select categories
   subcategories: string[]; // Multi-select subcategories
   brand: string;
+};
+
+// Global filters shared across all exchange types
+export type GlobalFilters = {
+  searchQuery: string;
+  onlyWithOffers: boolean;
   directExchangeOpportunities: boolean;
-  onlyMyLocation: boolean; // Filter products with offers from user's city/country
+  onlyMyLocation: boolean; // Filter products with offers from user's country (from profile)
+};
+
+// Combined filters for products-tab
+export type ProductFilters = GlobalFilters & ExchangeTypeFilters;
+
+// Filters stored per exchange type
+export type AllExchangeTypeFilters = {
+  "cross-product": ExchangeTypeFilters;
+  "automobile": ExchangeTypeFilters;
+  "home-spaces": ExchangeTypeFilters;
 };
 
 export type CountryData = {
