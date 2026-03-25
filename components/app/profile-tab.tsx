@@ -838,9 +838,12 @@ export function ProfileTab() {
         )}
       </div>
 
-      {/* Save Button - sticky at bottom */}
-      <div className="sticky bottom-0 left-0 right-0 mt-6 p-4 -mx-4 bg-background border-t border-border lg:mx-0 lg:rounded-lg lg:border">
-        <div className="flex gap-3">
+      {/* Spacer for fixed button */}
+      <div className="h-24" />
+
+      {/* Save Button - fixed at bottom with blur backdrop */}
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/90 backdrop-blur-md border-t border-border z-50">
+        <div className="mx-auto max-w-2xl flex gap-3 lg:pl-56">
           {!isNewUser && (
             <button
               onClick={handleLogout}
