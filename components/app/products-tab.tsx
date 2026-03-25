@@ -112,8 +112,13 @@ export function ProductsTab({ productType = "cross-product" }: Props) {
 
   // Get cities for user's country
   const availableCities = useMemo(() => {
-    if (!userCountry) return [];
-    return getCitiesForCountry(userCountry);
+    if (!userCountry) {
+      console.log("[v0] No userCountry available");
+      return [];
+    }
+    const cities = getCitiesForCountry(userCountry);
+    console.log("[v0] userCountry:", userCountry, "availableCities:", cities.length);
+    return cities;
   }, [userCountry]);
 
   // Close city dropdown when clicking outside
@@ -168,6 +173,9 @@ export function ProductsTab({ productType = "cross-product" }: Props) {
   // auth.user.city/country is the auto-detected location from login - we DON'T use those here
   const userCity = auth.user?.profileAddress?.city;
   const userCountry = auth.user?.profileAddress?.country;
+  
+  console.log("[v0] Profile address:", auth.user?.profileAddress);
+  console.log("[v0] userCity:", userCity, "userCountry:", userCountry);
 
   // Get products that have offers from selected cities in user's country
   const productsWithLocalOffers = useMemo(() => {
