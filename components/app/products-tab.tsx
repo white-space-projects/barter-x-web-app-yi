@@ -105,25 +105,30 @@ export function ProductsTab({ productType = "cross-product" }: Props) {
   // Get categories for the current product type
   const categories = useMemo(() => getProductTypeCategories(productType), [productType]);
   
-  // Get subcategories for the selected category
+  // Get subcategories for all selected categories
   const subcategories = useMemo(() => {
-    if (!productFilters.category) return [];
-    const categoryDef = getCategoryByName(productType, productFilters.category);
-    if (!categoryDef) return [];
-    return categoryDef.subcategories;
-  }, [productType, productFilters.category]);
+    if (productFilters.categories.length === 0) return [];
+    const allSubcategories: SubcategoryDefinition[] = [];
+    productFilters.categories.forEach(catName => {
+      const categoryDef = getCategoryByName(productType, catName);
+      if (categoryDef) {
+        allSubcategories.push(...categoryDef.subcategories);
+      }
+    });
+    return allSubcategories;
+  }, [productType, productFilters.categories]);
 
   const hasActiveFilters = productFilters.onlyWithOffers || 
-    productFilters.category || 
-    productFilters.subcategory || 
+    productFilters.categories.length > 0 || 
+    productFilters.subcategories.length > 0 || 
     productFilters.brand ||
     productFilters.directExchangeOpportunities ||
     productFilters.onlyMyLocation;
 
   const activeFilterCount = [
     productFilters.onlyWithOffers, 
-    productFilters.category, 
-    productFilters.subcategory, 
+    productFilters.categories.length > 0, 
+    productFilters.subcategories.length > 0, 
     productFilters.brand, 
     productFilters.directExchangeOpportunities,
     productFilters.onlyMyLocation
@@ -193,12 +198,9 @@ export function ProductsTab({ productType = "cross-product" }: Props) {
       )
         return false;
       if (productFilters.onlyWithOffers && p.offerCount === 0) return false;
-      if (productFilters.category && p.category !== productFilters.category)
+      if (productFilters.categories.length > 0 && !productFilters.categories.includes(p.category))
         return false;
-      if (
-        productFilters.subcategory &&
-        p.subcategory !== productFilters.subcategory
-      )
+      if (productFilters.subcategories.length > 0 && !productFilters.subcategories.includes(p.subcategory))
         return false;
       if (productFilters.brand && p.brand !== productFilters.brand) return false;
       if (productFilters.directExchangeOpportunities && !directExchangeProductIds.has(p.productId))
@@ -213,8 +215,8 @@ export function ProductsTab({ productType = "cross-product" }: Props) {
     setProductFilters({
       searchQuery: productFilters.searchQuery,
       onlyWithOffers: false,
-      category: "",
-      subcategory: "",
+      categories: [],
+      subcategories: [],
       brand: "",
       directExchangeOpportunities: false,
       onlyMyLocation: false,
@@ -223,24 +225,34 @@ export function ProductsTab({ productType = "cross-product" }: Props) {
   }
 
   function handleSelectCategory(categoryName: string) {
-    if (productFilters.category === categoryName) {
-      // Deselect
-      setProductFilters({ category: "", subcategory: "" });
-    } else {
-      setProductFilters({ category: categoryName, subcategory: "" });
-      // Auto-expand subcategories if available
+    const isSelected = productFilters.categories.includes(categoryName);
+    let newCategories: string[];
+    let newSubcategories = productFilters.subcategories;
+    
+    if (isSelected) {
+      // Remove category and its subcategories
+      newCategories = productFilters.categories.filter(c => c !== categoryName);
       const categoryDef = getCategoryByName(productType, categoryName);
-      if (categoryDef && categoryDef.subcategories.length > 0) {
-        setExpandedSection("subcategory");
+      if (categoryDef) {
+        const subNames = categoryDef.subcategories.map(s => s.name);
+        newSubcategories = productFilters.subcategories.filter(s => !subNames.includes(s));
       }
+    } else {
+      // Add category
+      newCategories = [...productFilters.categories, categoryName];
+      // Auto-expand subcategories
+      setExpandedSection("subcategory");
     }
+    
+    setProductFilters({ categories: newCategories, subcategories: newSubcategories });
   }
 
   function handleSelectSubcategory(subcategoryName: string) {
-    if (productFilters.subcategory === subcategoryName) {
-      setProductFilters({ subcategory: "" });
+    const isSelected = productFilters.subcategories.includes(subcategoryName);
+    if (isSelected) {
+      setProductFilters({ subcategories: productFilters.subcategories.filter(s => s !== subcategoryName) });
     } else {
-      setProductFilters({ subcategory: subcategoryName });
+      setProductFilters({ subcategories: [...productFilters.subcategories, subcategoryName] });
     }
   }
 
@@ -321,7 +333,7 @@ export function ProductsTab({ productType = "cross-product" }: Props) {
                 With offers only
               </button>
 
-              {userCity && userCountry && (
+              {userCountry && (
                 <button
                   onClick={() =>
                     setProductFilters({
@@ -335,7 +347,7 @@ export function ProductsTab({ productType = "cross-product" }: Props) {
                   }`}
                 >
                   <MapPin className="h-3.5 w-3.5" />
-                  {userCity}
+                  {userCountry}
                 </button>
               )}
 
@@ -366,15 +378,19 @@ export function ProductsTab({ productType = "cross-product" }: Props) {
               onClick={() => setExpandedSection(expandedSection === "category" ? null : "category")}
               className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-secondary/30 transition-colors"
             >
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-sm font-medium text-foreground">Category</span>
-                {productFilters.category && (
-                  <span className="text-xs text-primary bg-primary/10 px-2 py-0.5 rounded-full">
-                    {productFilters.category}
-                  </span>
+                {productFilters.categories.length > 0 && (
+                  <div className="flex gap-1 flex-wrap">
+                    {productFilters.categories.map(cat => (
+                      <span key={cat} className="text-xs text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                        {cat}
+                      </span>
+                    ))}
+                  </div>
                 )}
               </div>
-              <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${expandedSection === "category" ? "rotate-180" : ""}`} />
+              <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform flex-shrink-0 ${expandedSection === "category" ? "rotate-180" : ""}`} />
             </button>
             
             {expandedSection === "category" && (
@@ -382,7 +398,7 @@ export function ProductsTab({ productType = "cross-product" }: Props) {
                 <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
                   {categories.map((category) => {
                     const IconComponent = CATEGORY_ICONS[category.id] || Package;
-                    const isSelected = productFilters.category === category.name;
+                    const isSelected = productFilters.categories.includes(category.name);
                     return (
                       <button
                         key={category.id}
@@ -409,22 +425,26 @@ export function ProductsTab({ productType = "cross-product" }: Props) {
             )}
           </div>
 
-          {/* Subcategory Accordion - only show if category is selected */}
-          {productFilters.category && subcategories.length > 0 && (
+          {/* Subcategory Accordion - only show if categories are selected */}
+          {productFilters.categories.length > 0 && subcategories.length > 0 && (
             <div>
               <button
                 onClick={() => setExpandedSection(expandedSection === "subcategory" ? null : "subcategory")}
                 className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-secondary/30 transition-colors"
               >
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-sm font-medium text-foreground">Subcategory</span>
-                  {productFilters.subcategory && (
-                    <span className="text-xs text-primary bg-primary/10 px-2 py-0.5 rounded-full">
-                      {productFilters.subcategory}
-                    </span>
+                  {productFilters.subcategories.length > 0 && (
+                    <div className="flex gap-1 flex-wrap">
+                      {productFilters.subcategories.map(sub => (
+                        <span key={sub} className="text-xs text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                          {sub}
+                        </span>
+                      ))}
+                    </div>
                   )}
                 </div>
-                <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${expandedSection === "subcategory" ? "rotate-180" : ""}`} />
+                <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform flex-shrink-0 ${expandedSection === "subcategory" ? "rotate-180" : ""}`} />
               </button>
               
               {expandedSection === "subcategory" && (
@@ -432,7 +452,7 @@ export function ProductsTab({ productType = "cross-product" }: Props) {
                   <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
                     {subcategories.map((sub: SubcategoryDefinition) => {
                       const SubIcon = SUBCATEGORY_ICONS[sub.icon] || Package;
-                      const isSelected = productFilters.subcategory === sub.name;
+                      const isSelected = productFilters.subcategories.includes(sub.name);
                       return (
                         <button
                           key={sub.id}

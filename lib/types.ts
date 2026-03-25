@@ -139,8 +139,8 @@ export type FeedbackPayload = {
 export type ProductFilters = {
   searchQuery: string;
   onlyWithOffers: boolean;
-  category: string;
-  subcategory: string;
+  categories: string[]; // Multi-select categories
+  subcategories: string[]; // Multi-select subcategories
   brand: string;
   directExchangeOpportunities: boolean;
   onlyMyLocation: boolean; // Filter products with offers from user's city/country

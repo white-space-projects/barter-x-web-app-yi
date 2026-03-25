@@ -175,8 +175,8 @@ export function BarterProvider({ children }: { children: ReactNode }) {
   const [productFilters, setProductFiltersState] = useState<ProductFilters>({
     searchQuery: "",
     onlyWithOffers: false,
-    category: "",
-    subcategory: "",
+    categories: [],
+    subcategories: [],
     brand: "",
     directExchangeOpportunities: false,
     onlyMyLocation: false,
