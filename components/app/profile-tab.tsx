@@ -838,12 +838,9 @@ export function ProfileTab() {
         )}
       </div>
 
-      {/* Spacer for fixed button - larger when bottom nav is visible */}
-      <div className={isNewUser ? "h-24" : "h-40 lg:h-24"} />
-
-      {/* Save Button - fixed at bottom with blur backdrop, positioned above bottom nav when visible */}
-      <div className={`fixed left-0 right-0 p-4 bg-background/90 backdrop-blur-md border-t border-border z-50 ${isNewUser ? "bottom-0" : "bottom-[72px] lg:bottom-0"}`}>
-        <div className="mx-auto max-w-2xl flex gap-3 lg:pl-56">
+      {/* Save Button - stays within content area, at bottom of scrollable content */}
+      <div className="mt-6 p-4 -mx-4 lg:mx-0 bg-card/50 border-t border-border lg:rounded-lg lg:border">
+        <div className="flex gap-3">
           {!isNewUser && (
             <button
               onClick={handleLogout}
@@ -869,6 +866,9 @@ export function ProfileTab() {
           </button>
         </div>
       </div>
+
+      {/* Bottom spacer for mobile nav */}
+      {!isNewUser && <div className="h-20 lg:h-0" />}
     </div>
   );
 }
