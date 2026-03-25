@@ -143,6 +143,7 @@ export type ProductFilters = {
   subcategory: string;
   brand: string;
   directExchangeOpportunities: boolean;
+  onlyMyLocation: boolean; // Filter products with offers from user's city/country
 };
 
 export type CountryData = {

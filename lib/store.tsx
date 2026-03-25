@@ -179,6 +179,7 @@ export function BarterProvider({ children }: { children: ReactNode }) {
     subcategory: "",
     brand: "",
     directExchangeOpportunities: false,
+    onlyMyLocation: false,
   });
 
   const [conversations, setConversations] = useState<Conversation[]>([]);

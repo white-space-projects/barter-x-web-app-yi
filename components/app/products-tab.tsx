@@ -8,23 +8,86 @@
 
 import { useMemo, useState } from "react";
 import { useBarterStore } from "@/lib/store";
-import { Search, SlidersHorizontal, Package, MoreHorizontal, X, Eye, Plus } from "lucide-react";
+import { 
+  Search, SlidersHorizontal, Package, MoreHorizontal, X, Eye, Plus, 
+  ChevronDown, MapPin,
+  // Category icons
+  Cpu, Sofa, Refrigerator, Shirt, Baby, Dumbbell, Wrench, BookOpen, Monitor, Paintbrush,
+  Car, Bike, Bus, Truck, Container, Caravan,
+  Building2, Home, BedDouble, ParkingSquare, Warehouse,
+  // Subcategory icons
+  Smartphone, Laptop, Tablet, Headphones, Camera, Gamepad2, Watch,
+  Table, Armchair, Archive, Lamp, WashingMachine, Microwave, AirVent, CookingPot,
+  Footprints, ShoppingBag, Gem, BedSingle, ToyBrick, CarFront,
+  Tent, Trophy, Drill, Shovel, Hammer, Book, Dice5, Film, Star, Table2, Printer, Guitar,
+  Box, CarTaxiFront, Crown, Zap, Gauge, Wind, Fuel, Users, Castle, Building,
+  ParkingCircle, Lock, Square, LayoutGrid
+} from "lucide-react";
 import { ViewOffersPanel } from "./view-offers-panel";
 import { InlineAddOffer } from "./inline-add-offer";
 import type { Product, ProductType } from "@/lib/types";
-import {useProducts } from '@/hooks/use-products'
+import { useProducts } from "@/hooks/use-products";
+import { getProductTypeCategories, getSubcategories as getTypeSubcategories, getCategoryByName, type CategoryDefinition, type SubcategoryDefinition } from "@/lib/product-types";
 
 type Props = {
   productType?: ProductType;
 };
 
+// Icon mapping for categories
+const CATEGORY_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+  // Cross-product
+  electronics: Cpu,
+  "home-furniture": Sofa,
+  appliances: Refrigerator,
+  "fashion-accessories": Shirt,
+  "baby-kids": Baby,
+  "sports-outdoors": Dumbbell,
+  "tools-equipment": Wrench,
+  "books-media": BookOpen,
+  "office-work": Monitor,
+  "hobby-creative": Paintbrush,
+  miscellaneous: Package,
+  // Automobile
+  cars: Car,
+  bikes: Bike,
+  scooters: Bike,
+  "vans-commercial": Bus,
+  trucks: Truck,
+  trailers: Container,
+  caravans: Caravan,
+  // Home & Spaces
+  apartments: Building2,
+  houses: Home,
+  "rooms-coliving": BedDouble,
+  "parking-spaces": ParkingSquare,
+  "storage-spaces": Warehouse,
+};
+
+// Icon mapping for subcategories
+const SUBCATEGORY_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+  Smartphone, Laptop, Tablet, Headphones, Camera, Gamepad2, Watch,
+  Sofa, BedDouble, Table, Armchair, Archive, Lamp,
+  Refrigerator, WashingMachine, Microwave, AirVent, CookingPot,
+  Shirt, Footprints, ShoppingBag, Gem,
+  Baby, BedSingle, ToyBrick, CarFront,
+  Bike, Dumbbell, Tent, Trophy,
+  Drill, Shovel, Hammer,
+  Book, Dice5, Film, Star,
+  Table2, Monitor, Printer,
+  Guitar, Paintbrush,
+  Package, Box,
+  Car, CarTaxiFront, Crown, Zap, Gauge, Wind, Fuel,
+  Bus, Truck, Container, Caravan,
+  Building2, Home, Castle, Building, Users,
+  ParkingSquare, ParkingCircle, Warehouse, Lock, Square, LayoutGrid,
+  Cpu,
+};
+
 export function ProductsTab({ productType = "cross-product" }: Props) {
-  const {    
+  const {
+    auth,
     productFilters,
     setProductFilters,
-    getCategories,
-    getSubcategories,
-    getBrands,
     getMyOffers,
     getOfferById,
     hooks,
@@ -35,18 +98,57 @@ export function ProductsTab({ productType = "cross-product" }: Props) {
   const [inlineAddProduct, setInlineAddProduct] = useState<Product | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [mobileActionProduct, setMobileActionProduct] = useState<Product | null>(null);
+  const [expandedSection, setExpandedSection] = useState<"category" | "subcategory" | null>(null);
+  
   const { data: products = [], isLoading } = useProducts();
-  const categories = useMemo(() => getCategories(), [getCategories]);
-  const subcategories = useMemo(() => getSubcategories(productFilters.category || undefined), [getSubcategories, productFilters.category]);
-  const brands = useMemo(() => getBrands(), [getBrands]);
+  
+  // Get categories for the current product type
+  const categories = useMemo(() => getProductTypeCategories(productType), [productType]);
+  
+  // Get subcategories for the selected category
+  const subcategories = useMemo(() => {
+    if (!productFilters.category) return [];
+    const categoryDef = getCategoryByName(productType, productFilters.category);
+    if (!categoryDef) return [];
+    return categoryDef.subcategories;
+  }, [productType, productFilters.category]);
 
   const hasActiveFilters = productFilters.onlyWithOffers || 
     productFilters.category || 
     productFilters.subcategory || 
     productFilters.brand ||
-    productFilters.directExchangeOpportunities;
+    productFilters.directExchangeOpportunities ||
+    productFilters.onlyMyLocation;
+
+  const activeFilterCount = [
+    productFilters.onlyWithOffers, 
+    productFilters.category, 
+    productFilters.subcategory, 
+    productFilters.brand, 
+    productFilters.directExchangeOpportunities,
+    productFilters.onlyMyLocation
+  ].filter(Boolean).length;
 
   const myOffers = useMemo(() => getMyOffers(), [getMyOffers]);
+
+  // Get user's location for the "My Location" filter
+  const userCity = auth.user?.city;
+  const userCountry = auth.user?.country;
+
+  // Get products that have offers from user's location
+  const productsWithLocalOffers = useMemo(() => {
+    if (!userCity || !userCountry) return new Set<string>();
+    const localProductIds = new Set<string>();
+    offers.forEach((offer) => {
+      if (
+        offer.pickupAddress?.city?.toLowerCase() === userCity.toLowerCase() &&
+        offer.pickupAddress?.country?.toLowerCase() === userCountry.toLowerCase()
+      ) {
+        localProductIds.add(offer.productId);
+      }
+    });
+    return localProductIds;
+  }, [offers, userCity, userCountry]);
 
   const directExchangeProductIds = useMemo(() => {
     if (!productFilters.directExchangeOpportunities || myOffers.length === 0) {
@@ -101,9 +203,11 @@ export function ProductsTab({ productType = "cross-product" }: Props) {
       if (productFilters.brand && p.brand !== productFilters.brand) return false;
       if (productFilters.directExchangeOpportunities && !directExchangeProductIds.has(p.productId))
         return false;
+      if (productFilters.onlyMyLocation && !productsWithLocalOffers.has(p.productId))
+        return false;
       return true;
     });
-  }, [products, productFilters, directExchangeProductIds, productType]);
+  }, [products, productFilters, directExchangeProductIds, productsWithLocalOffers, productType]);
 
   function clearAllFilters() {
     setProductFilters({
@@ -113,7 +217,31 @@ export function ProductsTab({ productType = "cross-product" }: Props) {
       subcategory: "",
       brand: "",
       directExchangeOpportunities: false,
+      onlyMyLocation: false,
     });
+    setExpandedSection(null);
+  }
+
+  function handleSelectCategory(categoryName: string) {
+    if (productFilters.category === categoryName) {
+      // Deselect
+      setProductFilters({ category: "", subcategory: "" });
+    } else {
+      setProductFilters({ category: categoryName, subcategory: "" });
+      // Auto-expand subcategories if available
+      const categoryDef = getCategoryByName(productType, categoryName);
+      if (categoryDef && categoryDef.subcategories.length > 0) {
+        setExpandedSection("subcategory");
+      }
+    }
+  }
+
+  function handleSelectSubcategory(subcategoryName: string) {
+    if (productFilters.subcategory === subcategoryName) {
+      setProductFilters({ subcategory: "" });
+    } else {
+      setProductFilters({ subcategory: subcategoryName });
+    }
   }
 
   return (
@@ -145,7 +273,7 @@ export function ProductsTab({ productType = "cross-product" }: Props) {
           <span className="hidden sm:inline text-sm">Filters</span>
           {hasActiveFilters && (
             <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-primary-foreground">
-              {[productFilters.onlyWithOffers, productFilters.category, productFilters.subcategory, productFilters.brand, productFilters.directExchangeOpportunities].filter(Boolean).length}
+              {activeFilterCount}
             </span>
           )}
         </button>
@@ -153,14 +281,15 @@ export function ProductsTab({ productType = "cross-product" }: Props) {
 
       {/* Collapsible Filters Panel */}
       {showFilters && (
-        <div className="mb-4 rounded-lg border border-border bg-card p-4">
-          <div className="flex items-center justify-between mb-3">
+        <div className="mb-4 rounded-xl border border-border bg-card overflow-hidden">
+          {/* Filter Header */}
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-secondary/30">
             <h3 className="text-sm font-medium text-foreground">Filters</h3>
             <div className="flex gap-2">
               {hasActiveFilters && (
                 <button
                   onClick={clearAllFilters}
-                  className="text-xs text-muted-foreground hover:text-foreground"
+                  className="text-xs text-primary hover:underline"
                 >
                   Clear all
                 </button>
@@ -174,7 +303,8 @@ export function ProductsTab({ productType = "cross-product" }: Props) {
             </div>
           </div>
 
-          <div className="flex flex-col gap-3">
+          {/* Quick Filter Chips */}
+          <div className="p-4 border-b border-border">
             <div className="flex flex-wrap gap-2">
               <button
                 onClick={() =>
@@ -182,7 +312,7 @@ export function ProductsTab({ productType = "cross-product" }: Props) {
                     onlyWithOffers: !productFilters.onlyWithOffers,
                   })
                 }
-                className={`flex h-10 items-center justify-center rounded-lg border px-3 text-sm transition-colors ${
+                className={`flex h-9 items-center justify-center rounded-full border px-4 text-sm transition-colors ${
                   productFilters.onlyWithOffers
                     ? "border-primary bg-primary/10 text-primary"
                     : "border-input bg-secondary text-muted-foreground hover:text-foreground"
@@ -191,6 +321,24 @@ export function ProductsTab({ productType = "cross-product" }: Props) {
                 With offers only
               </button>
 
+              {userCity && userCountry && (
+                <button
+                  onClick={() =>
+                    setProductFilters({
+                      onlyMyLocation: !productFilters.onlyMyLocation,
+                    })
+                  }
+                  className={`flex h-9 items-center justify-center gap-1.5 rounded-full border px-4 text-sm transition-colors ${
+                    productFilters.onlyMyLocation
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-input bg-secondary text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <MapPin className="h-3.5 w-3.5" />
+                  {userCity}
+                </button>
+              )}
+
               <button
                 onClick={() =>
                   setProductFilters({
@@ -198,7 +346,7 @@ export function ProductsTab({ productType = "cross-product" }: Props) {
                   })
                 }
                 disabled={myOffers.length === 0}
-                className={`flex h-10 items-center justify-center rounded-lg border px-3 text-sm transition-colors ${
+                className={`flex h-9 items-center justify-center rounded-full border px-4 text-sm transition-colors ${
                   productFilters.directExchangeOpportunities
                     ? "border-primary bg-primary/10 text-primary"
                     : myOffers.length === 0
@@ -210,61 +358,118 @@ export function ProductsTab({ productType = "cross-product" }: Props) {
                 Direct Exchange
               </button>
             </div>
-
-            <select
-              value={productFilters.category}
-              onChange={(e) =>
-                setProductFilters({ category: e.target.value, subcategory: "" })
-              }
-              className="h-10 rounded-lg border border-input bg-secondary px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-            >
-              <option value="">All categories</option>
-              {categories.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-
-            <select
-              value={productFilters.subcategory}
-              onChange={(e) =>
-                setProductFilters({ subcategory: e.target.value })
-              }
-              className="h-10 rounded-lg border border-input bg-secondary px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-            >
-              <option value="">All subcategories</option>
-              {subcategories.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-
-            <select
-              value={productFilters.brand}
-              onChange={(e) => setProductFilters({ brand: e.target.value })}
-              className="h-10 rounded-lg border border-input bg-secondary px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-            >
-              <option value="">All brands</option>
-              {brands.map((b) => (
-                <option key={b} value={b}>
-                  {b}
-                </option>
-              ))}
-            </select>
           </div>
+
+          {/* Category Accordion */}
+          <div className="border-b border-border">
+            <button
+              onClick={() => setExpandedSection(expandedSection === "category" ? null : "category")}
+              className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-secondary/30 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-foreground">Category</span>
+                {productFilters.category && (
+                  <span className="text-xs text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                    {productFilters.category}
+                  </span>
+                )}
+              </div>
+              <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${expandedSection === "category" ? "rotate-180" : ""}`} />
+            </button>
+            
+            {expandedSection === "category" && (
+              <div className="px-4 pb-4">
+                <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
+                  {categories.map((category) => {
+                    const IconComponent = CATEGORY_ICONS[category.id] || Package;
+                    const isSelected = productFilters.category === category.name;
+                    return (
+                      <button
+                        key={category.id}
+                        onClick={() => handleSelectCategory(category.name)}
+                        className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all ${
+                          isSelected 
+                            ? "border-primary bg-primary/10" 
+                            : "border-border bg-secondary/30 hover:border-primary/30 hover:bg-secondary/50"
+                        }`}
+                      >
+                        <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${
+                          isSelected ? "bg-primary/20" : "bg-secondary"
+                        }`}>
+                          <IconComponent className={`h-5 w-5 ${isSelected ? "text-primary" : "text-foreground"}`} />
+                        </div>
+                        <span className={`text-[10px] font-medium text-center leading-tight ${isSelected ? "text-primary" : "text-muted-foreground"}`}>
+                          {category.name}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Subcategory Accordion - only show if category is selected */}
+          {productFilters.category && subcategories.length > 0 && (
+            <div>
+              <button
+                onClick={() => setExpandedSection(expandedSection === "subcategory" ? null : "subcategory")}
+                className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-secondary/30 transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-foreground">Subcategory</span>
+                  {productFilters.subcategory && (
+                    <span className="text-xs text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                      {productFilters.subcategory}
+                    </span>
+                  )}
+                </div>
+                <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${expandedSection === "subcategory" ? "rotate-180" : ""}`} />
+              </button>
+              
+              {expandedSection === "subcategory" && (
+                <div className="px-4 pb-4">
+                  <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
+                    {subcategories.map((sub: SubcategoryDefinition) => {
+                      const SubIcon = SUBCATEGORY_ICONS[sub.icon] || Package;
+                      const isSelected = productFilters.subcategory === sub.name;
+                      return (
+                        <button
+                          key={sub.id}
+                          onClick={() => handleSelectSubcategory(sub.name)}
+                          className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all ${
+                            isSelected 
+                              ? "border-primary bg-primary/10" 
+                              : "border-border bg-secondary/30 hover:border-primary/30 hover:bg-secondary/50"
+                          }`}
+                        >
+                          <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${
+                            isSelected ? "bg-primary/20" : "bg-secondary"
+                          }`}>
+                            <SubIcon className={`h-5 w-5 ${isSelected ? "text-primary" : "text-foreground"}`} />
+                          </div>
+                          <span className={`text-[10px] font-medium text-center leading-tight ${isSelected ? "text-primary" : "text-muted-foreground"}`}>
+                            {sub.name}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
-      {/* Product grid - max 3 columns for better card width */}
+      {/* Product grid - 3 columns on laptop, 4 on larger screens */}
       {filteredProducts.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
           <Package className="mb-3 h-10 w-10 opacity-40" />
           <p className="text-sm">No products match your filters.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
           {filteredProducts.map((product) => (
             <div
               key={product.productId}
