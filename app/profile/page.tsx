@@ -323,8 +323,11 @@ export default function ProfilePage() {
     { id: "support", label: "Support", icon: HelpCircle },
   ];
 
-  // Determine if we should show navigation (only block for new users who haven't completed profile)
-  const showNavigation = !isNewUser || isProfileComplete;
+  // Determine if we should show navigation
+  // Desktop sidebar: show for non-new users (blurred for new users handled separately)
+  // Mobile bottom nav: only show when profile is complete
+  const showDesktopNav = !isNewUser;
+  const showMobileNav = isProfileComplete;
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -332,7 +335,7 @@ export default function ProfilePage() {
 
       <div className="flex flex-1">
         {/* Desktop Sidebar - show when not a new user */}
-        {showNavigation && (
+        {showDesktopNav && (
           <SidebarNav
             activeProductType={activeProductType}
             activeUtilityTab={null}
@@ -350,18 +353,13 @@ export default function ProfilePage() {
         )}
 
         {/* Main content */}
-        <main className="flex-1 overflow-y-auto pb-20 lg:pb-0">
+        <main className="flex-1 overflow-y-auto pb-24 lg:pb-0">
           <div className="mx-auto max-w-2xl px-4 py-6 lg:px-6">
             {/* Header */}
             <div className="mb-6">
               <h1 className="text-xl font-semibold text-foreground">
                 {isNewUser ? "Complete Your Profile" : "Profile"}
               </h1>
-              {isNewUser && (
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Please complete your profile to continue using Barter-X
-                </p>
-              )}
             </div>
 
         {/* Section tabs - horizontal scroll on mobile */}
@@ -878,40 +876,41 @@ export default function ProfilePage() {
           )}
         </div>
 
-        {/* Save Button - sticky above bottom nav */}
-            <div className="sticky bottom-0 left-0 right-0 p-4 bg-background border-t border-border">
-              <div className="flex gap-3">
-                {!isNewUser && (
-                  <button
-                    onClick={handleLogout}
-                    className="flex items-center justify-center gap-2 px-6 py-3 rounded-lg border border-destructive/30 text-destructive text-sm font-medium hover:bg-destructive/10 transition-colors"
-                  >
-                    <DoorOpen className="h-4 w-4" />
-                    Logout
-                  </button>
-                )}
-                <button
-                  onClick={handleSaveProfile}
-                  disabled={saving || !isProfileComplete}
-                  className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-primary py-3 text-sm font-medium text-primary-foreground disabled:opacity-60"
-                >
-                  {saving ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <>
-                      <Check className="h-4 w-4" />
-                      {isNewUser ? "Complete Profile" : "Save Changes"}
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
           </div>
         </main>
+
+        {/* Save Button - fixed at bottom on mobile, sticky on desktop */}
+        <div className="fixed bottom-0 left-0 right-0 lg:sticky lg:bottom-0 p-4 bg-background border-t border-border z-40 lg:z-auto">
+          <div className="max-w-2xl mx-auto flex gap-3">
+            {!isNewUser && (
+              <button
+                onClick={handleLogout}
+                className="flex items-center justify-center gap-2 px-6 py-3 rounded-lg border border-destructive/30 text-destructive text-sm font-medium hover:bg-destructive/10 transition-colors"
+              >
+                <DoorOpen className="h-4 w-4" />
+                Logout
+              </button>
+            )}
+            <button
+              onClick={handleSaveProfile}
+              disabled={saving || !isProfileComplete}
+              className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-primary py-3 text-sm font-medium text-primary-foreground disabled:opacity-60"
+            >
+              {saving ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <>
+                  <Check className="h-4 w-4" />
+                  {isNewUser ? "Complete Profile" : "Save Changes"}
+                </>
+              )}
+            </button>
+          </div>
+        </div>
       </div>
 
-      {/* Mobile Bottom Navigation - show when not a new user */}
-      {showNavigation && (
+      {/* Mobile Bottom Navigation - only show when profile is complete */}
+      {showMobileNav && (
         <BottomNav
           activeProductType={activeProductType}
           activeUtilityTab={null}
