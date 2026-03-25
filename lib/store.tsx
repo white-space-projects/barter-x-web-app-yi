@@ -184,6 +184,7 @@ export function BarterProvider({ children }: { children: ReactNode }) {
     onlyWithOffers: false,
     directExchangeOpportunities: false,
     onlyMyLocation: false,
+    selectedCities: [],
   });
 
   // Default empty filters for each exchange type
@@ -523,7 +524,7 @@ export function BarterProvider({ children }: { children: ReactNode }) {
 
   const setProductFilters = useCallback((filters: Partial<ProductFilters>) => {
     // Separate global and exchange-type-specific filters
-    const globalKeys: (keyof GlobalFilters)[] = ["searchQuery", "onlyWithOffers", "directExchangeOpportunities", "onlyMyLocation"];
+    const globalKeys: (keyof GlobalFilters)[] = ["searchQuery", "onlyWithOffers", "directExchangeOpportunities", "onlyMyLocation", "selectedCities"];
     const exchangeTypeKeys: (keyof ExchangeTypeFilters)[] = ["categories", "subcategories", "brand"];
 
     const globalUpdates: Partial<GlobalFilters> = {};

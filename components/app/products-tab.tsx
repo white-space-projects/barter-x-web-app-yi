@@ -6,11 +6,12 @@
  * ============================================================================
  */
 
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { useBarterStore } from "@/lib/store";
+import { getCitiesForCountry } from "@/lib/countries-data";
 import { 
   Search, SlidersHorizontal, Package, MoreHorizontal, X, Eye, Plus, 
-  ChevronDown, MapPin,
+  ChevronDown, MapPin, Check,
   // Category icons
   Cpu, Sofa, Refrigerator, Shirt, Baby, Dumbbell, Wrench, BookOpen, Monitor, Paintbrush,
   Car, Bike, Bus, Truck, Container, Caravan,
@@ -106,6 +107,25 @@ export function ProductsTab({ productType = "cross-product" }: Props) {
   const [showFilters, setShowFilters] = useState(false);
   const [mobileActionProduct, setMobileActionProduct] = useState<Product | null>(null);
   const [expandedSection, setExpandedSection] = useState<"category" | "subcategory" | null>(null);
+  const [showCityDropdown, setShowCityDropdown] = useState(false);
+  const cityDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Get cities for user's country
+  const availableCities = useMemo(() => {
+    if (!userCountry) return [];
+    return getCitiesForCountry(userCountry);
+  }, [userCountry]);
+
+  // Close city dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (cityDropdownRef.current && !cityDropdownRef.current.contains(event.target as Node)) {
+        setShowCityDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
   
   const { data: products = [], isLoading } = useProducts();
   
@@ -149,20 +169,30 @@ export function ProductsTab({ productType = "cross-product" }: Props) {
   const userCity = auth.user?.profileAddress?.city;
   const userCountry = auth.user?.profileAddress?.country;
 
-  // Get products that have offers from user's location
+  // Get products that have offers from selected cities in user's country
   const productsWithLocalOffers = useMemo(() => {
-    if (!userCity || !userCountry) return new Set<string>();
+    if (!userCountry) return new Set<string>();
+    const selectedCities = productFilters.selectedCities;
     const localProductIds = new Set<string>();
+    
     offers.forEach((offer) => {
-      if (
-        offer.pickupAddress?.city?.toLowerCase() === userCity.toLowerCase() &&
-        offer.pickupAddress?.country?.toLowerCase() === userCountry.toLowerCase()
-      ) {
-        localProductIds.add(offer.productId);
+      const offerCountry = offer.pickupAddress?.country?.toLowerCase();
+      const offerCity = offer.pickupAddress?.city;
+      
+      // Must match user's country
+      if (offerCountry !== userCountry.toLowerCase()) return;
+      
+      // If specific cities are selected, must match one of them
+      if (selectedCities.length > 0) {
+        if (!offerCity || !selectedCities.some(c => c.toLowerCase() === offerCity.toLowerCase())) {
+          return;
+        }
       }
+      
+      localProductIds.add(offer.productId);
     });
     return localProductIds;
-  }, [offers, userCity, userCountry]);
+  }, [offers, userCountry, productFilters.selectedCities]);
 
   const directExchangeProductIds = useMemo(() => {
     if (!productFilters.directExchangeOpportunities || myOffers.length === 0) {
@@ -229,8 +259,10 @@ export function ProductsTab({ productType = "cross-product" }: Props) {
       brand: "",
       directExchangeOpportunities: false,
       onlyMyLocation: false,
+      selectedCities: [],
     });
     setExpandedSection(null);
+    setShowCityDropdown(false);
   }
 
   function handleSelectCategory(categoryName: string) {
@@ -343,21 +375,97 @@ export function ProductsTab({ productType = "cross-product" }: Props) {
               </button>
 
               {userCountry && (
-                <button
-                  onClick={() =>
-                    setProductFilters({
-                      onlyMyLocation: !productFilters.onlyMyLocation,
-                    })
-                  }
-                  className={`flex h-9 items-center justify-center gap-1.5 rounded-full border px-4 text-sm transition-colors ${
-                    productFilters.onlyMyLocation
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-input bg-secondary text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  <MapPin className="h-3.5 w-3.5" />
-                  {userCountry}
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      const newValue = !productFilters.onlyMyLocation;
+                      if (newValue && userCity) {
+                        // When enabling, default select user's city
+                        setProductFilters({
+                          onlyMyLocation: true,
+                          selectedCities: [userCity],
+                        });
+                      } else {
+                        // When disabling, clear cities
+                        setProductFilters({
+                          onlyMyLocation: false,
+                          selectedCities: [],
+                        });
+                        setShowCityDropdown(false);
+                      }
+                    }}
+                    className={`flex h-9 items-center justify-center gap-1.5 rounded-full border px-4 text-sm transition-colors ${
+                      productFilters.onlyMyLocation
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-input bg-secondary text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <MapPin className="h-3.5 w-3.5" />
+                    {userCountry}
+                  </button>
+
+                  {/* City Dropdown - only show when country filter is active */}
+                  {productFilters.onlyMyLocation && availableCities.length > 0 && (
+                    <div className="relative" ref={cityDropdownRef}>
+                      <button
+                        onClick={() => setShowCityDropdown(!showCityDropdown)}
+                        className="flex h-9 items-center justify-center gap-1.5 rounded-full border border-primary bg-primary/10 text-primary px-3 text-sm transition-colors"
+                      >
+                        <span>
+                          {productFilters.selectedCities.length === 0
+                            ? "All cities"
+                            : productFilters.selectedCities.length === 1
+                            ? productFilters.selectedCities[0]
+                            : `${productFilters.selectedCities.length} cities`}
+                        </span>
+                        <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showCityDropdown ? "rotate-180" : ""}`} />
+                      </button>
+
+                      {showCityDropdown && (
+                        <div className="absolute top-full left-0 mt-2 w-64 max-h-64 overflow-y-auto rounded-xl border border-border bg-card shadow-xl z-50">
+                          <div className="p-2">
+                            <div className="text-xs text-muted-foreground px-2 py-1.5 mb-1">
+                              Select cities in {userCountry}
+                            </div>
+                            {availableCities.map((city) => {
+                              const isSelected = productFilters.selectedCities.includes(city);
+                              const isUserCity = city === userCity;
+                              return (
+                                <button
+                                  key={city}
+                                  onClick={() => {
+                                    if (isSelected) {
+                                      setProductFilters({
+                                        selectedCities: productFilters.selectedCities.filter(c => c !== city),
+                                      });
+                                    } else {
+                                      setProductFilters({
+                                        selectedCities: [...productFilters.selectedCities, city],
+                                      });
+                                    }
+                                  }}
+                                  className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-sm text-left hover:bg-secondary/50 transition-colors"
+                                >
+                                  <div className={`flex h-4 w-4 items-center justify-center rounded border ${
+                                    isSelected 
+                                      ? "border-primary bg-primary" 
+                                      : "border-input bg-secondary"
+                                  }`}>
+                                    {isSelected && <Check className="h-3 w-3 text-primary-foreground" />}
+                                  </div>
+                                  <span className={isSelected ? "text-foreground" : "text-muted-foreground"}>
+                                    {city}
+                                    {isUserCity && <span className="text-primary ml-1">(Your city)</span>}
+                                  </span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               )}
 
               <button

@@ -149,6 +149,7 @@ export type GlobalFilters = {
   onlyWithOffers: boolean;
   directExchangeOpportunities: boolean;
   onlyMyLocation: boolean; // Filter products with offers from user's country (from profile)
+  selectedCities: string[]; // Multi-select cities when country filter is active
 };
 
 // Combined filters for products-tab
