@@ -1,6 +1,12 @@
-import useSWR from "swr";
-import { getProducts } from "@/lib/api/product";
+import { MOCK_PRODUCTS } from "@/lib/mock-data";
 
 export function useProducts() {
-  return useSWR("/api/product/list", getProducts);
+  // Bypass API and return mock data directly
+  return {
+    data: MOCK_PRODUCTS,
+    error: undefined,
+    isLoading: false,
+    isValidating: false,
+    mutate: () => Promise.resolve(MOCK_PRODUCTS),
+  };
 }
