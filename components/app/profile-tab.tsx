@@ -838,11 +838,11 @@ export function ProfileTab() {
         )}
       </div>
 
-      {/* Spacer for fixed button */}
-      <div className="h-24" />
+      {/* Spacer for fixed button - larger when bottom nav is visible */}
+      <div className={isNewUser ? "h-24" : "h-40 lg:h-24"} />
 
-      {/* Save Button - fixed at bottom with blur backdrop */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/90 backdrop-blur-md border-t border-border z-50">
+      {/* Save Button - fixed at bottom with blur backdrop, positioned above bottom nav when visible */}
+      <div className={`fixed left-0 right-0 p-4 bg-background/90 backdrop-blur-md border-t border-border z-50 ${isNewUser ? "bottom-0" : "bottom-[72px] lg:bottom-0"}`}>
         <div className="mx-auto max-w-2xl flex gap-3 lg:pl-56">
           {!isNewUser && (
             <button
