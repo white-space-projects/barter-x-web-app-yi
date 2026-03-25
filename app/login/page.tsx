@@ -11,7 +11,6 @@ import { Loader2, MapPin, ChevronDown } from "lucide-react";
 import { detectLocationFromIP, isAppleDevice, type GeoLocation } from "@/lib/geolocation";
 import { getCountryNames, getCitiesForCountry, getCountryCode, isCountrySupported } from "@/lib/countries-data";
 import { SupportAPI, type LoginIssueReport } from "@/lib/api";
-import FingerprintJS from "@fingerprintjs/fingerprintjs";
 import { GoogleLogin } from "@react-oauth/google";
 
 type LoginStep = "credentials" | "otp";
@@ -139,22 +138,13 @@ export default function LoginPage() {
     setLoading(true);
     
     try {
-      /**
-       * OTP SEND API PLACEHOLDER
-       * ========================
-       * Call AuthAPI.sendOtp({ email, deviceId }) here.
-       * On success, move to OTP step with countdown.
-       * On failure, show error and enable trouble reporting.
-       */
-      await fetch("/api/send-otp", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: email.trim() }),
-      });
+      // MOCK OTP SEND - Bypassing real API
+      await new Promise((r) => setTimeout(r, 500)); // Simulate network delay
+      
       setLoading(false);
       setStep("otp");
       setCountdown(60);
-      toast.success("OTP sent to your email.");
+      toast.success("OTP sent to your email. (Use any 6-digit code)");
     } catch (error) {
       setLoading(false);
       setHasLoginError(true);
@@ -175,51 +165,22 @@ export default function LoginPage() {
     setLoading(true);
     
     try {
-      /**
-       * OTP VERIFY API PLACEHOLDER
-       * ==========================
-       * Call AuthAPI.verifyOtp({ email, otp, deviceId }) here.
-       * On success, receive user data and access token, then login.
-       * On failure, show error and enable trouble reporting.
-       * 
-       * IMPORTANT: After successful login, also trigger ProductsAPI.getProducts()
-       * with city & country to pre-fetch products for the user's region.
-       */
-      const userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      const fp = await FingerprintJS.load();
-      const result = await fp.get();
-      const response = await fetch("/api/verify-otp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          email, 
-          otp: otp,
-          name: name.trim(),
-          device_id: result.visitorId,
-          region: userTimeZone,
-        }),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        setErrors({ otp : data.message || "Invalid OTP please try again."});
-        return
-      }
-
-      // Admin shortcut: admin@barter-x.com with OTP 123456
+      // MOCK OTP VERIFY - Accept any 6-digit OTP
+      await new Promise((r) => setTimeout(r, 500)); // Simulate network delay
+      
+      // Admin shortcut: admin@barter-x.com
       const isAdmin = adminEmails.includes(email.toLowerCase());
 
       const user = {
-          userId: data.user.user_id,
-          name: data.user.name,
-          email: data.user.email.toLowerCase(),
+          userId: generateGuid(),
+          name: name.trim() || "Barter User",
+          email: email.toLowerCase(),
           isAdmin,
-          city: city.trim(),
-          country: country.trim(),
-          countryCode: countryCode || undefined,
+          city: city.trim() || "Berlin",
+          country: country.trim() || "Germany",
+          countryCode: countryCode || "DE",
       };
-      const token = data.access_token;
+      const token = generateGuid();
 
       login(user, token);
       setLoading(false);
@@ -237,46 +198,32 @@ export default function LoginPage() {
 
     const handleGoogleSuccess = async (credentialResponse: any) => {
         setGoogleLoading(true);
-        const id_token = credentialResponse.credential;
-        const userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        const fp = await FingerprintJS.load();
-        const result = await fp.get();
-        const res = await fetch("/api/auth/google/verify",{
-            method : "POST",
-            headers: { "Content-Type": "application/json" },
-            body : JSON.stringify({ id_token : id_token , region : userTimeZone , device_id : result.visitorId})
-        })   
+        
+        try {
+          // MOCK GOOGLE LOGIN - Bypassing real API
+          await new Promise((r) => setTimeout(r, 800)); // Simulate network delay
+          
+          const mockGoogleUser = {
+            userId: generateGuid(),
+            name: "Google User",
+            email: "google.user@gmail.com",
+            isAdmin: false,
+            city: city.trim() || "Berlin",
+            country: country.trim() || "Germany",
+            countryCode: countryCode || "DE",
+          };
+          const token = generateGuid();
 
-        if (!res.ok) {
-          toast.error("Google authentication is failed. Please try again.")
-          return
+          login(mockGoogleUser, token);
+          setGoogleLoading(false);
+          toast.success("Signed in with Google.");
+          
+          // Navigate to workspace
+          router.push("/workspace");
+        } catch (error) {
+          setGoogleLoading(false);
+          toast.error("Google sign-in failed. Please try again.");
         }
-
-        const data:any = await res.json();
-        
-        // Admin shortcut: admin@barter-x.com with OTP 123456
-        const isAdmin = adminEmails.includes(data.user.email.toLowerCase());
-
-        console.log(data);
-
-        const user = {
-          userId: data.user.user_id,
-          name: data.user.name,
-          email: data.user.email.toLowerCase(),
-          isAdmin,
-          city: city.trim(),
-          country: country.trim(),
-          countryCode: countryCode || undefined
-        };
-        const token = data.access_token;
-
-        login(user, token);
-        setLoading(false);
-        toast.success("Logged in successfully.");
-        
-        // Navigate to workspace - profile will be shown inline if needed
-        router.push("/workspace");
-        
   }
 
 
