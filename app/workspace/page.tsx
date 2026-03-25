@@ -101,13 +101,16 @@ export default function WorkspacePage() {
   // EFFECTS (all hooks must be before conditional returns)
   // ---------------------------------------------------------------------------
 
-  // Handle URL tab parameter
+  // Handle URL tab parameter - only on initial load
+  const [initialUrlHandled, setInitialUrlHandled] = useState(false);
   useEffect(() => {
+    if (initialUrlHandled) return;
     const tab = searchParams.get("tab");
-    if (tab === "profile" && activeUtilityTab !== "profile") {
+    if (tab === "profile") {
       setActiveUtilityTab("profile");
     }
-  }, [searchParams, activeUtilityTab]);
+    setInitialUrlHandled(true);
+  }, [searchParams, initialUrlHandled]);
 
   // Authentication check - redirect if not logged in
   useEffect(() => {
