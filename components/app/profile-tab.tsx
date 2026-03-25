@@ -245,13 +245,6 @@ export function ProfileTab() {
 
     toast.success("Profile saved successfully");
     setSaving(false);
-
-    // If this was a new user completing their profile, refresh the page
-    // to show the full app with navigation
-    if (isNewUser) {
-      // Force a re-render by navigating to workspace
-      window.location.href = "/workspace";
-    }
   }
 
   async function handleSubmitSupport() {

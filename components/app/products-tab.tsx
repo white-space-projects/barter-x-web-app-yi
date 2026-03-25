@@ -136,9 +136,11 @@ export function ProductsTab({ productType = "cross-product" }: Props) {
 
   const myOffers = useMemo(() => getMyOffers(), [getMyOffers]);
 
-  // Get user's location for the "My Location" filter
-  const userCity = auth.user?.city;
-  const userCountry = auth.user?.country;
+  // Get user's location from profile for the "My Location" filter
+  // Note: profileAddress is the manually saved address from profile page
+  // auth.user.city/country is the auto-detected location from login - we DON'T use those here
+  const userCity = auth.user?.profileAddress?.city;
+  const userCountry = auth.user?.profileAddress?.country;
 
   // Get products that have offers from user's location
   const productsWithLocalOffers = useMemo(() => {
