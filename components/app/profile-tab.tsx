@@ -325,16 +325,11 @@ export function ProfileTab() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      {/* Header - only show "Complete Your Profile" until mandatory fields are entered */}
+      {/* Header */}
       <div className="mb-6">
         <h1 className="text-xl font-semibold text-foreground">
           {isNewUser && !isProfileComplete ? "Complete Your Profile" : "Profile"}
         </h1>
-        {isNewUser && !isProfileComplete && (
-          <p className="mt-1 text-sm text-muted-foreground">
-            Please complete your profile to continue using <span className="text-primary font-medium">BARTER-X</span>
-          </p>
-        )}
       </div>
 
       {/* Section tabs - horizontal scroll on mobile */}

@@ -353,7 +353,7 @@ export default function ProfilePage() {
         )}
 
         {/* Main content */}
-        <main className="flex-1 overflow-y-auto pb-24 lg:pb-0">
+        <main className="flex-1 overflow-y-auto pb-28 lg:pb-24">
           <div className="mx-auto max-w-2xl px-4 py-6 lg:px-6">
             {/* Header */}
             <div className="mb-6">
@@ -878,34 +878,34 @@ export default function ProfilePage() {
 
           </div>
         </main>
+      </div>
 
-        {/* Save Button - fixed at bottom on mobile, sticky on desktop */}
-        <div className="fixed bottom-0 left-0 right-0 lg:sticky lg:bottom-0 p-4 bg-background border-t border-border z-40 lg:z-auto">
-          <div className="max-w-2xl mx-auto flex gap-3">
-            {!isNewUser && (
-              <button
-                onClick={handleLogout}
-                className="flex items-center justify-center gap-2 px-6 py-3 rounded-lg border border-destructive/30 text-destructive text-sm font-medium hover:bg-destructive/10 transition-colors"
-              >
-                <DoorOpen className="h-4 w-4" />
-                Logout
-              </button>
-            )}
+      {/* Save Button - fixed at bottom with blur backdrop */}
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-md border-t border-border z-50">
+        <div className="max-w-2xl mx-auto flex gap-3 lg:pl-56">
+          {!isNewUser && (
             <button
-              onClick={handleSaveProfile}
-              disabled={saving || !isProfileComplete}
-              className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-primary py-3 text-sm font-medium text-primary-foreground disabled:opacity-60"
+              onClick={handleLogout}
+              className="flex items-center justify-center gap-2 px-6 py-3 rounded-lg border border-destructive/30 text-destructive text-sm font-medium hover:bg-destructive/10 transition-colors"
             >
-              {saving ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <>
-                  <Check className="h-4 w-4" />
-                  {isNewUser ? "Complete Profile" : "Save Changes"}
-                </>
-              )}
+              <DoorOpen className="h-4 w-4" />
+              Logout
             </button>
-          </div>
+          )}
+          <button
+            onClick={handleSaveProfile}
+            disabled={saving || !isProfileComplete}
+            className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-primary py-3 text-sm font-medium text-primary-foreground disabled:opacity-60"
+          >
+            {saving ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <>
+                <Check className="h-4 w-4" />
+                {isNewUser ? "Complete Profile" : "Save Changes"}
+              </>
+            )}
+          </button>
         </div>
       </div>
 

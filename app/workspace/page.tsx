@@ -171,15 +171,9 @@ export default function WorkspacePage() {
             isAdmin={isAdmin}
             unreadCount={totalUnread}
           />
-          {/* Blur overlay for new users - shows navigation is available after profile completion */}
+          {/* Blur overlay for new users */}
           {!showNavigation && (
-            <div className="absolute inset-0 bg-background/60 backdrop-blur-sm z-20 flex items-center justify-center">
-              <div className="p-3 text-center">
-                <p className="text-xs text-muted-foreground leading-tight">
-                  Complete profile<br />to unlock
-                </p>
-              </div>
-            </div>
+            <div className="absolute inset-0 bg-background/60 backdrop-blur-sm z-20" />
           )}
         </div>
 
@@ -232,24 +226,20 @@ export default function WorkspacePage() {
         </main>
       </div>
 
-      {/* Mobile Bottom Navigation - always visible, blurred for new users */}
-      <div className="relative lg:hidden">
-        <BottomNav
-          activeProductType={activeProductType}
-          activeUtilityTab={activeUtilityTab}
-          onSelectProductType={showNavigation ? setActiveProductType : () => {}}
-          onSelectUtilityTab={showNavigation ? setActiveUtilityTab : () => {}}
-          onAddOffer={showNavigation ? () => setAddOfferOpen(true) : () => {}}
-          isAdmin={isAdmin}
-          unreadCount={totalUnread}
-        />
-        {/* Blur overlay for new users on mobile */}
-        {!showNavigation && (
-          <div className="absolute inset-0 bg-background/60 backdrop-blur-sm z-20 flex items-center justify-center">
-            <p className="text-xs text-muted-foreground">Complete profile to unlock</p>
-          </div>
-        )}
-      </div>
+      {/* Mobile Bottom Navigation - hidden for new users until profile is complete */}
+      {showNavigation && (
+        <div className="lg:hidden">
+          <BottomNav
+            activeProductType={activeProductType}
+            activeUtilityTab={activeUtilityTab}
+            onSelectProductType={setActiveProductType}
+            onSelectUtilityTab={setActiveUtilityTab}
+            onAddOffer={() => setAddOfferOpen(true)}
+            isAdmin={isAdmin}
+            unreadCount={totalUnread}
+          />
+        </div>
+      )}
 
       {/* Global Add Offer Modal */}
       <AddOfferModal
