@@ -11,7 +11,6 @@ import { Loader2, MapPin, ChevronDown } from "lucide-react";
 import { detectLocationFromIP, isAppleDevice, type GeoLocation } from "@/lib/geolocation";
 import { getCountryNames, getCitiesForCountry, getCountryCode, isCountrySupported } from "@/lib/countries-data";
 import { SupportAPI, type LoginIssueReport } from "@/lib/api";
-import { GoogleLogin } from "@react-oauth/google";
 
 type LoginStep = "credentials" | "otp";
 
@@ -360,14 +359,10 @@ export default function LoginPage() {
 
             {step === "credentials" ? (
               <div>
-                {/* Google Sign-in Button */}
+                {/* Google Sign-in Button - Bypassed, directly creates mock user */}
                 <button
                   type="button"
-                  onClick={() => {
-                  (document
-                      .querySelector("#googleLoginButton div[role='button']") as HTMLElement)
-                      ?.click();
-                  }}
+                  onClick={() => handleGoogleSuccess(null)}
                   disabled={googleLoading}
                   className="mb-6 flex h-11 w-full items-center justify-center gap-3 rounded-lg border border-border bg-secondary text-sm font-medium text-foreground transition-colors hover:bg-secondary/80 disabled:opacity-60"
                 >
@@ -397,14 +392,6 @@ export default function LoginPage() {
                     </>
                   )}
                 </button>
-
-                {/* Hidden Google Button */}
-                <div className="hidden" id="googleLoginButton">
-                  <GoogleLogin                    
-                    onSuccess={handleGoogleSuccess}
-                    onError={() => toast.error("Login Failed")}
-                  />
-                </div>
 
                 {/* Apple Sign-In - Only visible on Apple devices */}
                 {showAppleSignIn && (

@@ -51,7 +51,11 @@ import {
 } from "lucide-react";
 import type { ProfileAddress } from "@/lib/types";
 
-export function ProfileTab() {
+interface ProfileTabProps {
+  onProfileComplete?: () => void; // Callback when new user completes profile
+}
+
+export function ProfileTab({ onProfileComplete }: ProfileTabProps) {
   const { auth, logout, getMyOffers, updateOffer, updateUser } = useBarterStore();
   const router = useRouter();
 
@@ -245,6 +249,11 @@ export function ProfileTab() {
 
     toast.success("Profile saved successfully");
     setSaving(false);
+
+    // If this was a new user completing their profile, navigate to main screen
+    if (isNewUser && onProfileComplete) {
+      onProfileComplete();
+    }
   }
 
   async function handleSubmitSupport() {

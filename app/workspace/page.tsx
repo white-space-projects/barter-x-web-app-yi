@@ -220,7 +220,15 @@ export default function WorkspacePage() {
               {activeUtilityTab === "chat" && <ChatTab onOpenPickupModal={setPickupModalOfferId} />}
               {activeUtilityTab === "admin" && isAdmin && <AdminPanel />}
               {activeUtilityTab === "simulate" && isAdmin && <SimulateTab />}
-              {activeUtilityTab === "profile" && <ProfileTab />}
+              {activeUtilityTab === "profile" && (
+                  <ProfileTab 
+                    onProfileComplete={() => {
+                      // Navigate to main screen (Cross-Product Exchange tab by default)
+                      setActiveUtilityTab(null);
+                      setActiveProductType("cross-product");
+                    }} 
+                  />
+                )}
               
               {/* Product type tabs - show ProductsTab with filter */}
               {!activeUtilityTab && <ProductsTab productType={activeProductType} />}
