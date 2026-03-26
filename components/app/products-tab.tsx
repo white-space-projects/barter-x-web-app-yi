@@ -334,9 +334,9 @@ export function ProductsTab({ productType = "cross-product" }: Props) {
         </button>
       </div>
 
-      {/* Collapsible Filters Panel */}
-      {showFilters && (
-        <div className="mb-4 rounded-xl border border-border bg-card overflow-hidden">
+        {/* Collapsible Filters Panel */}
+        {showFilters && (
+          <div className="mb-4 rounded-xl border border-border bg-card">
           {/* Filter Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-secondary/30">
             <h3 className="text-sm font-medium text-foreground">Filters</h3>
@@ -359,8 +359,8 @@ export function ProductsTab({ productType = "cross-product" }: Props) {
           </div>
 
           {/* Quick Filter Chips */}
-          <div className="p-4 border-b border-border">
-            <div className="flex flex-wrap gap-2">
+          <div className="p-4 border-b border-border overflow-visible">
+            <div className="flex flex-wrap gap-2 overflow-visible">
               <button
                 onClick={() =>
                   setProductFilters({
