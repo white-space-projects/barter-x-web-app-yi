@@ -108,6 +108,7 @@ export function ProductsTab({ productType = "cross-product" }: Props) {
   const [mobileActionProduct, setMobileActionProduct] = useState<Product | null>(null);
   const [expandedSection, setExpandedSection] = useState<"category" | "subcategory" | null>(null);
   const [showCityDropdown, setShowCityDropdown] = useState(false);
+  const [citySearchQuery, setCitySearchQuery] = useState("");
   const cityDropdownRef = useRef<HTMLDivElement>(null);
 
   // Get user's location from profile for the "My Location" filter
@@ -127,6 +128,7 @@ export function ProductsTab({ productType = "cross-product" }: Props) {
     function handleClickOutside(event: MouseEvent) {
       if (cityDropdownRef.current && !cityDropdownRef.current.contains(event.target as Node)) {
         setShowCityDropdown(false);
+        setCitySearchQuery("");
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -422,44 +424,63 @@ export function ProductsTab({ productType = "cross-product" }: Props) {
                       </button>
 
                       {showCityDropdown && (
-                        <div className="absolute top-full left-0 mt-2 w-64 max-h-64 overflow-y-auto rounded-xl border border-border bg-card shadow-xl z-50">
-                          <div className="p-2">
-                            <div className="text-xs text-muted-foreground px-2 py-1.5 mb-1">
-                              Select cities in {userCountry}
+                        <div className="absolute top-full left-0 mt-2 w-64 rounded-xl border border-border bg-card shadow-xl z-50">
+                          {/* Search bar */}
+                          <div className="p-2 border-b border-border">
+                            <div className="relative">
+                              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                              <input
+                                type="text"
+                                placeholder="Search cities..."
+                                value={citySearchQuery}
+                                onChange={(e) => setCitySearchQuery(e.target.value)}
+                                className="w-full h-8 pl-8 pr-3 rounded-lg border border-input bg-secondary text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                                autoFocus
+                              />
                             </div>
-                            {availableCities.map((city) => {
-                              const isSelected = productFilters.selectedCities.includes(city);
-                              const isUserCity = city === userCity;
-                              return (
-                                <button
-                                  key={city}
-                                  onClick={() => {
-                                    if (isSelected) {
-                                      setProductFilters({
-                                        selectedCities: productFilters.selectedCities.filter(c => c !== city),
-                                      });
-                                    } else {
-                                      setProductFilters({
-                                        selectedCities: [...productFilters.selectedCities, city],
-                                      });
-                                    }
-                                  }}
-                                  className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-sm text-left hover:bg-secondary/50 transition-colors"
-                                >
-                                  <div className={`flex h-4 w-4 items-center justify-center rounded border ${
-                                    isSelected 
-                                      ? "border-primary bg-primary" 
-                                      : "border-input bg-secondary"
-                                  }`}>
-                                    {isSelected && <Check className="h-3 w-3 text-primary-foreground" />}
-                                  </div>
-                                  <span className={isSelected ? "text-foreground" : "text-muted-foreground"}>
-                                    {city}
-                                    {isUserCity && <span className="text-primary ml-1">(Your city)</span>}
-                                  </span>
-                                </button>
-                              );
-                            })}
+                          </div>
+                          {/* City list - min height for 6 cities */}
+                          <div className="p-2 max-h-[280px] min-h-[240px] overflow-y-auto">
+                            {availableCities
+                              .filter(city => city.toLowerCase().includes(citySearchQuery.toLowerCase()))
+                              .map((city) => {
+                                const isSelected = productFilters.selectedCities.includes(city);
+                                const isUserCity = city === userCity;
+                                return (
+                                  <button
+                                    key={city}
+                                    onClick={() => {
+                                      if (isSelected) {
+                                        setProductFilters({
+                                          selectedCities: productFilters.selectedCities.filter(c => c !== city),
+                                        });
+                                      } else {
+                                        setProductFilters({
+                                          selectedCities: [...productFilters.selectedCities, city],
+                                        });
+                                      }
+                                    }}
+                                    className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-sm text-left hover:bg-secondary/50 transition-colors"
+                                  >
+                                    <div className={`flex h-4 w-4 items-center justify-center rounded border ${
+                                      isSelected 
+                                        ? "border-primary bg-primary" 
+                                        : "border-input bg-secondary"
+                                    }`}>
+                                      {isSelected && <Check className="h-3 w-3 text-primary-foreground" />}
+                                    </div>
+                                    <span className={isSelected ? "text-foreground" : "text-muted-foreground"}>
+                                      {city}
+                                      {isUserCity && <span className="text-primary ml-1">(Your city)</span>}
+                                    </span>
+                                  </button>
+                                );
+                              })}
+                            {availableCities.filter(city => city.toLowerCase().includes(citySearchQuery.toLowerCase())).length === 0 && (
+                              <div className="text-sm text-muted-foreground text-center py-4">
+                                No cities found
+                              </div>
+                            )}
                           </div>
                         </div>
                       )}
