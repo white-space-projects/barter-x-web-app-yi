@@ -194,15 +194,15 @@ export function BarterProvider({ children }: { children: ReactNode }) {
     brand: "",
   };
 
-  // Filters stored per exchange type
+  // Filters stored per barter type
   const [exchangeTypeFilters, setExchangeTypeFiltersState] = useState<AllExchangeTypeFilters>({
-    "cross-product": { ...defaultExchangeTypeFilters },
+    "goods": { ...defaultExchangeTypeFilters },
     "automobile": { ...defaultExchangeTypeFilters },
     "home-spaces": { ...defaultExchangeTypeFilters },
   });
 
   // Current active product type (for getting the right filters)
-  const [activeProductType, setActiveProductTypeState] = useState<ProductType>("cross-product");
+  const [activeProductType, setActiveProductTypeState] = useState<ProductType>("goods");
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);

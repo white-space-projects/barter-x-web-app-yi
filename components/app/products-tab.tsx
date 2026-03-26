@@ -84,7 +84,7 @@ const SUBCATEGORY_ICONS: Record<string, React.ComponentType<{ className?: string
   Cpu,
 };
 
-export function ProductsTab({ productType = "cross-product" }: Props) {
+export function ProductsTab({ productType = "goods" }: Props) {
   const {
     auth,
     productFilters,

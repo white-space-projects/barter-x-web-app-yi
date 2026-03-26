@@ -35,9 +35,9 @@ export type ProductTypeDefinition = {
 };
 
 // ============================================================================
-// CROSS-PRODUCT EXCHANGE CATEGORIES & SUBCATEGORIES
+// GOODS BARTER CATEGORIES & SUBCATEGORIES
 // ============================================================================
-const CROSS_PRODUCT_CATEGORIES: CategoryDefinition[] = [
+const GOODS_CATEGORIES: CategoryDefinition[] = [
   {
     id: "electronics",
     name: "Electronics",
@@ -308,25 +308,25 @@ const HOME_SPACES_CATEGORIES: CategoryDefinition[] = [
 // ============================================================================
 export const PRODUCT_TYPES: ProductTypeDefinition[] = [
   {
-    id: "cross-product",
-    name: "Cross-Product Exchange",
-    description: "Exchange any items across different categories",
-    icon: "Repeat",
+    id: "goods",
+    name: "General Goods Barter",
+    description: "Barter any items across different categories",
+    icon: "ShoppingBag",
     color: "text-blue-500",
-    categories: CROSS_PRODUCT_CATEGORIES,
+    categories: GOODS_CATEGORIES,
   },
   {
     id: "automobile",
-    name: "Automobile",
-    description: "Exchange vehicles within automobile categories",
+    name: "Automobile Barter",
+    description: "Barter vehicles within automobile categories",
     icon: "Car",
     color: "text-orange-500",
     categories: AUTOMOBILE_CATEGORIES,
   },
   {
     id: "home-spaces",
-    name: "Home & Spaces",
-    description: "Exchange living spaces and rentals",
+    name: "Homes & Spaces Barter",
+    description: "Barter living spaces and rentals",
     icon: "Home",
     color: "text-green-500",
     categories: HOME_SPACES_CATEGORIES,

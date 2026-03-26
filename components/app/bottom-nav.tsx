@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import {
-  Repeat,
+  ShoppingBag,
   Car,
   Home,
   Package,
@@ -40,9 +40,9 @@ export function BottomNav({
   // Primary nav items (always visible)
   const primaryItems = [
     {
-      id: "cross-product" as ProductType,
-      label: "Exchange",
-      icon: Repeat,
+      id: "goods" as ProductType,
+      label: "Goods",
+      icon: ShoppingBag,
       type: "product-type" as const,
       color: "text-blue-500",
       bgColor: "bg-blue-500/10",

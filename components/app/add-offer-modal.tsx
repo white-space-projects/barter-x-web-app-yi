@@ -125,16 +125,16 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   Cpu,
 };
 
-// Product type icons
+// Barter type icons
 const TYPE_ICONS: Record<ProductType, React.ComponentType<{ className?: string }>> = {
-  "cross-product": Repeat,
+  "goods": ShoppingBag,
   automobile: Car,
   "home-spaces": Home,
 };
 
-// Product type colors
+// Barter type colors
 const TYPE_COLORS: Record<ProductType, { bg: string; text: string; border: string }> = {
-  "cross-product": { bg: "bg-blue-500/10", text: "text-blue-500", border: "border-blue-500/30" },
+  "goods": { bg: "bg-blue-500/10", text: "text-blue-500", border: "border-blue-500/30" },
   automobile: { bg: "bg-orange-500/10", text: "text-orange-500", border: "border-orange-500/30" },
   "home-spaces": { bg: "bg-green-500/10", text: "text-green-500", border: "border-green-500/30" },
 };
@@ -373,7 +373,7 @@ export function AddOfferModal({ open, onClose, initialProductType }: Props) {
   // Get step title
   const getStepTitle = () => {
     switch (step) {
-      case "select-type": return "Select Exchange Type";
+      case "select-type": return "Select Barter Type";
       case "select-category": return "Select Category";
       case "select-product": return "Select Product";
       case "offer-details": return "Offer Details";

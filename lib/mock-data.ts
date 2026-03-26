@@ -6,10 +6,10 @@ import { getProductInfo } from "./offer-info-fields";
 // Categories match product-types.ts definitions
 // ==========================================
 export const MOCK_PRODUCTS: Product[] = [
-  // ========== CROSS-PRODUCT EXCHANGE ==========
+  // ========== GOODS BARTER ==========
   {
     productId: "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
-    productType: "cross-product",
+    productType: "goods",
     title: "iPhone 13 Pro",
     category: "Electronics",
     subcategory: "Phones",
@@ -20,7 +20,7 @@ export const MOCK_PRODUCTS: Product[] = [
   },
   {
     productId: "b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e",
-    productType: "cross-product",
+    productType: "goods",
     title: "MacBook Air M2",
     category: "Electronics",
     subcategory: "Laptops",
@@ -31,7 +31,7 @@ export const MOCK_PRODUCTS: Product[] = [
   },
   {
     productId: "c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f",
-    productType: "cross-product",
+    productType: "goods",
     title: "Samsung Galaxy S23",
     category: "Electronics",
     subcategory: "Phones",
@@ -42,7 +42,7 @@ export const MOCK_PRODUCTS: Product[] = [
   },
   {
     productId: "d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f8a",
-    productType: "cross-product",
+    productType: "goods",
     title: "IKEA KALLAX Shelf",
     category: "Home & Furniture",
     subcategory: "Storage Units",
@@ -53,7 +53,7 @@ export const MOCK_PRODUCTS: Product[] = [
   },
   {
     productId: "e5f6a7b8-c9d0-4e1f-2a3b-4c5d6e7f8a9b",
-    productType: "cross-product",
+    productType: "goods",
     title: "Nike Air Max 90",
     category: "Fashion & Accessories",
     subcategory: "Shoes",
@@ -64,7 +64,7 @@ export const MOCK_PRODUCTS: Product[] = [
   },
   {
     productId: "f6a7b8c9-d0e1-4f2a-3b4c-5d6e7f8a9b0c",
-    productType: "cross-product",
+    productType: "goods",
     title: "Sony WH-1000XM5",
     category: "Electronics",
     subcategory: "Audio (Headphones / Speakers)",
@@ -75,7 +75,7 @@ export const MOCK_PRODUCTS: Product[] = [
   },
   {
     productId: "a7b8c9d0-e1f2-4a3b-4c5d-6e7f8a9b0c1d",
-    productType: "cross-product",
+    productType: "goods",
     title: "Herman Miller Aeron Chair",
     category: "Office & Work Setup",
     subcategory: "Office Chairs",
@@ -86,7 +86,7 @@ export const MOCK_PRODUCTS: Product[] = [
   },
   {
     productId: "b8c9d0e1-f2a3-4b4c-5d6e-7f8a9b0c1d2e",
-    productType: "cross-product",
+    productType: "goods",
     title: "Canon EOS R6",
     category: "Electronics",
     subcategory: "Cameras",
@@ -97,7 +97,7 @@ export const MOCK_PRODUCTS: Product[] = [
   },
   {
     productId: "c9d0e1f2-a3b4-4c5d-6e7f-8a9b0c1d2e3f",
-    productType: "cross-product",
+    productType: "goods",
     title: "Dyson V15 Detect",
     category: "Appliances",
     subcategory: "Kitchen Appliances",
@@ -108,7 +108,7 @@ export const MOCK_PRODUCTS: Product[] = [
   },
   {
     productId: "d0e1f2a3-b4c5-4d6e-7f8a-9b0c1d2e3f4a",
-    productType: "cross-product",
+    productType: "goods",
     title: "Levi's 501 Jeans",
     category: "Fashion & Accessories",
     subcategory: "Clothing",
@@ -119,7 +119,7 @@ export const MOCK_PRODUCTS: Product[] = [
   },
   {
     productId: "e1f2a3b4-c5d6-4e7f-8a9b-0c1d2e3f4a5b",
-    productType: "cross-product",
+    productType: "goods",
     title: "PlayStation 5",
     category: "Electronics",
     subcategory: "Gaming Consoles",
@@ -130,7 +130,7 @@ export const MOCK_PRODUCTS: Product[] = [
   },
   {
     productId: "f2a3b4c5-d6e7-4f8a-9b0c-1d2e3f4a5b6c",
-    productType: "cross-product",
+    productType: "goods",
     title: "KitchenAid Stand Mixer",
     category: "Appliances",
     subcategory: "Kitchen Appliances",
@@ -141,7 +141,7 @@ export const MOCK_PRODUCTS: Product[] = [
   },
   {
     productId: "a3b4c5d6-e7f8-4a9b-0c1d-2e3f4a5b6c7d",
-    productType: "cross-product",
+    productType: "goods",
     title: "AirPods Max",
     category: "Electronics",
     subcategory: "Audio (Headphones / Speakers)",

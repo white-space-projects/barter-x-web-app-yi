@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import {
-  Repeat,
+  ShoppingBag,
   Car,
   Home,
   Package,
@@ -27,13 +27,13 @@ type NavItem = {
 };
 
 const NAV_ITEMS: NavItem[] = [
-  // Product Types
+  // Barter Types
   {
-    id: "cross-product",
-    label: "Cross-Product",
-    icon: Repeat,
+    id: "goods",
+    label: "Goods",
+    icon: ShoppingBag,
     type: "product-type",
-    productType: "cross-product",
+    productType: "goods",
     color: "text-blue-500",
   },
   {
@@ -46,7 +46,7 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     id: "home-spaces",
-    label: "Home & Spaces",
+    label: "Homes & Spaces",
     icon: Home,
     type: "product-type",
     productType: "home-spaces",
@@ -169,7 +169,7 @@ export function SidebarNav({
         <div className="px-3 py-2">
           {!collapsed && (
             <p className="px-2 mb-2 text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
-              Exchange Types
+              Barter Types
             </p>
           )}
           <nav className="flex flex-col gap-1">

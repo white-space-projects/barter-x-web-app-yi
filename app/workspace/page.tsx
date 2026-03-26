@@ -6,7 +6,7 @@
  * ============================================================================
  * 
  * This is the main authenticated workspace where users can:
- * - Browse products by type (Cross-Product, Automobile, Home & Spaces)
+ * - Browse products by barter type (Goods, Automobile, Homes & Spaces)
  * - Manage their offers (My Offers)
  * - View notifications and chat (Chat)
  * - Add new offers (Add Offer button)
@@ -47,7 +47,7 @@ export default function WorkspacePage() {
   // ---------------------------------------------------------------------------
   // LOCAL STATE
   // ---------------------------------------------------------------------------
-  const [activeProductType, setActiveProductType] = useState<ProductType>("cross-product");
+  const [activeProductType, setActiveProductType] = useState<ProductType>("goods");
   const [activeUtilityTab, setActiveUtilityTab] = useState<UtilityTab | null>(null);
   const [addOfferOpen, setAddOfferOpen] = useState(false);
   const [pickupModalOfferId, setPickupModalOfferId] = useState<string | null>(null);
@@ -193,9 +193,9 @@ export default function WorkspacePage() {
                   {activeUtilityTab === "admin" && "Admin Panel"}
                   {activeUtilityTab === "simulate" && "Simulate"}
                   {activeUtilityTab === "profile" && "Profile"}
-                  {!activeUtilityTab && activeProductType === "cross-product" && "Cross-Product Exchange"}
-                  {!activeUtilityTab && activeProductType === "automobile" && "Automobile Exchange"}
-                  {!activeUtilityTab && activeProductType === "home-spaces" && "Home & Spaces Exchange"}
+                  {!activeUtilityTab && activeProductType === "goods" && "General Goods Barter"}
+                  {!activeUtilityTab && activeProductType === "automobile" && "Automobile Barter"}
+                  {!activeUtilityTab && activeProductType === "home-spaces" && "Homes & Spaces Barter"}
                 </span>
               </div>
               
@@ -223,9 +223,9 @@ export default function WorkspacePage() {
               {activeUtilityTab === "profile" && (
                   <ProfileTab 
                     onProfileComplete={() => {
-                      // Navigate to main screen (Cross-Product Exchange tab by default)
+                      // Navigate to main screen (Goods Barter tab by default)
                       setActiveUtilityTab(null);
-                      setActiveProductType("cross-product");
+                      setActiveProductType("goods");
                     }} 
                   />
                 )}

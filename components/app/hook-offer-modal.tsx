@@ -19,7 +19,7 @@ export function HookOfferModal({ targetOfferId, onClose }: Props) {
   // Get target offer's product type
   const targetOffer = getOfferById(targetOfferId);
   const targetProduct = targetOffer ? getProductById(targetOffer.productId) : null;
-  const targetProductType = targetProduct?.productType || "cross-product";
+  const targetProductType = targetProduct?.productType || "goods";
   
   // Filter my offers to only those with matching product type
   const myOffers = useMemo(() => {

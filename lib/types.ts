@@ -4,9 +4,9 @@
  * ============================================================================
  */
 
-// Product Types - determines which offers can hook with each other
-// Offers can ONLY hook within the same product type
-export type ProductType = "cross-product" | "automobile" | "home-spaces";
+// Barter Types - determines which offers can hook with each other
+// Offers can ONLY hook within the same barter type
+export type ProductType = "goods" | "automobile" | "home-spaces";
 
 export type User = {
   userId: string;
@@ -155,9 +155,9 @@ export type GlobalFilters = {
 // Combined filters for products-tab
 export type ProductFilters = GlobalFilters & ExchangeTypeFilters;
 
-// Filters stored per exchange type
+// Filters stored per barter type
 export type AllExchangeTypeFilters = {
-  "cross-product": ExchangeTypeFilters;
+  "goods": ExchangeTypeFilters;
   "automobile": ExchangeTypeFilters;
   "home-spaces": ExchangeTypeFilters;
 };
