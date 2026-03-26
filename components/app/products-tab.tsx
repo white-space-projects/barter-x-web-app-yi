@@ -110,15 +110,16 @@ export function ProductsTab({ productType = "cross-product" }: Props) {
   const [showCityDropdown, setShowCityDropdown] = useState(false);
   const cityDropdownRef = useRef<HTMLDivElement>(null);
 
+  // Get user's location from profile for the "My Location" filter
+  // For new users: use auto-detected location from login (auth.user.city/country)
+  // For existing users with profile: use profileAddress (manually saved)
+  const userCity = auth.user?.profileAddress?.city || auth.user?.city;
+  const userCountry = auth.user?.profileAddress?.country || auth.user?.country;
+
   // Get cities for user's country
   const availableCities = useMemo(() => {
-    if (!userCountry) {
-      console.log("[v0] No userCountry available");
-      return [];
-    }
-    const cities = getCitiesForCountry(userCountry);
-    console.log("[v0] userCountry:", userCountry, "availableCities:", cities.length);
-    return cities;
+    if (!userCountry) return [];
+    return getCitiesForCountry(userCountry);
   }, [userCountry]);
 
   // Close city dropdown when clicking outside
@@ -167,15 +168,6 @@ export function ProductsTab({ productType = "cross-product" }: Props) {
   ].filter(Boolean).length;
 
   const myOffers = useMemo(() => getMyOffers(), [getMyOffers]);
-
-  // Get user's location from profile for the "My Location" filter
-  // Note: profileAddress is the manually saved address from profile page
-  // auth.user.city/country is the auto-detected location from login - we DON'T use those here
-  const userCity = auth.user?.profileAddress?.city;
-  const userCountry = auth.user?.profileAddress?.country;
-  
-  console.log("[v0] Profile address:", auth.user?.profileAddress);
-  console.log("[v0] userCity:", userCity, "userCountry:", userCountry);
 
   // Get products that have offers from selected cities in user's country
   const productsWithLocalOffers = useMemo(() => {
