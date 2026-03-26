@@ -210,7 +210,7 @@ export function ChatTab({ onOpenPickupModal }: ChatTabProps = {}) {
   const unreadMessages = getTotalUnreadMessages();
 
   return (
-    <div className="flex flex-col h-[calc(100vh-220px)] min-h-[400px]">
+    <div className="flex flex-col h-full w-full">
       {/* Header tabs */}
       <div className="flex items-center gap-2 border-b border-border pb-3 mb-4">
         <button

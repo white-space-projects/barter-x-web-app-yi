@@ -326,7 +326,7 @@ export function ProfileTab({ onProfileComplete }: ProfileTabProps) {
   ];
 
   return (
-    <div className="mx-auto max-w-2xl">
+    <div className="mx-auto max-w-2xl w-full">
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-xl font-semibold text-foreground">

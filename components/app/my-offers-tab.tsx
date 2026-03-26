@@ -112,7 +112,7 @@ export function MyOffersTab() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-4 lg:px-6">
+    <div className="w-full">
       {/* Sub-tabs: Open Offers / Closed Offers */}
       <div className="mb-4 flex gap-2">
         <button
