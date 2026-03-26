@@ -212,15 +212,16 @@ export default function WorkspacePage() {
             </div>
           </div>
 
-          {/* Scrollable Tab content */}
-          <div className="flex-1 overflow-y-auto pb-20 lg:pb-0">
-            <div className="px-4 py-6 lg:px-6">
-              {/* Utility tabs */}
-              {activeUtilityTab === "my-offers" && <MyOffersTab />}
-              {activeUtilityTab === "chat" && <ChatTab onOpenPickupModal={setPickupModalOfferId} />}
-              {activeUtilityTab === "admin" && isAdmin && <AdminPanel />}
-              {activeUtilityTab === "simulate" && isAdmin && <SimulateTab />}
-              {activeUtilityTab === "profile" && (
+          {/* Tab content - full height, scroll handled inside each tab or TabContentWrapper */}
+          <div className="flex-1 flex flex-col overflow-hidden pb-20 lg:pb-0">
+            {/* Utility tabs - with padding and scroll */}
+            {activeUtilityTab && (
+              <div className="flex-1 overflow-y-auto px-4 py-6 lg:px-6">
+                {activeUtilityTab === "my-offers" && <MyOffersTab />}
+                {activeUtilityTab === "chat" && <ChatTab onOpenPickupModal={setPickupModalOfferId} />}
+                {activeUtilityTab === "admin" && isAdmin && <AdminPanel />}
+                {activeUtilityTab === "simulate" && isAdmin && <SimulateTab />}
+                {activeUtilityTab === "profile" && (
                   <ProfileTab 
                     onProfileComplete={() => {
                       // Navigate to main screen (Goods Barter tab by default)
@@ -229,10 +230,15 @@ export default function WorkspacePage() {
                     }} 
                   />
                 )}
+              </div>
+            )}
               
-              {/* Product type tabs - show ProductsTab with filter */}
-              {!activeUtilityTab && <ProductsTab productType={activeProductType} />}
-            </div>
+            {/* Product type tabs - ProductsTab handles its own layout via TabContentWrapper */}
+            {!activeUtilityTab && (
+              <div className="flex-1 flex flex-col overflow-hidden px-4 py-6 lg:px-6">
+                <ProductsTab productType={activeProductType} />
+              </div>
+            )}
           </div>
         </main>
       </div>

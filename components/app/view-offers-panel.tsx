@@ -1,7 +1,18 @@
 "use client";
 
+/**
+ * ============================================================================
+ * VIEW OFFERS PANEL
+ * ============================================================================
+ * 
+ * Displays all offers within a product. This is now a content component
+ * that renders inline within the TabContentWrapper, not as a fixed overlay.
+ * 
+ * Shows different actions based on ownership (owner vs other users).
+ */
+
 import { useState, useMemo } from "react";
-import { X, AlertCircle, Package, MoreHorizontal, Eye, ArrowRightLeft, Pencil, Plus } from "lucide-react";
+import { AlertCircle, Package, MoreHorizontal, Eye, ArrowRightLeft, Pencil, Plus, X } from "lucide-react";
 import { useBarterStore } from "@/lib/store";
 import type { Product, HookStatus } from "@/lib/types";
 import { HookOfferModal } from "./hook-offer-modal";
@@ -33,12 +44,12 @@ const HOOK_STATUS_LABELS: Record<HookStatus, string> = {
 
 type Props = {
   product: Product;
-  onClose: () => void;
+  onAddOffer?: () => void;
 };
 
-// VIEW OFFERS PANEL - Displays all offers within a product
+// VIEW OFFERS PANEL - Displays all offers within a product (inline content, not overlay)
 // Shows different actions based on ownership (owner vs other users)
-export function ViewOffersPanel({ product, onClose }: Props) {
+export function ViewOffersPanel({ product, onAddOffer }: Props) {
   const { getOffersByProduct, auth, products, hooks, getOfferById, getProductById, addNotification, getHooksByFromOffer, getMyOffers } = useBarterStore();
   const offers = getOffersByProduct(product.productId);
   
@@ -105,32 +116,8 @@ export function ViewOffersPanel({ product, onClose }: Props) {
 
   return (
     <>
-      {/* On mobile: fixed full-screen overlay. On desktop: inline panel that fills content area */}
-      {/* Mobile backdrop */}
-      <div className="fixed inset-0 z-40 bg-background/60 backdrop-blur-sm lg:hidden" onClick={onClose} />
-
-      {/* Panel - fixed on mobile, absolute positioned within content on desktop */}
-      <div className="fixed inset-0 z-50 bg-card overflow-y-auto lg:absolute lg:inset-0 lg:z-30">
-        <div className="sticky top-0 flex items-center justify-between border-b border-border bg-card/90 backdrop-blur-sm p-4">
-          <div className="flex-1 min-w-0">
-            <h2 className="text-sm font-semibold text-foreground truncate">Offers for {product.title}</h2>
-            <p className="text-xs text-muted-foreground truncate">{product.subcategory} / {product.brand}</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button 
-              onClick={() => setShowInlineAdd(true)} 
-              className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              Add Offer
-            </button>
-            <button onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:text-foreground transition-colors" aria-label="Close panel">
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-
-        <div className="p-4">
+      {/* Content panel - renders inline within TabContentWrapper */}
+      <div className="w-full">
           {/* Inline Add Offer Form - shows when Add Offer is clicked */}
           {showInlineAdd && (
             <div className="mb-4 rounded-xl border border-primary/30 bg-primary/5 p-4">
@@ -288,7 +275,6 @@ export function ViewOffersPanel({ product, onClose }: Props) {
               })}
             </div>
           ) : null}
-        </div>
       </div>
 
       {hookTargetOfferId && <HookOfferModal targetOfferId={hookTargetOfferId} onClose={() => setHookTargetOfferId(null)} />}

@@ -26,6 +26,8 @@ import {
 } from "lucide-react";
 import { ViewOffersPanel } from "./view-offers-panel";
 import { InlineAddOffer } from "./inline-add-offer";
+import { TabContentWrapper } from "./tab-content-wrapper";
+import { Plus } from "lucide-react";
 import type { Product, ProductType } from "@/lib/types";
 import { useProducts } from "@/hooks/use-products";
 import { getProductTypeCategories, getSubcategories as getTypeSubcategories, getCategoryByName, type CategoryDefinition, type SubcategoryDefinition } from "@/lib/product-types";
@@ -299,9 +301,32 @@ export function ProductsTab({ productType = "goods" }: Props) {
     }
   }
 
+  // Header actions for ViewOffersPanel
+  const detailHeaderActions = selectedProduct ? (
+    <button 
+      onClick={() => setInlineAddProduct(selectedProduct)} 
+      className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+    >
+      <Plus className="h-3.5 w-3.5" />
+      Add Offer
+    </button>
+  ) : null;
+
   return (
-    <div className="relative">
-      {/* Search + Filter Toggle Row */}
+    <TabContentWrapper
+      detailPanel={selectedProduct ? (
+        <ViewOffersPanel 
+          product={selectedProduct} 
+          onAddOffer={() => setInlineAddProduct(selectedProduct)}
+        />
+      ) : null}
+      onCloseDetail={() => setSelectedProduct(null)}
+      detailTitle={selectedProduct ? `Offers for ${selectedProduct.title}` : undefined}
+      detailSubtitle={selectedProduct ? `${selectedProduct.subcategory} / ${selectedProduct.brand}` : undefined}
+      detailHeaderActions={detailHeaderActions}
+    >
+      <div className="relative">
+        {/* Search + Filter Toggle Row */}
       <div className="mb-4 flex gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -739,20 +764,13 @@ export function ProductsTab({ productType = "goods" }: Props) {
         </>
       )}
 
-      {selectedProduct && (
-        <ViewOffersPanel
-          product={selectedProduct}
-          onClose={() => setSelectedProduct(null)}
-          onAddOffer={() => setInlineAddProduct(selectedProduct)}
-        />
-      )}
-
       {inlineAddProduct && (
         <InlineAddOffer
           product={inlineAddProduct}
           onClose={() => setInlineAddProduct(null)}
         />
       )}
-    </div>
+      </div>
+    </TabContentWrapper>
   );
 }
