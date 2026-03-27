@@ -5,6 +5,7 @@ import "./globals.css";
 import { Toaster } from "sonner";
 import { BarterProvider } from "@/lib/store";
 import { GoogleOAuthProvider } from "@react-oauth/google";
+import { ToastDismissWrapper } from "@/components/ui/toast-dismiss-wrapper";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const jetbrainsMono = JetBrains_Mono({
@@ -37,16 +38,20 @@ export default function RootLayout({
         
         <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!}>
           <BarterProvider>
-            {children}
+            <ToastDismissWrapper>
+              {children}
+            </ToastDismissWrapper>
             <Toaster
               theme="dark"
-              position="bottom-right"
+              position="top-center"
+              closeButton
               toastOptions={{
                 style: {
                   background: "hsl(0 0% 9%)",
                   border: "1px solid hsl(0 0% 14%)",
                   color: "hsl(0 0% 96%)",
                 },
+                className: "cursor-pointer",
               }}
             />
           </BarterProvider>
