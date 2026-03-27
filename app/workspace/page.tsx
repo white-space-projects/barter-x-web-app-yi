@@ -213,31 +213,15 @@ export default function WorkspacePage() {
             </div>
           </div>
 
-          {/* Tab content - full height, all tabs use TabContentWrapper for consistent scroll behavior */}
-          <div className="flex-1 flex flex-col overflow-hidden pb-20 lg:pb-0 px-4 py-6 lg:px-6">
-            {/* Utility tabs */}
-            {activeUtilityTab === "my-offers" && (
-              <TabContentWrapper>
-                <MyOffersTab />
-              </TabContentWrapper>
-            )}
-            {activeUtilityTab === "chat" && (
-              <TabContentWrapper>
-                <ChatTab onOpenPickupModal={setPickupModalOfferId} />
-              </TabContentWrapper>
-            )}
-            {activeUtilityTab === "admin" && isAdmin && (
-              <TabContentWrapper>
-                <AdminPanel />
-              </TabContentWrapper>
-            )}
-            {activeUtilityTab === "simulate" && isAdmin && (
-              <TabContentWrapper>
-                <SimulateTab />
-              </TabContentWrapper>
-            )}
-            {activeUtilityTab === "profile" && (
-              <TabContentWrapper>
+          {/* Tab content - scrollable area for all tab content */}
+          <div className="flex-1 overflow-y-auto pb-20 lg:pb-0">
+            <div className="px-4 py-6 lg:px-6">
+              {/* Utility tabs */}
+              {activeUtilityTab === "my-offers" && <MyOffersTab />}
+              {activeUtilityTab === "chat" && <ChatTab onOpenPickupModal={setPickupModalOfferId} />}
+              {activeUtilityTab === "admin" && isAdmin && <AdminPanel />}
+              {activeUtilityTab === "simulate" && isAdmin && <SimulateTab />}
+              {activeUtilityTab === "profile" && (
                 <ProfileTab 
                   onProfileComplete={() => {
                     // Navigate to main screen (Goods Barter tab by default)
@@ -245,11 +229,11 @@ export default function WorkspacePage() {
                     setActiveProductType("goods");
                   }} 
                 />
-              </TabContentWrapper>
-            )}
+              )}
               
-            {/* Product type tabs - ProductsTab has its own TabContentWrapper internally */}
-            {!activeUtilityTab && <ProductsTab productType={activeProductType} />}
+              {/* Product type tabs */}
+              {!activeUtilityTab && <ProductsTab productType={activeProductType} />}
+            </div>
           </div>
         </main>
       </div>

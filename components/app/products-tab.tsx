@@ -26,8 +26,7 @@ import {
 } from "lucide-react";
 import { ViewOffersPanel } from "./view-offers-panel";
 import { InlineAddOffer } from "./inline-add-offer";
-import { TabContentWrapper } from "./tab-content-wrapper";
-import { Plus } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import type { Product, ProductType } from "@/lib/types";
 import { useProducts } from "@/hooks/use-products";
 import { getProductTypeCategories, getSubcategories as getTypeSubcategories, getCategoryByName, type CategoryDefinition, type SubcategoryDefinition } from "@/lib/product-types";
@@ -301,31 +300,56 @@ export function ProductsTab({ productType = "goods" }: Props) {
     }
   }
 
-  // Header actions for ViewOffersPanel
-  const detailHeaderActions = selectedProduct ? (
-    <button 
-      onClick={() => setInlineAddProduct(selectedProduct)} 
-      className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-    >
-      <Plus className="h-3.5 w-3.5" />
-      Add Offer
-    </button>
-  ) : null;
-
-  return (
-    <TabContentWrapper
-      detailPanel={selectedProduct ? (
+  // If a product is selected, show ViewOffersPanel instead of product list
+  if (selectedProduct) {
+    return (
+      <div className="w-full">
+        {/* Header with back button */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <button
+              onClick={() => setSelectedProduct(null)}
+              className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+              aria-label="Go back"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </button>
+            <div className="min-w-0">
+              <h2 className="text-sm font-semibold text-foreground truncate">
+                Offers for {selectedProduct.title}
+              </h2>
+              <p className="text-xs text-muted-foreground truncate">
+                {selectedProduct.subcategory} / {selectedProduct.brand}
+              </p>
+            </div>
+          </div>
+          <button 
+            onClick={() => setInlineAddProduct(selectedProduct)} 
+            className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Add Offer
+          </button>
+        </div>
+        
+        {/* ViewOffersPanel content */}
         <ViewOffersPanel 
           product={selectedProduct} 
           onAddOffer={() => setInlineAddProduct(selectedProduct)}
         />
-      ) : null}
-      onCloseDetail={() => setSelectedProduct(null)}
-      detailTitle={selectedProduct ? `Offers for ${selectedProduct.title}` : undefined}
-      detailSubtitle={selectedProduct ? `${selectedProduct.subcategory} / ${selectedProduct.brand}` : undefined}
-      detailHeaderActions={detailHeaderActions}
-    >
-      <div className="relative">
+        
+        {inlineAddProduct && (
+          <InlineAddOffer
+            product={inlineAddProduct}
+            onClose={() => setInlineAddProduct(null)}
+          />
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative">
         {/* Search + Filter Toggle Row */}
       <div className="mb-4 flex gap-2">
         <div className="relative flex-1">
@@ -770,7 +794,6 @@ export function ProductsTab({ productType = "goods" }: Props) {
           onClose={() => setInlineAddProduct(null)}
         />
       )}
-      </div>
-    </TabContentWrapper>
+    </div>
   );
 }
