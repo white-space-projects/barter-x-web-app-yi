@@ -287,10 +287,16 @@ CREATE TABLE application.products (
   
   -- Timestamps
   created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
-  updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
-  
-  -- Uniqueness: prevent duplicate products (same category + subcategory + brand + model)
-  UNIQUE NULLS NOT DISTINCT (category_id, subcategory_id, LOWER(brand), LOWER(model))
+  updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+
+-- Unique index to prevent duplicate products (same category + subcategory + brand + model)
+-- Using COALESCE to handle NULLs in brand/model
+CREATE UNIQUE INDEX idx_products_unique_combo ON application.products(
+  category_id, 
+  subcategory_id, 
+  COALESCE(LOWER(brand), ''), 
+  COALESCE(LOWER(model), '')
 );
 
 CREATE INDEX idx_products_barter_type ON application.products(barter_type_id);
