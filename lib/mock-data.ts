@@ -1,5 +1,19 @@
-import type { Product, Offer, Hook, DashboardStats, ProductInfoField } from "./types";
+import type { Product, Offer, Hook, DashboardStats, ProductInfoField, LockLevel, NotificationState } from "./types";
 import { getProductInfo } from "./offer-info-fields";
+
+// Helper to create default workflow fields for offers
+const defaultOfferWorkflow = {
+  readyState: false,
+  lockLevel: 0 as LockLevel,
+  notificationState: 0 as NotificationState,
+  isActive: true,
+};
+
+// Helper to create default workflow fields for hooks
+const defaultHookWorkflow = {
+  lockLevel: 0 as LockLevel,
+  isActive: true,
+};
 
 // ==========================================
 // Mock Products — realistic used goods
@@ -258,6 +272,7 @@ export const MOCK_OFFERS: Offer[] = [
       { fieldId: "visible_damages", fieldName: "Visible Damages", fieldType: "multi_select", value: ["Scratches"] },
       { fieldId: "functional_issues", fieldName: "Functional Issues", fieldType: "multi_select", value: ["None"] },
     ],
+    ...defaultOfferWorkflow,
   },
   {
     offerId: "1a2b3c4d-e5f6-4a7b-8c9d-000000000002",
@@ -268,6 +283,7 @@ export const MOCK_OFFERS: Offer[] = [
     hookedCount: 1,
     outgoingHookCount: 0,
     readyForCommit: false,
+    ...defaultOfferWorkflow,
   },
   {
     offerId: "1a2b3c4d-e5f6-4a7b-8c9d-000000000003",
@@ -278,6 +294,7 @@ export const MOCK_OFFERS: Offer[] = [
     hookedCount: 0,
     outgoingHookCount: 2,
     readyForCommit: false,
+    ...defaultOfferWorkflow,
   },
   // MacBook Air M2 offers
   {
@@ -289,6 +306,7 @@ export const MOCK_OFFERS: Offer[] = [
     hookedCount: 3,
     outgoingHookCount: 1,
     readyForCommit: false,
+    ...defaultOfferWorkflow,
   },
   {
     offerId: "2b3c4d5e-f6a7-4b8c-9d0e-000000000002",
@@ -299,6 +317,7 @@ export const MOCK_OFFERS: Offer[] = [
     hookedCount: 1,
     outgoingHookCount: 0,
     readyForCommit: false,
+    ...defaultOfferWorkflow,
   },
   // Samsung Galaxy S23
   {
@@ -310,6 +329,7 @@ export const MOCK_OFFERS: Offer[] = [
     hookedCount: 0,
     outgoingHookCount: 1,
     readyForCommit: false,
+    ...defaultOfferWorkflow,
   },
   // IKEA KALLAX offers
   {
@@ -321,6 +341,7 @@ export const MOCK_OFFERS: Offer[] = [
     hookedCount: 1,
     outgoingHookCount: 2, // Hooked to iPhone 13 Pro and MacBook Air M2
     readyForCommit: false,
+    ...defaultOfferWorkflow,
   },
   {
     offerId: "4d5e6f7a-b8c9-4d0e-1f2a-000000000002",
@@ -331,6 +352,7 @@ export const MOCK_OFFERS: Offer[] = [
     hookedCount: 0,
     outgoingHookCount: 0,
     readyForCommit: false,
+    ...defaultOfferWorkflow,
   },
   // Nike Air Max 90
   {
@@ -350,6 +372,8 @@ export const MOCK_OFFERS: Offer[] = [
       zip: "1012 AB",
       addressLine1: "Damrak 1",
     },
+    ...defaultOfferWorkflow,
+    lockLevel: 1 as LockLevel, // Reserved - demo for pickup readiness flow
   },
   // Sony WH-1000XM5
   {
@@ -361,6 +385,7 @@ export const MOCK_OFFERS: Offer[] = [
     hookedCount: 2,
     outgoingHookCount: 0,
     readyForCommit: false,
+    ...defaultOfferWorkflow,
   },
   {
     offerId: "6f7a8b9c-d0e1-4f2a-3b4c-000000000002",
@@ -371,6 +396,7 @@ export const MOCK_OFFERS: Offer[] = [
     hookedCount: 0,
     outgoingHookCount: 1,
     readyForCommit: false,
+    ...defaultOfferWorkflow,
   },
   // Canon EOS R6
   {
@@ -382,6 +408,7 @@ export const MOCK_OFFERS: Offer[] = [
     hookedCount: 0,
     outgoingHookCount: 0,
     readyForCommit: false,
+    ...defaultOfferWorkflow,
   },
   // Levi's 501
   {
@@ -393,6 +420,9 @@ export const MOCK_OFFERS: Offer[] = [
     hookedCount: 0,
     outgoingHookCount: 0,
     readyForCommit: true,
+    ...defaultOfferWorkflow,
+    lockLevel: 2 as LockLevel, // Processing - demo for committed state
+    readyState: true,
   },
   // PlayStation 5
   {
@@ -404,6 +434,7 @@ export const MOCK_OFFERS: Offer[] = [
     hookedCount: 3,
     outgoingHookCount: 2,
     readyForCommit: false,
+    ...defaultOfferWorkflow,
   },
   {
     offerId: "9c0d1e2f-a3b4-4c5d-6e7f-000000000002",
@@ -420,6 +451,9 @@ export const MOCK_OFFERS: Offer[] = [
       zip: "10178",
       addressLine1: "Alexanderplatz 1",
     },
+    ...defaultOfferWorkflow,
+    lockLevel: 3 as LockLevel, // Exchanged - demo for closed offers
+    readyState: true,
   },
   // AirPods Max
   {
@@ -431,6 +465,7 @@ export const MOCK_OFFERS: Offer[] = [
     hookedCount: 1,
     outgoingHookCount: 0,
     readyForCommit: false,
+    ...defaultOfferWorkflow,
   },
 ];
 
@@ -445,7 +480,9 @@ export const MOCK_HOOKS: Hook[] = [
     correlationId: "corr-demo-001",
     fromOfferId: "5e6f7a8b-c9d0-4e1f-2a3b-000000000001", // Nike Air Max 90
     toOfferId: "1a2b3c4d-e5f6-4a7b-8c9d-000000000001",   // iPhone 15 Pro Max
-    status: "searching",
+    status: "reserved",
+    ...defaultHookWorkflow,
+    lockLevel: 1 as LockLevel, // Reserved
   },
   // Nike Air Max offer is also hooked to MacBook Pro offer
   {
@@ -454,6 +491,7 @@ export const MOCK_HOOKS: Hook[] = [
     fromOfferId: "5e6f7a8b-c9d0-4e1f-2a3b-000000000001", // Nike Air Max 90
     toOfferId: "2b3c4d5e-f6a7-4b8c-9d0e-000000000001",   // MacBook Pro M3
     status: "searching",
+    ...defaultHookWorkflow,
   },
   // PS5 offer is hooked to Samsung TV offer
   {
@@ -461,7 +499,10 @@ export const MOCK_HOOKS: Hook[] = [
     correlationId: "corr-demo-002",
     fromOfferId: "9c0d1e2f-a3b4-4c5d-6e7f-000000000002", // PS5 Digital Edition
     toOfferId: "4d5e6f7a-8b9c-4d0e-1f2a-000000000001",   // Samsung Neo QLED
-    status: "searching",
+    status: "exchanged",
+    exchangedDate: "2024-03-15",
+    ...defaultHookWorkflow,
+    lockLevel: 3 as LockLevel, // Done
   },
   // MacBook Air M2 offer is hooked to Canon EOS R6 offer
   {
@@ -470,6 +511,7 @@ export const MOCK_HOOKS: Hook[] = [
     fromOfferId: "2b3c4d5e-f6a7-4b8c-9d0e-000000000001", // MacBook Air M2
     toOfferId: "7a8b9c0d-e1f2-4a3b-4c5d-000000000001",   // Canon EOS R6
     status: "searching",
+    ...defaultHookWorkflow,
   },
   // KALLAX offer is hooked to iPhone 13 Pro offer (owner wants iPhone)
   {
@@ -478,6 +520,7 @@ export const MOCK_HOOKS: Hook[] = [
     fromOfferId: "4d5e6f7a-b8c9-4d0e-1f2a-000000000001", // KALLAX 4x4 White
     toOfferId: "1a2b3c4d-e5f6-4a7b-8c9d-000000000001",   // iPhone 13 Pro 256GB
     status: "searching",
+    ...defaultHookWorkflow,
   },
   // KALLAX offer is also hooked to MacBook Air M2 offer (owner also wants MacBook)
   {
@@ -486,6 +529,7 @@ export const MOCK_HOOKS: Hook[] = [
     fromOfferId: "4d5e6f7a-b8c9-4d0e-1f2a-000000000001", // KALLAX 4x4 White
     toOfferId: "2b3c4d5e-f6a7-4b8c-9d0e-000000000001",   // MacBook Air M2
     status: "searching",
+    ...defaultHookWorkflow,
   },
   // iPhone 13 Pro 256GB (offer 1) is hooked to Sony WH-1000XM5
   {
@@ -494,6 +538,7 @@ export const MOCK_HOOKS: Hook[] = [
     fromOfferId: "1a2b3c4d-e5f6-4a7b-8c9d-000000000001", // iPhone 13 Pro 256GB
     toOfferId: "6f7a8b9c-d0e1-4f2a-3b4c-000000000001",   // Sony WH-1000XM5
     status: "searching",
+    ...defaultHookWorkflow,
   },
   // iPhone 13 Pro 512GB (offer 3) is hooked to PS5 Disc and Canon EOS R6
   {
@@ -502,6 +547,7 @@ export const MOCK_HOOKS: Hook[] = [
     fromOfferId: "1a2b3c4d-e5f6-4a7b-8c9d-000000000003", // iPhone 13 Pro 512GB
     toOfferId: "9c0d1e2f-a3b4-4c5d-6e7f-000000000001",   // PS5 Disc Edition
     status: "searching",
+    ...defaultHookWorkflow,
   },
   {
     hookId: "hook-demo-009",
@@ -509,6 +555,7 @@ export const MOCK_HOOKS: Hook[] = [
     fromOfferId: "1a2b3c4d-e5f6-4a7b-8c9d-000000000003", // iPhone 13 Pro 512GB
     toOfferId: "7a8b9c0d-e1f2-4a3b-4c5d-000000000001",   // Canon EOS R6
     status: "searching",
+    ...defaultHookWorkflow,
   },
   // Samsung Galaxy S23 is hooked to AirPods Max
   {
@@ -517,6 +564,7 @@ export const MOCK_HOOKS: Hook[] = [
     fromOfferId: "3c4d5e6f-a7b8-4c9d-0e1f-000000000001", // Samsung Galaxy S23
     toOfferId: "0d1e2f3a-b4c5-4d6e-7f8a-000000000001",   // AirPods Max
     status: "searching",
+    ...defaultHookWorkflow,
   },
   // Sony WH-1000XM5 Silver is hooked to Levi's 501 Jeans
   {
@@ -524,7 +572,9 @@ export const MOCK_HOOKS: Hook[] = [
     correlationId: "corr-demo-008",
     fromOfferId: "6f7a8b9c-d0e1-4f2a-3b4c-000000000002", // Sony WH-1000XM5 Silver
     toOfferId: "8b9c0d1e-f2a3-4b4c-5d6e-000000000001",   // Levi's 501
-    status: "searching",
+    status: "processing",
+    ...defaultHookWorkflow,
+    lockLevel: 2 as LockLevel, // Processing
   },
   // PS5 Disc Edition is hooked to MacBook Air M2 and iPhone 13 Pro
   {
@@ -533,6 +583,7 @@ export const MOCK_HOOKS: Hook[] = [
     fromOfferId: "9c0d1e2f-a3b4-4c5d-6e7f-000000000001", // PS5 Disc Edition
     toOfferId: "2b3c4d5e-f6a7-4b8c-9d0e-000000000001",   // MacBook Air M2
     status: "searching",
+    ...defaultHookWorkflow,
   },
   {
     hookId: "hook-demo-013",
@@ -540,6 +591,7 @@ export const MOCK_HOOKS: Hook[] = [
     fromOfferId: "9c0d1e2f-a3b4-4c5d-6e7f-000000000001", // PS5 Disc Edition
     toOfferId: "1a2b3c4d-e5f6-4a7b-8c9d-000000000001",   // iPhone 13 Pro 256GB
     status: "searching",
+    ...defaultHookWorkflow,
   },
 ];
 

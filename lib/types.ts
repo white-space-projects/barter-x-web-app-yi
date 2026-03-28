@@ -104,11 +104,68 @@ export type Offer = {
   images?: OfferImage[];
   // Offer info fields (user-provided, varies by subcategory)
   offerInfo?: OfferInfoFieldValue[];
+  
+  // === WORKFLOW FIELDS ===
+  // Readiness confirmation
+  readyState: boolean;           // User confirmed pickup readiness
+  readyUpdatedAt?: string;       // ISO timestamp
+  
+  // Lock level for workflow control
+  lockLevel: LockLevel;          // 0=AVAILABLE, 1=RESERVED, 2=PROCESSING, 3=EXCHANGED
+  lockUpdatedAt?: string;        // ISO timestamp
+  
+  // Notification progression state
+  notificationState: NotificationState;  // 0=none, 1=first, 2=reserved, 3=final
+  notificationUpdatedAt?: string;        // ISO timestamp
+  
+  // Active/inactive (soft delete)
+  isActive: boolean;             // Offer visible in marketplace
+  isActiveUpdatedAt?: string;    // ISO timestamp
 };
 
 export type PickupAddress = OfferPickupAddress;
 
 export type HookStatus = "searching" | "cycle_found" | "reserved" | "processing" | "exchanged" | "expired";
+
+// Lock Level for workflow control
+// 0 = AVAILABLE, 1 = RESERVED, 2 = PROCESSING, 3 = EXCHANGED/DONE
+export type LockLevel = 0 | 1 | 2 | 3;
+
+// Notification State for tracking notification progression
+// 0 = none, 1 = first notification, 2 = reserved notification, 3 = final notification
+export type NotificationState = 0 | 1 | 2 | 3;
+
+// Lock level display labels
+export const LOCK_LEVEL_LABELS: Record<LockLevel, string> = {
+  0: "Available",
+  1: "Reserved",
+  2: "Processing",
+  3: "Exchanged",
+};
+
+// Lock level colors for UI badges
+export const LOCK_LEVEL_COLORS: Record<LockLevel, string> = {
+  0: "text-green-500",
+  1: "text-yellow-500",
+  2: "text-blue-500",
+  3: "text-muted-foreground",
+};
+
+// Lock level background colors for badges
+export const LOCK_LEVEL_BG_COLORS: Record<LockLevel, string> = {
+  0: "bg-green-500/10",
+  1: "bg-yellow-500/10",
+  2: "bg-blue-500/10",
+  3: "bg-muted/50",
+};
+
+// Lock level helper text shown on badge tap
+export const LOCK_LEVEL_HELPER_TEXT: Record<LockLevel, string> = {
+  0: "This offer is active. You can hook, unhook, or delete it anytime.",
+  1: "This offer is temporarily reserved in a potential trade. Deleting or unhooking is disabled until it's released.",
+  2: "This offer is being finalized for a trade. Changes are paused while we complete the process.",
+  3: "This offer has been completed in a trade and is now closed.",
+};
 
 export type Hook = {
   hookId: string;
@@ -119,6 +176,15 @@ export type Hook = {
   reservedCycleId?: string;
   targetUserDistance?: number;
   exchangedDate?: string;
+  
+  // === WORKFLOW FIELDS ===
+  // Lock level for workflow control
+  lockLevel: LockLevel;          // 0=normal, 1=RESERVED, 2=PROCESSING, 3=DONE
+  lockUpdatedAt?: string;        // ISO timestamp
+  
+  // Active/inactive (soft delete)
+  isActive: boolean;             // Hook is active
+  isActiveUpdatedAt?: string;    // ISO timestamp
 };
 
 export type DashboardStats = {

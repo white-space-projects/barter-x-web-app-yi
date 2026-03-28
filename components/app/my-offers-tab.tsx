@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Package, ChevronDown, ChevronUp, MapPin, MessageSquare, Pencil, MoreHorizontal, X, Link2Off } from "lucide-react";
+import { Package, ChevronDown, ChevronUp, MapPin, MessageSquare, Pencil, MoreHorizontal, X, Link2Off, Info, Trash2 } from "lucide-react";
 import { useBarterStore } from "@/lib/store";
-import type { HookStatus } from "@/lib/types";
+import type { HookStatus, LockLevel } from "@/lib/types";
+import { LOCK_LEVEL_LABELS, LOCK_LEVEL_COLORS, LOCK_LEVEL_BG_COLORS, LOCK_LEVEL_HELPER_TEXT } from "@/lib/types";
 import { PickupReadinessModal } from "./pickup-readiness-modal";
 import { EditOfferModal } from "./edit-offer-modal";
 import { toast } from "sonner";
@@ -50,56 +51,93 @@ export function MyOffersTab() {
   const [expandedOffer, setExpandedOffer] = useState<string | null>(null);
   const [pickupOffer, setPickupOffer] = useState<string | null>(null);
   const [editOffer, setEditOffer] = useState<string | null>(null);
+  const [showStatusHelp, setShowStatusHelp] = useState<string | null>(null);
 
   // Helper: Get product for an offer
   function getProductForOffer(offer: { productId: string }) {
     return products.find((p) => p.productId === offer.productId);
   }
 
-  // Helper: Check if offer has any hook with "exchanged" status
-  function hasExchangedHook(offerId: string): boolean {
-    const hooks = getHooksByFromOffer(offerId);
-    return hooks.some((h) => h.status === "exchanged");
+  // Helper: Check if an offer can be modified (not locked)
+  function canModifyOffer(offer: { lockLevel: LockLevel; isActive: boolean }): boolean {
+    return offer.lockLevel === 0 && offer.isActive;
   }
 
-  // Helper: Check if offer has any hook with "reserved" status
-  function hasReservedHook(offerId: string): boolean {
-    const hooks = getHooksByFromOffer(offerId);
-    return hooks.some((h) => h.status === "reserved");
+  // Helper: Check if an offer can be hooked to
+  function canHookOffer(offer: { lockLevel: LockLevel; isActive: boolean }): boolean {
+    return offer.lockLevel <= 1 && offer.isActive;
   }
 
-  // Helper: Check if offer has any hook with "processing" status
-  function hasProcessingHook(offerId: string): boolean {
-    const hooks = getHooksByFromOffer(offerId);
-    return hooks.some((h) => h.status === "processing");
+  // Helper: Check if a hook can be removed
+  function canRemoveHook(hook: { lockLevel: LockLevel; isActive: boolean }): boolean {
+    return hook.lockLevel === 0 && hook.isActive;
   }
 
-  // Helper: Get highest priority status for display
-  function getOfferDisplayStatus(offerId: string): HookStatus | null {
-    const hooks = getHooksByFromOffer(offerId);
-    if (hooks.some((h) => h.status === "processing")) return "processing";
-    if (hooks.some((h) => h.status === "reserved")) return "reserved";
-    return null;
+  // Helper: Check if readiness can be confirmed (lockLevel == 1)
+  function canConfirmReadiness(offer: { lockLevel: LockLevel; isActive: boolean; readyState: boolean }): boolean {
+    return offer.lockLevel === 1 && offer.isActive && !offer.readyState;
+  }
+
+  // Helper: Check if readiness can be toggled off (only at lockLevel 1)
+  function canToggleReadinessOff(offer: { lockLevel: LockLevel; readyState: boolean }): boolean {
+    return offer.lockLevel === 1 && offer.readyState;
   }
 
   // Helper: Get exchanged hook for closed offers
   function getExchangedHook(offerId: string) {
     const hooks = getHooksByFromOffer(offerId);
-    return hooks.find((h) => h.status === "exchanged");
+    return hooks.find((h) => h.status === "exchanged" || h.lockLevel === 3);
   }
 
-  // Split offers: "open" = no exchanged hooks, "closed" = has an exchanged hook
+  // Split offers using lockLevel:
+  // Open Offers: isActive=true AND lockLevel is 0, 1, or 2
+  // Closed Offers: lockLevel === 3 (EXCHANGED)
   const { openOffers, closedOffers } = useMemo(() => ({
-    openOffers: myOffers.filter((o) => !hasExchangedHook(o.offerId)),
-    closedOffers: myOffers.filter((o) => hasExchangedHook(o.offerId)),
+    openOffers: myOffers.filter((o) => o.isActive && o.lockLevel < 3),
+    closedOffers: myOffers.filter((o) => o.lockLevel === 3),
   }), [myOffers]);
 
   const displayedOffers = activeSubTab === "open" ? openOffers : closedOffers;
 
-  // Handle unhook action
-  function handleUnhook(hookId: string) {
+  // Handle unhook action - check lock level first
+  function handleUnhook(hookId: string, hook: { lockLevel: LockLevel; isActive: boolean }) {
+    if (!canRemoveHook(hook)) {
+      toast.error("Cannot remove this hook - it is locked in a trade process");
+      return;
+    }
     removeHook(hookId);
     toast.success("Hook removed successfully");
+  }
+
+  // Handle deactivate/delete offer - soft delete using isActive
+  function handleDeactivateOffer(offerId: string, offer: { lockLevel: LockLevel; isActive: boolean }) {
+    if (!canModifyOffer(offer)) {
+      toast.error("Cannot delete this offer - it is locked in a trade process");
+      return;
+    }
+    updateOffer(offerId, { 
+      isActive: false, 
+      isActiveUpdatedAt: new Date().toISOString() 
+    });
+    toast.success("Offer deactivated");
+  }
+
+  // Handle confirm pickup readiness
+  function handleConfirmReadiness(offerId: string) {
+    updateOffer(offerId, {
+      readyState: true,
+      readyUpdatedAt: new Date().toISOString(),
+    });
+    toast.success("Pickup readiness confirmed");
+  }
+
+  // Handle toggle readiness off (only when lockLevel == 1)
+  function handleUnconfirmReadiness(offerId: string) {
+    updateOffer(offerId, {
+      readyState: false,
+      readyUpdatedAt: new Date().toISOString(),
+    });
+    toast.info("Pickup readiness removed");
   }
 
   // Handle open chat action
@@ -153,11 +191,16 @@ export function MyOffersTab() {
             const product = getProductForOffer(offer);
             const hooks = getHooksByFromOffer(offer.offerId);
             const isExpanded = expandedOffer === offer.offerId;
-            const displayStatus = activeSubTab === "open" ? getOfferDisplayStatus(offer.offerId) : null;
             const exchangedHook = activeSubTab === "closed" ? getExchangedHook(offer.offerId) : null;
             const exchangedTargetOffer = exchangedHook ? getOfferById(exchangedHook.toOfferId) : null;
-            const showConfirmPickup = activeSubTab === "open" && hasReservedHook(offer.offerId) && !offer.readyForCommit;
-            const showPickupDate = activeSubTab === "open" && (hasProcessingHook(offer.offerId) || offer.readyForCommit) && offer.pickupReadyDate;
+            
+            // Workflow-based UI logic
+            const showConfirmPickup = canConfirmReadiness(offer);
+            const showReadyLabel = offer.readyState && offer.lockLevel >= 1;
+            const canUnconfirmReady = canToggleReadinessOff(offer);
+            const showPickupDate = offer.readyState && offer.pickupReadyDate;
+            const canDelete = canModifyOffer(offer);
+            const isStatusHelpVisible = showStatusHelp === offer.offerId;
 
             return (
               <div
@@ -229,21 +272,34 @@ export function MyOffersTab() {
                         </button>
                       </div>
 
-                      {/* Status badge (only if reserved or processing/committed) */}
-                      {displayStatus && (
-                        <p className={`text-xs font-medium ${HOOK_STATUS_COLORS[displayStatus]}`}>
-                          {HOOK_STATUS_LABELS[displayStatus]}
-                        </p>
+                      {/* Status badge based on lockLevel - clickable for helper text */}
+                      {activeSubTab === "open" && (
+                        <button
+                          onClick={() => setShowStatusHelp(isStatusHelpVisible ? null : offer.offerId)}
+                          className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${LOCK_LEVEL_BG_COLORS[offer.lockLevel]} ${LOCK_LEVEL_COLORS[offer.lockLevel]}`}
+                        >
+                          {LOCK_LEVEL_LABELS[offer.lockLevel]}
+                          <Info className="h-3 w-3" />
+                        </button>
                       )}
                       {activeSubTab === "closed" && (
-                        <p className="text-xs font-medium text-muted-foreground">
-                          Exchanged
-                        </p>
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${LOCK_LEVEL_BG_COLORS[3]} ${LOCK_LEVEL_COLORS[3]}`}>
+                          {LOCK_LEVEL_LABELS[3]}
+                        </span>
                       )}
                     </div>
                   </div>
 
-                  {/* Confirm Pickup button - positioned same as "Hook this offer" */}
+                  {/* Status helper text tooltip */}
+                  {isStatusHelpVisible && (
+                    <div className="mt-2 p-2 rounded-lg bg-secondary/50 border border-border/50">
+                      <p className="text-xs text-muted-foreground">
+                        {LOCK_LEVEL_HELPER_TEXT[offer.lockLevel]}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Confirm Pickup / Ready for Pickup section */}
                   {showConfirmPickup && (
                     <div className="mt-3 pt-3 border-t border-border/50 flex justify-end">
                       <button
@@ -251,6 +307,34 @@ export function MyOffersTab() {
                         className="px-3 py-1.5 text-xs font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
                       >
                         Confirm Pickup Readiness
+                      </button>
+                    </div>
+                  )}
+                  
+                  {/* Show Ready for Pickup label when confirmed */}
+                  {showReadyLabel && !showConfirmPickup && (
+                    <div className="mt-3 pt-3 border-t border-border/50 flex justify-between items-center">
+                      <span className="text-xs text-green-500 font-medium">Ready for Pick-up</span>
+                      {canUnconfirmReady && (
+                        <button
+                          onClick={() => handleUnconfirmReadiness(offer.offerId)}
+                          className="text-xs text-muted-foreground hover:text-foreground underline"
+                        >
+                          Cancel readiness
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Delete button - only when available (lockLevel 0) */}
+                  {canDelete && activeSubTab === "open" && (
+                    <div className="mt-2 flex justify-end">
+                      <button
+                        onClick={() => handleDeactivateOffer(offer.offerId, offer)}
+                        className="flex items-center gap-1 text-xs text-destructive hover:underline"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                        Delete Offer
                       </button>
                     </div>
                   )}
@@ -325,15 +409,20 @@ export function MyOffersTab() {
                                     {HOOK_STATUS_LABELS[hook.status]}
                                   </p>
 
-                                  {/* Actions based on status */}
-                                  {hook.status === "searching" && (
+                                  {/* Actions based on lock level */}
+                                  {canRemoveHook(hook) && (
                                     <button
-                                      onClick={() => handleUnhook(hook.hookId)}
+                                      onClick={() => handleUnhook(hook.hookId, hook)}
                                       className="flex items-center gap-1 text-xs text-destructive hover:underline"
                                     >
                                       <Link2Off className="h-3 w-3" />
                                       Unhook
                                     </button>
+                                  )}
+                                  {!canRemoveHook(hook) && hook.lockLevel > 0 && (
+                                    <span className="text-xs text-muted-foreground italic">
+                                      Locked
+                                    </span>
                                   )}
                                   {(hook.status === "reserved" || hook.status === "processing") && (
                                     <button
