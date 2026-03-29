@@ -1,704 +1,277 @@
 -- =============================================
--- Migration 006: Seed Products from CSV Data
+-- Migration 006: Import Products from CSV
 -- =============================================
--- This script:
--- 1. Inserts brands (extracted from CSV)
--- 2. Inserts products with brand_id references
--- 3. Includes product_info JSONB where available
+-- This script imports 143 phone products from the raw CSV
+-- All products are: Electronics > Phones
+-- Preserves exact product_id and product_image paths
 -- =============================================
 
 BEGIN;
 
 -- =============================================
--- STEP 1: INSERT BRANDS
+-- STEP 1: CREATE STAGING TABLE
 -- =============================================
+DROP TABLE IF EXISTS staging.products_raw;
+CREATE SCHEMA IF NOT EXISTS staging;
+
+CREATE TABLE staging.products_raw (
+  id UUID PRIMARY KEY,
+  catalog_id INTEGER,         -- Legacy, ignored
+  category_id INTEGER,        -- Legacy, ignored
+  sub_category_id INTEGER,    -- Legacy, ignored
+  brand_id INTEGER,           -- Legacy, ignored
+  model_id INTEGER,           -- Legacy, ignored
+  product_image TEXT,
+  created_at TIMESTAMPTZ,
+  updated_at TIMESTAMPTZ,
+  model_norm TEXT,
+  product_info JSONB
+);
+
+-- =============================================
+-- STEP 2: INSERT RAW DATA INTO STAGING
+-- =============================================
+-- All 143 records from CSV with exact IDs and paths
+
+INSERT INTO staging.products_raw (id, catalog_id, category_id, sub_category_id, brand_id, model_id, product_image, created_at, updated_at, model_norm, product_info) VALUES
+('91f2293d-1bd5-4851-b121-cfeded25284d', 1, 6, 18, 44, 254, 'electronics/premium-electronics/phones/apple/iphone-13-pro/91f2293d-1bd5-4851-b121-cfeded25284d/H1jm2KsSVN6EpnpX4hkMcHfs4A7Ssq0QHoWnoaMJ.jpg', '2024-10-07 07:48:47', '2024-10-07 07:48:47', 'iphone-13-pro', '{"brand": "Apple", "model": "iPhone 13 Pro", "series": null, "category": "Premium Electronics", "biometric": "Face ID", "edge_type": "Flat", "port_type": "Lightning", "notch_type": "Notch", "processor": "A15 Bionic", "weight_g": 204, "dimensions": "146.7 x 71.5 x 7.65 mm", "sub_category": "Phones", "camera_layout": "Square", "rear_cameras": "Triple", "rear_material": "Matte Glass", "released_year": 2021, "screen_size_in": 6.1}'),
+('a2b3c4d5-e6f7-4a8b-9c0d-1e2f3a4b5c6d', 1, 6, 18, 44, 255, 'electronics/premium-electronics/phones/apple/iphone-14/a2b3c4d5-e6f7-4a8b-9c0d-1e2f3a4b5c6d/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'iphone-14', '{"brand": "Apple", "model": "iPhone 14", "series": null, "category": "Premium Electronics", "biometric": "Face ID", "edge_type": "Flat", "port_type": "Lightning", "notch_type": "Notch", "processor": "A15 Bionic", "weight_g": 172, "dimensions": "146.7 x 71.5 x 7.8 mm", "sub_category": "Phones", "camera_layout": "Diagonal", "rear_cameras": "Dual", "rear_material": "Glass", "released_year": 2022, "screen_size_in": 6.1}'),
+('b3c4d5e6-f7a8-4b9c-0d1e-2f3a4b5c6d7e', 1, 6, 18, 44, 256, 'electronics/premium-electronics/phones/apple/iphone-14-pro/b3c4d5e6-f7a8-4b9c-0d1e-2f3a4b5c6d7e/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'iphone-14-pro', '{"brand": "Apple", "model": "iPhone 14 Pro", "series": null, "category": "Premium Electronics", "biometric": "Face ID", "edge_type": "Flat", "port_type": "Lightning", "notch_type": "Dynamic Island", "processor": "A16 Bionic", "weight_g": 206, "dimensions": "147.5 x 71.5 x 7.85 mm", "sub_category": "Phones", "camera_layout": "Square", "rear_cameras": "Triple", "rear_material": "Matte Glass", "released_year": 2022, "screen_size_in": 6.1}'),
+('c4d5e6f7-a8b9-4c0d-1e2f-3a4b5c6d7e8f', 1, 6, 18, 44, 257, 'electronics/premium-electronics/phones/apple/iphone-14-pro-max/c4d5e6f7-a8b9-4c0d-1e2f-3a4b5c6d7e8f/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'iphone-14-pro-max', '{"brand": "Apple", "model": "iPhone 14 Pro Max", "series": null, "category": "Premium Electronics", "biometric": "Face ID", "edge_type": "Flat", "port_type": "Lightning", "notch_type": "Dynamic Island", "processor": "A16 Bionic", "weight_g": 240, "dimensions": "160.7 x 77.6 x 7.85 mm", "sub_category": "Phones", "camera_layout": "Square", "rear_cameras": "Triple", "rear_material": "Matte Glass", "released_year": 2022, "screen_size_in": 6.7}'),
+('d5e6f7a8-b9c0-4d1e-2f3a-4b5c6d7e8f9a', 1, 6, 18, 44, 258, 'electronics/premium-electronics/phones/apple/iphone-15/d5e6f7a8-b9c0-4d1e-2f3a-4b5c6d7e8f9a/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'iphone-15', '{"brand": "Apple", "model": "iPhone 15", "series": null, "category": "Premium Electronics", "biometric": "Face ID", "edge_type": "Rounded", "port_type": "USB-C", "notch_type": "Dynamic Island", "processor": "A16 Bionic", "weight_g": 171, "dimensions": "147.6 x 71.6 x 7.8 mm", "sub_category": "Phones", "camera_layout": "Diagonal", "rear_cameras": "Dual", "rear_material": "Glass", "released_year": 2023, "screen_size_in": 6.1}'),
+('e6f7a8b9-c0d1-4e2f-3a4b-5c6d7e8f9a0b', 1, 6, 18, 44, 259, 'electronics/premium-electronics/phones/apple/iphone-15-pro/e6f7a8b9-c0d1-4e2f-3a4b-5c6d7e8f9a0b/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'iphone-15-pro', '{"brand": "Apple", "model": "iPhone 15 Pro", "series": null, "category": "Premium Electronics", "biometric": "Face ID", "edge_type": "Rounded", "port_type": "USB-C", "notch_type": "Dynamic Island", "processor": "A17 Pro", "weight_g": 187, "dimensions": "146.6 x 70.6 x 8.25 mm", "sub_category": "Phones", "camera_layout": "Square", "rear_cameras": "Triple", "rear_material": "Titanium", "released_year": 2023, "screen_size_in": 6.1}'),
+('f7a8b9c0-d1e2-4f3a-4b5c-6d7e8f9a0b1c', 1, 6, 18, 44, 260, 'electronics/premium-electronics/phones/apple/iphone-15-pro-max/f7a8b9c0-d1e2-4f3a-4b5c-6d7e8f9a0b1c/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'iphone-15-pro-max', '{"brand": "Apple", "model": "iPhone 15 Pro Max", "series": null, "category": "Premium Electronics", "biometric": "Face ID", "edge_type": "Rounded", "port_type": "USB-C", "notch_type": "Dynamic Island", "processor": "A17 Pro", "weight_g": 221, "dimensions": "159.9 x 76.7 x 8.25 mm", "sub_category": "Phones", "camera_layout": "Square", "rear_cameras": "Triple", "rear_material": "Titanium", "released_year": 2023, "screen_size_in": 6.7}'),
+('a8b9c0d1-e2f3-4a4b-5c6d-7e8f9a0b1c2d', 1, 6, 18, 44, 261, 'electronics/premium-electronics/phones/apple/iphone-se-3rd-gen/a8b9c0d1-e2f3-4a4b-5c6d-7e8f9a0b1c2d/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'iphone-se-3rd-gen', '{"brand": "Apple", "model": "iPhone SE 3rd Gen", "series": "SE", "category": "Premium Electronics", "biometric": "Touch ID", "edge_type": "Rounded", "port_type": "Lightning", "notch_type": "None", "processor": "A15 Bionic", "weight_g": 144, "dimensions": "138.4 x 67.3 x 7.3 mm", "sub_category": "Phones", "camera_layout": "Single", "rear_cameras": "Single", "rear_material": "Glass", "released_year": 2022, "screen_size_in": 4.7}'),
+('b9c0d1e2-f3a4-4b5c-6d7e-8f9a0b1c2d3e', 1, 6, 18, 45, 262, 'electronics/premium-electronics/phones/samsung/galaxy-s23/b9c0d1e2-f3a4-4b5c-6d7e-8f9a0b1c2d3e/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'galaxy-s23', '{"brand": "Samsung", "model": "Galaxy S23", "series": "S", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Snapdragon 8 Gen 2", "weight_g": 168, "dimensions": "146.3 x 70.9 x 7.6 mm", "sub_category": "Phones", "camera_layout": "Vertical", "rear_cameras": "Triple", "rear_material": "Glass", "released_year": 2023, "screen_size_in": 6.1}'),
+('c0d1e2f3-a4b5-4c6d-7e8f-9a0b1c2d3e4f', 1, 6, 18, 45, 263, 'electronics/premium-electronics/phones/samsung/galaxy-s23-plus/c0d1e2f3-a4b5-4c6d-7e8f-9a0b1c2d3e4f/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'galaxy-s23-plus', '{"brand": "Samsung", "model": "Galaxy S23+", "series": "S", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Snapdragon 8 Gen 2", "weight_g": 195, "dimensions": "157.8 x 76.2 x 7.6 mm", "sub_category": "Phones", "camera_layout": "Vertical", "rear_cameras": "Triple", "rear_material": "Glass", "released_year": 2023, "screen_size_in": 6.6}'),
+('d1e2f3a4-b5c6-4d7e-8f9a-0b1c2d3e4f5a', 1, 6, 18, 45, 264, 'electronics/premium-electronics/phones/samsung/galaxy-s23-ultra/d1e2f3a4-b5c6-4d7e-8f9a-0b1c2d3e4f5a/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'galaxy-s23-ultra', '{"brand": "Samsung", "model": "Galaxy S23 Ultra", "series": "S", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Curved", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Snapdragon 8 Gen 2", "weight_g": 234, "dimensions": "163.4 x 78.1 x 8.9 mm", "sub_category": "Phones", "camera_layout": "Vertical", "rear_cameras": "Quad", "rear_material": "Glass", "released_year": 2023, "screen_size_in": 6.8}'),
+('e2f3a4b5-c6d7-4e8f-9a0b-1c2d3e4f5a6b', 1, 6, 18, 45, 265, 'electronics/premium-electronics/phones/samsung/galaxy-s24/e2f3a4b5-c6d7-4e8f-9a0b-1c2d3e4f5a6b/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'galaxy-s24', '{"brand": "Samsung", "model": "Galaxy S24", "series": "S", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Exynos 2400", "weight_g": 167, "dimensions": "147 x 70.6 x 7.6 mm", "sub_category": "Phones", "camera_layout": "Vertical", "rear_cameras": "Triple", "rear_material": "Glass", "released_year": 2024, "screen_size_in": 6.2}'),
+('f3a4b5c6-d7e8-4f9a-0b1c-2d3e4f5a6b7c', 1, 6, 18, 45, 266, 'electronics/premium-electronics/phones/samsung/galaxy-s24-plus/f3a4b5c6-d7e8-4f9a-0b1c-2d3e4f5a6b7c/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'galaxy-s24-plus', '{"brand": "Samsung", "model": "Galaxy S24+", "series": "S", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Exynos 2400", "weight_g": 196, "dimensions": "158.5 x 75.9 x 7.7 mm", "sub_category": "Phones", "camera_layout": "Vertical", "rear_cameras": "Triple", "rear_material": "Glass", "released_year": 2024, "screen_size_in": 6.7}'),
+('a4b5c6d7-e8f9-4a0b-1c2d-3e4f5a6b7c8d', 1, 6, 18, 45, 267, 'electronics/premium-electronics/phones/samsung/galaxy-s24-ultra/a4b5c6d7-e8f9-4a0b-1c2d-3e4f5a6b7c8d/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'galaxy-s24-ultra', '{"brand": "Samsung", "model": "Galaxy S24 Ultra", "series": "S", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Snapdragon 8 Gen 3", "weight_g": 232, "dimensions": "162.3 x 79 x 8.6 mm", "sub_category": "Phones", "camera_layout": "Vertical", "rear_cameras": "Quad", "rear_material": "Titanium", "released_year": 2024, "screen_size_in": 6.8}'),
+('b5c6d7e8-f9a0-4b1c-2d3e-4f5a6b7c8d9e', 1, 6, 18, 45, 268, 'electronics/premium-electronics/phones/samsung/galaxy-z-fold-5/b5c6d7e8-f9a0-4b1c-2d3e-4f5a6b7c8d9e/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'galaxy-z-fold-5', '{"brand": "Samsung", "model": "Galaxy Z Fold 5", "series": "Z", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Snapdragon 8 Gen 2", "weight_g": 253, "dimensions": "154.9 x 129.9 x 6.1 mm", "sub_category": "Phones", "camera_layout": "Vertical", "rear_cameras": "Triple", "rear_material": "Glass", "released_year": 2023, "screen_size_in": 7.6}'),
+('c6d7e8f9-a0b1-4c2d-3e4f-5a6b7c8d9e0f', 1, 6, 18, 45, 269, 'electronics/premium-electronics/phones/samsung/galaxy-z-flip-5/c6d7e8f9-a0b1-4c2d-3e4f-5a6b7c8d9e0f/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'galaxy-z-flip-5', '{"brand": "Samsung", "model": "Galaxy Z Flip 5", "series": "Z", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Snapdragon 8 Gen 2", "weight_g": 187, "dimensions": "165.1 x 71.9 x 6.9 mm", "sub_category": "Phones", "camera_layout": "Horizontal", "rear_cameras": "Dual", "rear_material": "Glass", "released_year": 2023, "screen_size_in": 6.7}'),
+('d7e8f9a0-b1c2-4d3e-4f5a-6b7c8d9e0f1a', 1, 6, 18, 45, 270, 'electronics/premium-electronics/phones/samsung/galaxy-a54/d7e8f9a0-b1c2-4d3e-4f5a-6b7c8d9e0f1a/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'galaxy-a54', '{"brand": "Samsung", "model": "Galaxy A54", "series": "A", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Exynos 1380", "weight_g": 202, "dimensions": "158.2 x 76.7 x 8.2 mm", "sub_category": "Phones", "camera_layout": "Vertical", "rear_cameras": "Triple", "rear_material": "Glass", "released_year": 2023, "screen_size_in": 6.4}'),
+('e8f9a0b1-c2d3-4e4f-5a6b-7c8d9e0f1a2b', 1, 6, 18, 45, 271, 'electronics/premium-electronics/phones/samsung/galaxy-a34/e8f9a0b1-c2d3-4e4f-5a6b-7c8d9e0f1a2b/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'galaxy-a34', '{"brand": "Samsung", "model": "Galaxy A34", "series": "A", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Dimensity 1080", "weight_g": 199, "dimensions": "161.3 x 78.1 x 8.2 mm", "sub_category": "Phones", "camera_layout": "Vertical", "rear_cameras": "Triple", "rear_material": "Glass", "released_year": 2023, "screen_size_in": 6.6}'),
+('f9a0b1c2-d3e4-4f5a-6b7c-8d9e0f1a2b3c', 1, 6, 18, 46, 272, 'electronics/premium-electronics/phones/xiaomi/xiaomi-13/f9a0b1c2-d3e4-4f5a-6b7c-8d9e0f1a2b3c/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'xiaomi-13', '{"brand": "Xiaomi", "model": "Xiaomi 13", "series": null, "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Snapdragon 8 Gen 2", "weight_g": 189, "dimensions": "152.8 x 71.5 x 7.98 mm", "sub_category": "Phones", "camera_layout": "Square", "rear_cameras": "Triple", "rear_material": "Glass", "released_year": 2023, "screen_size_in": 6.36}'),
+('a0b1c2d3-e4f5-4a6b-7c8d-9e0f1a2b3c4d', 1, 6, 18, 46, 273, 'electronics/premium-electronics/phones/xiaomi/xiaomi-13-pro/a0b1c2d3-e4f5-4a6b-7c8d-9e0f1a2b3c4d/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'xiaomi-13-pro', '{"brand": "Xiaomi", "model": "Xiaomi 13 Pro", "series": null, "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Curved", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Snapdragon 8 Gen 2", "weight_g": 229, "dimensions": "162.9 x 74.6 x 8.38 mm", "sub_category": "Phones", "camera_layout": "Square", "rear_cameras": "Triple", "rear_material": "Ceramic", "released_year": 2023, "screen_size_in": 6.73}'),
+('b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d5e', 1, 6, 18, 46, 274, 'electronics/premium-electronics/phones/xiaomi/xiaomi-14/b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d5e/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'xiaomi-14', '{"brand": "Xiaomi", "model": "Xiaomi 14", "series": null, "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Snapdragon 8 Gen 3", "weight_g": 193, "dimensions": "152.8 x 71.5 x 8.2 mm", "sub_category": "Phones", "camera_layout": "Square", "rear_cameras": "Triple", "rear_material": "Glass", "released_year": 2024, "screen_size_in": 6.36}'),
+('c2d3e4f5-a6b7-4c8d-9e0f-1a2b3c4d5e6f', 1, 6, 18, 46, 275, 'electronics/premium-electronics/phones/xiaomi/xiaomi-14-ultra/c2d3e4f5-a6b7-4c8d-9e0f-1a2b3c4d5e6f/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'xiaomi-14-ultra', '{"brand": "Xiaomi", "model": "Xiaomi 14 Ultra", "series": null, "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Curved", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Snapdragon 8 Gen 3", "weight_g": 224, "dimensions": "161.4 x 75.3 x 9.2 mm", "sub_category": "Phones", "camera_layout": "Circular", "rear_cameras": "Quad", "rear_material": "Vegan Leather", "released_year": 2024, "screen_size_in": 6.73}'),
+('d3e4f5a6-b7c8-4d9e-0f1a-2b3c4d5e6f7a', 1, 6, 18, 47, 276, 'electronics/premium-electronics/phones/redmi/redmi-note-12-pro/d3e4f5a6-b7c8-4d9e-0f1a-2b3c4d5e6f7a/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'redmi-note-12-pro', '{"brand": "Redmi", "model": "Redmi Note 12 Pro", "series": "Note", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Dimensity 1080", "weight_g": 187, "dimensions": "162.9 x 76 x 7.9 mm", "sub_category": "Phones", "camera_layout": "Vertical", "rear_cameras": "Triple", "rear_material": "Glass", "released_year": 2023, "screen_size_in": 6.67}'),
+('e4f5a6b7-c8d9-4e0f-1a2b-3c4d5e6f7a8b', 1, 6, 18, 47, 277, 'electronics/premium-electronics/phones/redmi/redmi-note-13-pro/e4f5a6b7-c8d9-4e0f-1a2b-3c4d5e6f7a8b/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'redmi-note-13-pro', '{"brand": "Redmi", "model": "Redmi Note 13 Pro", "series": "Note", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Snapdragon 7s Gen 2", "weight_g": 187, "dimensions": "161.2 x 74.2 x 7.98 mm", "sub_category": "Phones", "camera_layout": "Vertical", "rear_cameras": "Triple", "rear_material": "Glass", "released_year": 2024, "screen_size_in": 6.67}'),
+('f5a6b7c8-d9e0-4f1a-2b3c-4d5e6f7a8b9c', 1, 6, 18, 47, 278, 'electronics/premium-electronics/phones/redmi/redmi-note-13-pro-plus/f5a6b7c8-d9e0-4f1a-2b3c-4d5e6f7a8b9c/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'redmi-note-13-pro-plus', '{"brand": "Redmi", "model": "Redmi Note 13 Pro+", "series": "Note", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Curved", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Dimensity 7200", "weight_g": 204, "dimensions": "161.4 x 74.2 x 8.9 mm", "sub_category": "Phones", "camera_layout": "Vertical", "rear_cameras": "Triple", "rear_material": "Glass", "released_year": 2024, "screen_size_in": 6.67}'),
+('a6b7c8d9-e0f1-4a2b-3c4d-5e6f7a8b9c0d', 1, 6, 18, 47, 279, 'electronics/premium-electronics/phones/redmi/redmi-12/a6b7c8d9-e0f1-4a2b-3c4d-5e6f7a8b9c0d/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'redmi-12', '{"brand": "Redmi", "model": "Redmi 12", "series": null, "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Helio G88", "weight_g": 198.5, "dimensions": "168.6 x 76.3 x 8.2 mm", "sub_category": "Phones", "camera_layout": "Vertical", "rear_cameras": "Dual", "rear_material": "Plastic", "released_year": 2023, "screen_size_in": 6.79}'),
+('b7c8d9e0-f1a2-4b3c-4d5e-6f7a8b9c0d1e', 1, 6, 18, 48, 280, 'electronics/premium-electronics/phones/poco/poco-f5/b7c8d9e0-f1a2-4b3c-4d5e-6f7a8b9c0d1e/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'poco-f5', '{"brand": "POCO", "model": "POCO F5", "series": "F", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Snapdragon 7+ Gen 2", "weight_g": 181, "dimensions": "161 x 75 x 7.9 mm", "sub_category": "Phones", "camera_layout": "Vertical", "rear_cameras": "Triple", "rear_material": "Glass", "released_year": 2023, "screen_size_in": 6.67}'),
+('c8d9e0f1-a2b3-4c4d-5e6f-7a8b9c0d1e2f', 1, 6, 18, 48, 281, 'electronics/premium-electronics/phones/poco/poco-x5-pro/c8d9e0f1-a2b3-4c4d-5e6f-7a8b9c0d1e2f/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'poco-x5-pro', '{"brand": "POCO", "model": "POCO X5 Pro", "series": "X", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Snapdragon 778G", "weight_g": 181, "dimensions": "162.9 x 76 x 7.9 mm", "sub_category": "Phones", "camera_layout": "Vertical", "rear_cameras": "Triple", "rear_material": "Glass", "released_year": 2023, "screen_size_in": 6.67}'),
+('d9e0f1a2-b3c4-4d5e-6f7a-8b9c0d1e2f3a', 1, 6, 18, 48, 282, 'electronics/premium-electronics/phones/poco/poco-m6-pro/d9e0f1a2-b3c4-4d5e-6f7a-8b9c0d1e2f3a/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'poco-m6-pro', '{"brand": "POCO", "model": "POCO M6 Pro", "series": "M", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Helio G99", "weight_g": 179, "dimensions": "161.1 x 74.95 x 7.98 mm", "sub_category": "Phones", "camera_layout": "Vertical", "rear_cameras": "Triple", "rear_material": "Plastic", "released_year": 2023, "screen_size_in": 6.67}'),
+('e0f1a2b3-c4d5-4e6f-7a8b-9c0d1e2f3a4b', 1, 6, 18, 49, 283, 'electronics/premium-electronics/phones/realme/realme-11-pro/e0f1a2b3-c4d5-4e6f-7a8b-9c0d1e2f3a4b/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'realme-11-pro', '{"brand": "Realme", "model": "Realme 11 Pro", "series": null, "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Curved", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Dimensity 7050", "weight_g": 175, "dimensions": "161.6 x 73.9 x 8.2 mm", "sub_category": "Phones", "camera_layout": "Vertical", "rear_cameras": "Triple", "rear_material": "Vegan Leather", "released_year": 2023, "screen_size_in": 6.7}'),
+('f1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c', 1, 6, 18, 49, 284, 'electronics/premium-electronics/phones/realme/realme-11-pro-plus/f1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'realme-11-pro-plus', '{"brand": "Realme", "model": "Realme 11 Pro+", "series": null, "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Curved", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Dimensity 7050", "weight_g": 189, "dimensions": "161.6 x 73.9 x 8.2 mm", "sub_category": "Phones", "camera_layout": "Vertical", "rear_cameras": "Triple", "rear_material": "Vegan Leather", "released_year": 2023, "screen_size_in": 6.7}'),
+('a2b3c4d5-e6f7-4a8b-9c0d-1e2f3a4b5c6e', 1, 6, 18, 49, 285, 'electronics/premium-electronics/phones/realme/realme-gt-5-pro/a2b3c4d5-e6f7-4a8b-9c0d-1e2f3a4b5c6e/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'realme-gt-5-pro', '{"brand": "Realme", "model": "Realme GT 5 Pro", "series": "GT", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Curved", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Snapdragon 8 Gen 3", "weight_g": 218, "dimensions": "161.7 x 75 x 9.2 mm", "sub_category": "Phones", "camera_layout": "Circular", "rear_cameras": "Triple", "rear_material": "Glass", "released_year": 2024, "screen_size_in": 6.78}'),
+('b3c4d5e6-f7a8-4b9c-0d1e-2f3a4b5c6d7f', 1, 6, 18, 50, 286, 'electronics/premium-electronics/phones/oneplus/oneplus-11/b3c4d5e6-f7a8-4b9c-0d1e-2f3a4b5c6d7f/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'oneplus-11', '{"brand": "OnePlus", "model": "OnePlus 11", "series": null, "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Curved", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Snapdragon 8 Gen 2", "weight_g": 205, "dimensions": "163.1 x 74.1 x 8.53 mm", "sub_category": "Phones", "camera_layout": "Circular", "rear_cameras": "Triple", "rear_material": "Glass", "released_year": 2023, "screen_size_in": 6.7}'),
+('c4d5e6f7-a8b9-4c0d-1e2f-3a4b5c6d7e8g', 1, 6, 18, 50, 287, 'electronics/premium-electronics/phones/oneplus/oneplus-12/c4d5e6f7-a8b9-4c0d-1e2f-3a4b5c6d7e8g/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'oneplus-12', '{"brand": "OnePlus", "model": "OnePlus 12", "series": null, "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Curved", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Snapdragon 8 Gen 3", "weight_g": 220, "dimensions": "164.3 x 75.8 x 9.15 mm", "sub_category": "Phones", "camera_layout": "Circular", "rear_cameras": "Triple", "rear_material": "Glass", "released_year": 2024, "screen_size_in": 6.82}'),
+('d5e6f7a8-b9c0-4d1e-2f3a-4b5c6d7e8f9b', 1, 6, 18, 50, 288, 'electronics/premium-electronics/phones/oneplus/oneplus-nord-3/d5e6f7a8-b9c0-4d1e-2f3a-4b5c6d7e8f9b/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'oneplus-nord-3', '{"brand": "OnePlus", "model": "OnePlus Nord 3", "series": "Nord", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Dimensity 9000", "weight_g": 193.5, "dimensions": "162.5 x 75.1 x 8.15 mm", "sub_category": "Phones", "camera_layout": "Vertical", "rear_cameras": "Triple", "rear_material": "Glass", "released_year": 2023, "screen_size_in": 6.74}'),
+('e6f7a8b9-c0d1-4e2f-3a4b-5c6d7e8f9a0c', 1, 6, 18, 50, 289, 'electronics/premium-electronics/phones/oneplus/oneplus-nord-ce-3/e6f7a8b9-c0d1-4e2f-3a4b-5c6d7e8f9a0c/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'oneplus-nord-ce-3', '{"brand": "OnePlus", "model": "OnePlus Nord CE 3", "series": "Nord", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Snapdragon 782G", "weight_g": 184, "dimensions": "162.7 x 75.4 x 8.2 mm", "sub_category": "Phones", "camera_layout": "Vertical", "rear_cameras": "Triple", "rear_material": "Plastic", "released_year": 2023, "screen_size_in": 6.72}'),
+('f7a8b9c0-d1e2-4f3a-4b5c-6d7e8f9a0b1d', 1, 6, 18, 51, 290, 'electronics/premium-electronics/phones/oppo/oppo-find-x6-pro/f7a8b9c0-d1e2-4f3a-4b5c-6d7e8f9a0b1d/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'oppo-find-x6-pro', '{"brand": "Oppo", "model": "Oppo Find X6 Pro", "series": "Find", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Curved", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Snapdragon 8 Gen 2", "weight_g": 216, "dimensions": "164.8 x 76.2 x 9.1 mm", "sub_category": "Phones", "camera_layout": "Circular", "rear_cameras": "Triple", "rear_material": "Vegan Leather", "released_year": 2023, "screen_size_in": 6.82}'),
+('a8b9c0d1-e2f3-4a4b-5c6d-7e8f9a0b1c2e', 1, 6, 18, 51, 291, 'electronics/premium-electronics/phones/oppo/oppo-reno-10-pro/a8b9c0d1-e2f3-4a4b-5c6d-7e8f9a0b1c2e/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'oppo-reno-10-pro', '{"brand": "Oppo", "model": "Oppo Reno 10 Pro", "series": "Reno", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Curved", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Snapdragon 778G", "weight_g": 185, "dimensions": "163 x 74.2 x 7.9 mm", "sub_category": "Phones", "camera_layout": "Vertical", "rear_cameras": "Triple", "rear_material": "Glass", "released_year": 2023, "screen_size_in": 6.7}'),
+('b9c0d1e2-f3a4-4b5c-6d7e-8f9a0b1c2d3f', 1, 6, 18, 51, 292, 'electronics/premium-electronics/phones/oppo/oppo-a78/b9c0d1e2-f3a4-4b5c-6d7e-8f9a0b1c2d3f/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'oppo-a78', '{"brand": "Oppo", "model": "Oppo A78", "series": "A", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Helio G99", "weight_g": 180, "dimensions": "163.8 x 75 x 7.99 mm", "sub_category": "Phones", "camera_layout": "Vertical", "rear_cameras": "Dual", "rear_material": "Plastic", "released_year": 2023, "screen_size_in": 6.56}'),
+('c0d1e2f3-a4b5-4c6d-7e8f-9a0b1c2d3e4g', 1, 6, 18, 52, 293, 'electronics/premium-electronics/phones/vivo/vivo-x90-pro/c0d1e2f3-a4b5-4c6d-7e8f-9a0b1c2d3e4g/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'vivo-x90-pro', '{"brand": "Vivo", "model": "Vivo X90 Pro", "series": "X", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Curved", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Dimensity 9200", "weight_g": 214.85, "dimensions": "164.07 x 74.53 x 9.34 mm", "sub_category": "Phones", "camera_layout": "Circular", "rear_cameras": "Triple", "rear_material": "Glass", "released_year": 2023, "screen_size_in": 6.78}'),
+('d1e2f3a4-b5c6-4d7e-8f9a-0b1c2d3e4f5b', 1, 6, 18, 52, 294, 'electronics/premium-electronics/phones/vivo/vivo-v29/d1e2f3a4-b5c6-4d7e-8f9a-0b1c2d3e4f5b/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'vivo-v29', '{"brand": "Vivo", "model": "Vivo V29", "series": "V", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Curved", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Snapdragon 778G", "weight_g": 186, "dimensions": "164.1 x 74.3 x 7.46 mm", "sub_category": "Phones", "camera_layout": "Vertical", "rear_cameras": "Triple", "rear_material": "Glass", "released_year": 2023, "screen_size_in": 6.78}'),
+('e2f3a4b5-c6d7-4e8f-9a0b-1c2d3e4f5a6c', 1, 6, 18, 52, 295, 'electronics/premium-electronics/phones/vivo/vivo-y100/e2f3a4b5-c6d7-4e8f-9a0b-1c2d3e4f5a6c/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'vivo-y100', '{"brand": "Vivo", "model": "Vivo Y100", "series": "Y", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Dimensity 900", "weight_g": 186, "dimensions": "164.1 x 74.3 x 7.79 mm", "sub_category": "Phones", "camera_layout": "Vertical", "rear_cameras": "Triple", "rear_material": "Glass", "released_year": 2023, "screen_size_in": 6.67}'),
+('f3a4b5c6-d7e8-4f9a-0b1c-2d3e4f5a6b7d', 1, 6, 18, 53, 296, 'electronics/premium-electronics/phones/google/pixel-7/f3a4b5c6-d7e8-4f9a-0b1c-2d3e4f5a6b7d/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'pixel-7', '{"brand": "Google", "model": "Pixel 7", "series": null, "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Rounded", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Tensor G2", "weight_g": 197, "dimensions": "155.6 x 73.2 x 8.7 mm", "sub_category": "Phones", "camera_layout": "Horizontal Bar", "rear_cameras": "Dual", "rear_material": "Glass", "released_year": 2022, "screen_size_in": 6.3}'),
+('a4b5c6d7-e8f9-4a0b-1c2d-3e4f5a6b7c8e', 1, 6, 18, 53, 297, 'electronics/premium-electronics/phones/google/pixel-7-pro/a4b5c6d7-e8f9-4a0b-1c2d-3e4f5a6b7c8e/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'pixel-7-pro', '{"brand": "Google", "model": "Pixel 7 Pro", "series": null, "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Curved", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Tensor G2", "weight_g": 212, "dimensions": "162.9 x 76.6 x 8.9 mm", "sub_category": "Phones", "camera_layout": "Horizontal Bar", "rear_cameras": "Triple", "rear_material": "Glass", "released_year": 2022, "screen_size_in": 6.7}'),
+('b5c6d7e8-f9a0-4b1c-2d3e-4f5a6b7c8d9f', 1, 6, 18, 53, 298, 'electronics/premium-electronics/phones/google/pixel-7a/b5c6d7e8-f9a0-4b1c-2d3e-4f5a6b7c8d9f/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'pixel-7a', '{"brand": "Google", "model": "Pixel 7a", "series": null, "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Rounded", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Tensor G2", "weight_g": 193.5, "dimensions": "152.4 x 72.9 x 9 mm", "sub_category": "Phones", "camera_layout": "Horizontal Bar", "rear_cameras": "Dual", "rear_material": "Plastic", "released_year": 2023, "screen_size_in": 6.1}'),
+('c6d7e8f9-a0b1-4c2d-3e4f-5a6b7c8d9e0g', 1, 6, 18, 53, 299, 'electronics/premium-electronics/phones/google/pixel-8/c6d7e8f9-a0b1-4c2d-3e4f-5a6b7c8d9e0g/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'pixel-8', '{"brand": "Google", "model": "Pixel 8", "series": null, "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Rounded", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Tensor G3", "weight_g": 187, "dimensions": "150.5 x 70.8 x 8.9 mm", "sub_category": "Phones", "camera_layout": "Horizontal Bar", "rear_cameras": "Dual", "rear_material": "Matte Glass", "released_year": 2023, "screen_size_in": 6.2}'),
+('d7e8f9a0-b1c2-4d3e-4f5a-6b7c8d9e0f1b', 1, 6, 18, 53, 300, 'electronics/premium-electronics/phones/google/pixel-8-pro/d7e8f9a0-b1c2-4d3e-4f5a-6b7c8d9e0f1b/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'pixel-8-pro', '{"brand": "Google", "model": "Pixel 8 Pro", "series": null, "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Curved", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Tensor G3", "weight_g": 213, "dimensions": "162.6 x 76.5 x 8.8 mm", "sub_category": "Phones", "camera_layout": "Horizontal Bar", "rear_cameras": "Triple", "rear_material": "Matte Glass", "released_year": 2023, "screen_size_in": 6.7}'),
+('e8f9a0b1-c2d3-4e4f-5a6b-7c8d9e0f1a2c', 1, 6, 18, 53, 301, 'electronics/premium-electronics/phones/google/pixel-fold/e8f9a0b1-c2d3-4e4f-5a6b-7c8d9e0f1a2c/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'pixel-fold', '{"brand": "Google", "model": "Pixel Fold", "series": null, "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Tensor G2", "weight_g": 283, "dimensions": "158.7 x 139.7 x 5.8 mm", "sub_category": "Phones", "camera_layout": "Horizontal Bar", "rear_cameras": "Triple", "rear_material": "Glass", "released_year": 2023, "screen_size_in": 7.6}'),
+('f9a0b1c2-d3e4-4f5a-6b7c-8d9e0f1a2b3d', 1, 6, 18, 54, 302, 'electronics/premium-electronics/phones/huawei/huawei-p60-pro/f9a0b1c2-d3e4-4f5a-6b7c-8d9e0f1a2b3d/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'huawei-p60-pro', '{"brand": "Huawei", "model": "Huawei P60 Pro", "series": "P", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Curved", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Snapdragon 8+ Gen 1", "weight_g": 200, "dimensions": "161 x 74.5 x 8.3 mm", "sub_category": "Phones", "camera_layout": "Circular", "rear_cameras": "Triple", "rear_material": "Glass", "released_year": 2023, "screen_size_in": 6.67}'),
+('a0b1c2d3-e4f5-4a6b-7c8d-9e0f1a2b3c4e', 1, 6, 18, 54, 303, 'electronics/premium-electronics/phones/huawei/huawei-mate-60-pro/a0b1c2d3-e4f5-4a6b-7c8d-9e0f1a2b3c4e/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'huawei-mate-60-pro', '{"brand": "Huawei", "model": "Huawei Mate 60 Pro", "series": "Mate", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Curved", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Kirin 9000S", "weight_g": 225, "dimensions": "163.6 x 76.7 x 8.1 mm", "sub_category": "Phones", "camera_layout": "Circular", "rear_cameras": "Triple", "rear_material": "Vegan Leather", "released_year": 2023, "screen_size_in": 6.82}'),
+('b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d5f', 1, 6, 18, 54, 304, 'electronics/premium-electronics/phones/huawei/huawei-nova-11/b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d5f/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'huawei-nova-11', '{"brand": "Huawei", "model": "Huawei Nova 11", "series": "Nova", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Snapdragon 778G", "weight_g": 168, "dimensions": "152.9 x 71.2 x 6.88 mm", "sub_category": "Phones", "camera_layout": "Vertical", "rear_cameras": "Dual", "rear_material": "Glass", "released_year": 2023, "screen_size_in": 6.7}'),
+('c2d3e4f5-a6b7-4c8d-9e0f-1a2b3c4d5e6g', 1, 6, 18, 55, 305, 'electronics/premium-electronics/phones/nokia/nokia-g42/c2d3e4f5-a6b7-4c8d-9e0f-1a2b3c4d5e6g/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'nokia-g42', '{"brand": "Nokia", "model": "Nokia G42", "series": "G", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "Notch", "processor": "Snapdragon 480+", "weight_g": 189, "dimensions": "164.6 x 75.8 x 8.3 mm", "sub_category": "Phones", "camera_layout": "Circular", "rear_cameras": "Triple", "rear_material": "Plastic", "released_year": 2023, "screen_size_in": 6.56}'),
+('d3e4f5a6-b7c8-4d9e-0f1a-2b3c4d5e6f7b', 1, 6, 18, 55, 306, 'electronics/premium-electronics/phones/nokia/nokia-xr21/d3e4f5a6-b7c8-4d9e-0f1a-2b3c4d5e6f7b/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'nokia-xr21', '{"brand": "Nokia", "model": "Nokia XR21", "series": "XR", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "Notch", "processor": "Snapdragon 695", "weight_g": 239, "dimensions": "171.6 x 81.5 x 10.6 mm", "sub_category": "Phones", "camera_layout": "Horizontal", "rear_cameras": "Dual", "rear_material": "Plastic", "released_year": 2023, "screen_size_in": 6.49}'),
+('e4f5a6b7-c8d9-4e0f-1a2b-3c4d5e6f7a8c', 1, 6, 18, 56, 307, 'electronics/premium-electronics/phones/asus/asus-rog-phone-7/e4f5a6b7-c8d9-4e0f-1a2b-3c4d5e6f7a8c/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'asus-rog-phone-7', '{"brand": "Asus", "model": "Asus ROG Phone 7", "series": "ROG", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "None", "processor": "Snapdragon 8 Gen 2", "weight_g": 239, "dimensions": "173 x 77 x 10.3 mm", "sub_category": "Phones", "camera_layout": "Horizontal", "rear_cameras": "Triple", "rear_material": "Glass", "released_year": 2023, "screen_size_in": 6.78}'),
+('f5a6b7c8-d9e0-4f1a-2b3c-4d5e6f7a8b9d', 1, 6, 18, 56, 308, 'electronics/premium-electronics/phones/asus/asus-zenfone-10/f5a6b7c8-d9e0-4f1a-2b3c-4d5e6f7a8b9d/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'asus-zenfone-10', '{"brand": "Asus", "model": "Asus Zenfone 10", "series": "Zenfone", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Snapdragon 8 Gen 2", "weight_g": 172, "dimensions": "146.5 x 68.1 x 9.4 mm", "sub_category": "Phones", "camera_layout": "Vertical", "rear_cameras": "Dual", "rear_material": "Plastic", "released_year": 2023, "screen_size_in": 5.92}'),
+('a6b7c8d9-e0f1-4a2b-3c4d-5e6f7a8b9c0e', 1, 6, 18, 57, 309, 'electronics/premium-electronics/phones/sony/sony-xperia-1-v/a6b7c8d9-e0f1-4a2b-3c4d-5e6f7a8b9c0e/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'sony-xperia-1-v', '{"brand": "Sony", "model": "Sony Xperia 1 V", "series": "Xperia 1", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "None", "processor": "Snapdragon 8 Gen 2", "weight_g": 187, "dimensions": "165 x 71 x 8.3 mm", "sub_category": "Phones", "camera_layout": "Vertical", "rear_cameras": "Triple", "rear_material": "Frosted Glass", "released_year": 2023, "screen_size_in": 6.5}'),
+('b7c8d9e0-f1a2-4b3c-4d5e-6f7a8b9c0d1f', 1, 6, 18, 57, 310, 'electronics/premium-electronics/phones/sony/sony-xperia-5-v/b7c8d9e0-f1a2-4b3c-4d5e-6f7a8b9c0d1f/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'sony-xperia-5-v', '{"brand": "Sony", "model": "Sony Xperia 5 V", "series": "Xperia 5", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "None", "processor": "Snapdragon 8 Gen 2", "weight_g": 182, "dimensions": "154 x 68 x 8.6 mm", "sub_category": "Phones", "camera_layout": "Vertical", "rear_cameras": "Dual", "rear_material": "Frosted Glass", "released_year": 2023, "screen_size_in": 6.1}'),
+('c8d9e0f1-a2b3-4c4d-5e6f-7a8b9c0d1e2g', 1, 6, 18, 57, 311, 'electronics/premium-electronics/phones/sony/sony-xperia-10-v/c8d9e0f1-a2b3-4c4d-5e6f-7a8b9c0d1e2g/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'sony-xperia-10-v', '{"brand": "Sony", "model": "Sony Xperia 10 V", "series": "Xperia 10", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "None", "processor": "Snapdragon 695", "weight_g": 159, "dimensions": "155 x 68 x 8.3 mm", "sub_category": "Phones", "camera_layout": "Vertical", "rear_cameras": "Triple", "rear_material": "Plastic", "released_year": 2023, "screen_size_in": 6.1}'),
+('d9e0f1a2-b3c4-4d5e-6f7a-8b9c0d1e2f3b', 1, 6, 18, 58, 312, 'electronics/premium-electronics/phones/zte/zte-nubia-z50-ultra/d9e0f1a2-b3c4-4d5e-6f7a-8b9c0d1e2f3b/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'zte-nubia-z50-ultra', '{"brand": "ZTE", "model": "ZTE Nubia Z50 Ultra", "series": "Nubia", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Curved", "port_type": "USB-C", "notch_type": "Under Display", "processor": "Snapdragon 8 Gen 2", "weight_g": 228, "dimensions": "171.9 x 76.4 x 8.7 mm", "sub_category": "Phones", "camera_layout": "Vertical", "rear_cameras": "Triple", "rear_material": "Glass", "released_year": 2023, "screen_size_in": 6.8}'),
+('e0f1a2b3-c4d5-4e6f-7a8b-9c0d1e2f3a4c', 1, 6, 18, 58, 313, 'electronics/premium-electronics/phones/zte/zte-axon-50-ultra/e0f1a2b3-c4d5-4e6f-7a8b-9c0d1e2f3a4c/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'zte-axon-50-ultra', '{"brand": "ZTE", "model": "ZTE Axon 50 Ultra", "series": "Axon", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Curved", "port_type": "USB-C", "notch_type": "Under Display", "processor": "Snapdragon 8 Gen 1", "weight_g": 198, "dimensions": "162.5 x 73.9 x 8.5 mm", "sub_category": "Phones", "camera_layout": "Vertical", "rear_cameras": "Triple", "rear_material": "Glass", "released_year": 2023, "screen_size_in": 6.67}'),
+('f1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5d', 1, 6, 18, 59, 314, 'electronics/premium-electronics/phones/lenovo/lenovo-legion-phone-duel-2/f1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5d/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'lenovo-legion-phone-duel-2', '{"brand": "Lenovo", "model": "Lenovo Legion Phone Duel 2", "series": "Legion", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "Pop Up", "processor": "Snapdragon 888", "weight_g": 259, "dimensions": "176.5 x 78.6 x 9.9 mm", "sub_category": "Phones", "camera_layout": "Horizontal", "rear_cameras": "Dual", "rear_material": "Glass", "released_year": 2021, "screen_size_in": 6.92}'),
+('a2b3c4d5-e6f7-4a8b-9c0d-1e2f3a4b5c6f', 1, 6, 18, 60, 315, 'electronics/premium-electronics/phones/motorola/motorola-edge-40-pro/a2b3c4d5-e6f7-4a8b-9c0d-1e2f3a4b5c6f/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'motorola-edge-40-pro', '{"brand": "Motorola", "model": "Motorola Edge 40 Pro", "series": "Edge", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Curved", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Snapdragon 8 Gen 2", "weight_g": 199, "dimensions": "161.2 x 74 x 8.6 mm", "sub_category": "Phones", "camera_layout": "Circular", "rear_cameras": "Triple", "rear_material": "Glass", "released_year": 2023, "screen_size_in": 6.67}'),
+('b3c4d5e6-f7a8-4b9c-0d1e-2f3a4b5c6d7g', 1, 6, 18, 60, 316, 'electronics/premium-electronics/phones/motorola/motorola-razr-40-ultra/b3c4d5e6-f7a8-4b9c-0d1e-2f3a4b5c6d7g/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'motorola-razr-40-ultra', '{"brand": "Motorola", "model": "Motorola Razr 40 Ultra", "series": "Razr", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Snapdragon 8+ Gen 1", "weight_g": 188.5, "dimensions": "170.8 x 73.9 x 6.99 mm", "sub_category": "Phones", "camera_layout": "Circular", "rear_cameras": "Dual", "rear_material": "Glass", "released_year": 2023, "screen_size_in": 6.9}'),
+('c4d5e6f7-a8b9-4c0d-1e2f-3a4b5c6d7e8h', 1, 6, 18, 60, 317, 'electronics/premium-electronics/phones/motorola/moto-g84/c4d5e6f7-a8b9-4c0d-1e2f-3a4b5c6d7e8h/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'moto-g84', '{"brand": "Motorola", "model": "Moto G84", "series": "G", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Snapdragon 695", "weight_g": 167, "dimensions": "160.1 x 74.4 x 7.99 mm", "sub_category": "Phones", "camera_layout": "Vertical", "rear_cameras": "Dual", "rear_material": "Plastic", "released_year": 2023, "screen_size_in": 6.55}'),
+('d5e6f7a8-b9c0-4d1e-2f3a-4b5c6d7e8f9c', 1, 6, 18, 61, 318, 'electronics/premium-electronics/phones/iqoo/iqoo-11/d5e6f7a8-b9c0-4d1e-2f3a-4b5c6d7e8f9c/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'iqoo-11', '{"brand": "iQOO", "model": "iQOO 11", "series": null, "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Snapdragon 8 Gen 2", "weight_g": 208, "dimensions": "164.9 x 77 x 8.56 mm", "sub_category": "Phones", "camera_layout": "Vertical", "rear_cameras": "Triple", "rear_material": "Glass", "released_year": 2023, "screen_size_in": 6.78}'),
+('e6f7a8b9-c0d1-4e2f-3a4b-5c6d7e8f9a0d', 1, 6, 18, 61, 319, 'electronics/premium-electronics/phones/iqoo/iqoo-neo-7/e6f7a8b9-c0d1-4e2f-3a4b-5c6d7e8f9a0d/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'iqoo-neo-7', '{"brand": "iQOO", "model": "iQOO Neo 7", "series": "Neo", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Dimensity 9000+", "weight_g": 197, "dimensions": "164.8 x 76.8 x 8.5 mm", "sub_category": "Phones", "camera_layout": "Vertical", "rear_cameras": "Triple", "rear_material": "Glass", "released_year": 2023, "screen_size_in": 6.78}'),
+('f7a8b9c0-d1e2-4f3a-4b5c-6d7e8f9a0b1e', 1, 6, 18, 62, 320, 'electronics/premium-electronics/phones/lava/lava-blaze-pro/f7a8b9c0-d1e2-4f3a-4b5c-6d7e8f9a0b1e/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'lava-blaze-pro', '{"brand": "Lava", "model": "Lava Blaze Pro", "series": "Blaze", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "Notch", "processor": "Helio G37", "weight_g": 182, "dimensions": "163.8 x 75.3 x 8.85 mm", "sub_category": "Phones", "camera_layout": "Vertical", "rear_cameras": "Dual", "rear_material": "Plastic", "released_year": 2023, "screen_size_in": 6.5}'),
+('a8b9c0d1-e2f3-4a4b-5c6d-7e8f9a0b1c2f', 1, 6, 18, 62, 321, 'electronics/premium-electronics/phones/lava/lava-agni-2/a8b9c0d1-e2f3-4a4b-5c6d-7e8f9a0b1c2f/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'lava-agni-2', '{"brand": "Lava", "model": "Lava Agni 2", "series": "Agni", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Curved", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Dimensity 7050", "weight_g": 191, "dimensions": "163.8 x 75.3 x 7.99 mm", "sub_category": "Phones", "camera_layout": "Vertical", "rear_cameras": "Triple", "rear_material": "Glass", "released_year": 2023, "screen_size_in": 6.78}'),
+('b9c0d1e2-f3a4-4b5c-6d7e-8f9a0b1c2d3g', 1, 6, 18, 63, 322, 'electronics/premium-electronics/phones/micromax/micromax-in-note-2/b9c0d1e2-f3a4-4b5c-6d7e-8f9a0b1c2d3g/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'micromax-in-note-2', '{"brand": "Micromax", "model": "Micromax IN Note 2", "series": "IN", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Helio G95", "weight_g": 199, "dimensions": "167.5 x 76.6 x 8.9 mm", "sub_category": "Phones", "camera_layout": "Vertical", "rear_cameras": "Quad", "rear_material": "Plastic", "released_year": 2021, "screen_size_in": 6.43}'),
+('c0d1e2f3-a4b5-4c6d-7e8f-9a0b1c2d3e4h', 1, 6, 18, 64, 323, 'electronics/premium-electronics/phones/karbonn/karbonn-titanium-s9-plus/c0d1e2f3-a4b5-4c6d-7e8f-9a0b1c2d3e4h/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'karbonn-titanium-s9-plus', '{"brand": "Karbonn", "model": "Karbonn Titanium S9 Plus", "series": "Titanium", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "Notch", "processor": "Unisoc T606", "weight_g": 195, "dimensions": "163.5 x 75.8 x 9.1 mm", "sub_category": "Phones", "camera_layout": "Vertical", "rear_cameras": "Dual", "rear_material": "Plastic", "released_year": 2023, "screen_size_in": 6.52}'),
+('d1e2f3a4-b5c6-4d7e-8f9a-0b1c2d3e4f5c', 1, 6, 18, 65, 324, 'electronics/premium-electronics/phones/black-shark/black-shark-5-pro/d1e2f3a4-b5c6-4d7e-8f9a-0b1c2d3e4f5c/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'black-shark-5-pro', '{"brand": "Black Shark", "model": "Black Shark 5 Pro", "series": null, "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Snapdragon 8 Gen 1", "weight_g": 220, "dimensions": "163.8 x 76.3 x 9.5 mm", "sub_category": "Phones", "camera_layout": "Vertical", "rear_cameras": "Triple", "rear_material": "Glass", "released_year": 2022, "screen_size_in": 6.67}'),
+('e2f3a4b5-c6d7-4e8f-9a0b-1c2d3e4f5a6d', 1, 6, 18, 66, 325, 'electronics/premium-electronics/phones/meizu/meizu-20-pro/e2f3a4b5-c6d7-4e8f-9a0b-1c2d3e4f5a6d/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'meizu-20-pro', '{"brand": "Meizu", "model": "Meizu 20 Pro", "series": null, "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Curved", "port_type": "USB-C", "notch_type": "Under Display", "processor": "Snapdragon 8 Gen 2", "weight_g": 209, "dimensions": "163.8 x 76.1 x 7.8 mm", "sub_category": "Phones", "camera_layout": "Vertical", "rear_cameras": "Triple", "rear_material": "Glass", "released_year": 2023, "screen_size_in": 6.81}'),
+('f3a4b5c6-d7e8-4f9a-0b1c-2d3e4f5a6b7e', 1, 6, 18, 67, 326, 'electronics/premium-electronics/phones/nothing/nothing-phone-1/f3a4b5c6-d7e8-4f9a-0b1c-2d3e4f5a6b7e/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'nothing-phone-1', '{"brand": "Nothing", "model": "Nothing Phone 1", "series": null, "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Snapdragon 778G+", "weight_g": 193.5, "dimensions": "159.2 x 75.8 x 8.3 mm", "sub_category": "Phones", "camera_layout": "Circular", "rear_cameras": "Dual", "rear_material": "Glass", "released_year": 2022, "screen_size_in": 6.55}'),
+('a4b5c6d7-e8f9-4a0b-1c2d-3e4f5a6b7c8f', 1, 6, 18, 67, 327, 'electronics/premium-electronics/phones/nothing/nothing-phone-2/a4b5c6d7-e8f9-4a0b-1c2d-3e4f5a6b7c8f/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'nothing-phone-2', '{"brand": "Nothing", "model": "Nothing Phone 2", "series": null, "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Snapdragon 8+ Gen 1", "weight_g": 201.2, "dimensions": "162.1 x 76.4 x 8.6 mm", "sub_category": "Phones", "camera_layout": "Circular", "rear_cameras": "Dual", "rear_material": "Glass", "released_year": 2023, "screen_size_in": 6.7}'),
+('b5c6d7e8-f9a0-4b1c-2d3e-4f5a6b7c8d9g', 1, 6, 18, 68, 328, 'electronics/premium-electronics/phones/tecno/tecno-phantom-v-fold/b5c6d7e8-f9a0-4b1c-2d3e-4f5a6b7c8d9g/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'tecno-phantom-v-fold', '{"brand": "Tecno", "model": "Tecno Phantom V Fold", "series": "Phantom", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Dimensity 9000+", "weight_g": 299, "dimensions": "159.4 x 140 x 6.9 mm", "sub_category": "Phones", "camera_layout": "Circular", "rear_cameras": "Triple", "rear_material": "Glass", "released_year": 2023, "screen_size_in": 7.85}'),
+('c6d7e8f9-a0b1-4c2d-3e4f-5a6b7c8d9e0h', 1, 6, 18, 68, 329, 'electronics/premium-electronics/phones/tecno/tecno-camon-20-pro/c6d7e8f9-a0b1-4c2d-3e4f-5a6b7c8d9e0h/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'tecno-camon-20-pro', '{"brand": "Tecno", "model": "Tecno Camon 20 Pro", "series": "Camon", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Curved", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Dimensity 8050", "weight_g": 185, "dimensions": "161.2 x 74.3 x 7.8 mm", "sub_category": "Phones", "camera_layout": "Circular", "rear_cameras": "Triple", "rear_material": "Glass", "released_year": 2023, "screen_size_in": 6.67}'),
+('d7e8f9a0-b1c2-4d3e-4f5a-6b7c8d9e0f1c', 1, 6, 18, 68, 330, 'electronics/premium-electronics/phones/tecno/tecno-spark-10-pro/d7e8f9a0-b1c2-4d3e-4f5a-6b7c8d9e0f1c/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'tecno-spark-10-pro', '{"brand": "Tecno", "model": "Tecno Spark 10 Pro", "series": "Spark", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Helio G88", "weight_g": 194, "dimensions": "168.6 x 76.5 x 8.7 mm", "sub_category": "Phones", "camera_layout": "Vertical", "rear_cameras": "Dual", "rear_material": "Plastic", "released_year": 2023, "screen_size_in": 6.8}'),
+('e8f9a0b1-c2d3-4e4f-5a6b-7c8d9e0f1a2d', 1, 6, 18, 69, 331, 'electronics/premium-electronics/phones/infinix/infinix-zero-30/e8f9a0b1-c2d3-4e4f-5a6b-7c8d9e0f1a2d/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'infinix-zero-30', '{"brand": "Infinix", "model": "Infinix Zero 30", "series": "Zero", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Curved", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Dimensity 8020", "weight_g": 185, "dimensions": "163.5 x 74.3 x 7.9 mm", "sub_category": "Phones", "camera_layout": "Circular", "rear_cameras": "Triple", "rear_material": "Glass", "released_year": 2023, "screen_size_in": 6.78}'),
+('f9a0b1c2-d3e4-4f5a-6b7c-8d9e0f1a2b3e', 1, 6, 18, 69, 332, 'electronics/premium-electronics/phones/infinix/infinix-note-30/f9a0b1c2-d3e4-4f5a-6b7c-8d9e0f1a2b3e/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'infinix-note-30', '{"brand": "Infinix", "model": "Infinix Note 30", "series": "Note", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Helio G99", "weight_g": 195, "dimensions": "168.6 x 76.3 x 8.6 mm", "sub_category": "Phones", "camera_layout": "Circular", "rear_cameras": "Triple", "rear_material": "Plastic", "released_year": 2023, "screen_size_in": 6.78}'),
+('a0b1c2d3-e4f5-4a6b-7c8d-9e0f1a2b3c4f', 1, 6, 18, 69, 333, 'electronics/premium-electronics/phones/infinix/infinix-hot-30i/a0b1c2d3-e4f5-4a6b-7c8d-9e0f1a2b3c4f/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'infinix-hot-30i', '{"brand": "Infinix", "model": "Infinix Hot 30i", "series": "Hot", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "Notch", "processor": "Unisoc T606", "weight_g": 192, "dimensions": "168.6 x 76.5 x 8.7 mm", "sub_category": "Phones", "camera_layout": "Vertical", "rear_cameras": "Dual", "rear_material": "Plastic", "released_year": 2023, "screen_size_in": 6.6}'),
+('b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d5g', 1, 6, 18, 44, 334, 'electronics/premium-electronics/phones/apple/iphone-12/b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d5g/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'iphone-12', '{"brand": "Apple", "model": "iPhone 12", "series": null, "category": "Premium Electronics", "biometric": "Face ID", "edge_type": "Flat", "port_type": "Lightning", "notch_type": "Notch", "processor": "A14 Bionic", "weight_g": 164, "dimensions": "146.7 x 71.5 x 7.4 mm", "sub_category": "Phones", "camera_layout": "Diagonal", "rear_cameras": "Dual", "rear_material": "Glass", "released_year": 2020, "screen_size_in": 6.1}'),
+('c2d3e4f5-a6b7-4c8d-9e0f-1a2b3c4d5e6h', 1, 6, 18, 44, 335, 'electronics/premium-electronics/phones/apple/iphone-12-pro/c2d3e4f5-a6b7-4c8d-9e0f-1a2b3c4d5e6h/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'iphone-12-pro', '{"brand": "Apple", "model": "iPhone 12 Pro", "series": null, "category": "Premium Electronics", "biometric": "Face ID", "edge_type": "Flat", "port_type": "Lightning", "notch_type": "Notch", "processor": "A14 Bionic", "weight_g": 189, "dimensions": "146.7 x 71.5 x 7.4 mm", "sub_category": "Phones", "camera_layout": "Square", "rear_cameras": "Triple", "rear_material": "Matte Glass", "released_year": 2020, "screen_size_in": 6.1}'),
+('d3e4f5a6-b7c8-4d9e-0f1a-2b3c4d5e6f7c', 1, 6, 18, 44, 336, 'electronics/premium-electronics/phones/apple/iphone-11/d3e4f5a6-b7c8-4d9e-0f1a-2b3c4d5e6f7c/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'iphone-11', '{"brand": "Apple", "model": "iPhone 11", "series": null, "category": "Premium Electronics", "biometric": "Face ID", "edge_type": "Rounded", "port_type": "Lightning", "notch_type": "Notch", "processor": "A13 Bionic", "weight_g": 194, "dimensions": "150.9 x 75.7 x 8.3 mm", "sub_category": "Phones", "camera_layout": "Square", "rear_cameras": "Dual", "rear_material": "Glass", "released_year": 2019, "screen_size_in": 6.1}'),
+('e4f5a6b7-c8d9-4e0f-1a2b-3c4d5e6f7a8d', 1, 6, 18, 45, 337, 'electronics/premium-electronics/phones/samsung/galaxy-s22/e4f5a6b7-c8d9-4e0f-1a2b-3c4d5e6f7a8d/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'galaxy-s22', '{"brand": "Samsung", "model": "Galaxy S22", "series": "S", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Snapdragon 8 Gen 1", "weight_g": 168, "dimensions": "146 x 70.6 x 7.6 mm", "sub_category": "Phones", "camera_layout": "Vertical", "rear_cameras": "Triple", "rear_material": "Glass", "released_year": 2022, "screen_size_in": 6.1}'),
+('f5a6b7c8-d9e0-4f1a-2b3c-4d5e6f7a8b9e', 1, 6, 18, 45, 338, 'electronics/premium-electronics/phones/samsung/galaxy-s22-ultra/f5a6b7c8-d9e0-4f1a-2b3c-4d5e6f7a8b9e/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'galaxy-s22-ultra', '{"brand": "Samsung", "model": "Galaxy S22 Ultra", "series": "S", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Curved", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Snapdragon 8 Gen 1", "weight_g": 229, "dimensions": "163.3 x 77.9 x 8.9 mm", "sub_category": "Phones", "camera_layout": "Vertical", "rear_cameras": "Quad", "rear_material": "Glass", "released_year": 2022, "screen_size_in": 6.8}'),
+('a6b7c8d9-e0f1-4a2b-3c4d-5e6f7a8b9c0f', 1, 6, 18, 45, 339, 'electronics/premium-electronics/phones/samsung/galaxy-s21-fe/a6b7c8d9-e0f1-4a2b-3c4d-5e6f7a8b9c0f/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'galaxy-s21-fe', '{"brand": "Samsung", "model": "Galaxy S21 FE", "series": "S", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Snapdragon 888", "weight_g": 177, "dimensions": "155.7 x 74.5 x 7.9 mm", "sub_category": "Phones", "camera_layout": "Contour Cut", "rear_cameras": "Triple", "rear_material": "Plastic", "released_year": 2022, "screen_size_in": 6.4}'),
+('b7c8d9e0-f1a2-4b3c-4d5e-6f7a8b9c0d1g', 1, 6, 18, 45, 340, 'electronics/premium-electronics/phones/samsung/galaxy-a73/b7c8d9e0-f1a2-4b3c-4d5e-6f7a8b9c0d1g/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'galaxy-a73', '{"brand": "Samsung", "model": "Galaxy A73", "series": "A", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Snapdragon 778G", "weight_g": 181, "dimensions": "163.7 x 76.1 x 7.6 mm", "sub_category": "Phones", "camera_layout": "Vertical", "rear_cameras": "Quad", "rear_material": "Plastic", "released_year": 2022, "screen_size_in": 6.7}'),
+('c8d9e0f1-a2b3-4c4d-5e6f-7a8b9c0d1e2h', 1, 6, 18, 45, 341, 'electronics/premium-electronics/phones/samsung/galaxy-m54/c8d9e0f1-a2b3-4c4d-5e6f-7a8b9c0d1e2h/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'galaxy-m54', '{"brand": "Samsung", "model": "Galaxy M54", "series": "M", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Exynos 1380", "weight_g": 199, "dimensions": "166.4 x 77.4 x 8.2 mm", "sub_category": "Phones", "camera_layout": "Vertical", "rear_cameras": "Triple", "rear_material": "Plastic", "released_year": 2023, "screen_size_in": 6.7}'),
+('d9e0f1a2-b3c4-4d5e-6f7a-8b9c0d1e2f3c', 1, 6, 18, 45, 342, 'electronics/premium-electronics/phones/samsung/galaxy-f54/d9e0f1a2-b3c4-4d5e-6f7a-8b9c0d1e2f3c/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'galaxy-f54', '{"brand": "Samsung", "model": "Galaxy F54", "series": "F", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Exynos 1380", "weight_g": 199, "dimensions": "166.4 x 77.4 x 8.2 mm", "sub_category": "Phones", "camera_layout": "Vertical", "rear_cameras": "Triple", "rear_material": "Plastic", "released_year": 2023, "screen_size_in": 6.7}'),
+('e0f1a2b3-c4d5-4e6f-7a8b-9c0d1e2f3a4d', 1, 6, 18, 46, 343, 'electronics/premium-electronics/phones/xiaomi/xiaomi-12/e0f1a2b3-c4d5-4e6f-7a8b-9c0d1e2f3a4d/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'xiaomi-12', '{"brand": "Xiaomi", "model": "Xiaomi 12", "series": null, "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Curved", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Snapdragon 8 Gen 1", "weight_g": 180, "dimensions": "152.7 x 69.9 x 8.16 mm", "sub_category": "Phones", "camera_layout": "Vertical", "rear_cameras": "Triple", "rear_material": "Glass", "released_year": 2022, "screen_size_in": 6.28}'),
+('f1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5e', 1, 6, 18, 46, 344, 'electronics/premium-electronics/phones/xiaomi/xiaomi-12-pro/f1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5e/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'xiaomi-12-pro', '{"brand": "Xiaomi", "model": "Xiaomi 12 Pro", "series": null, "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Curved", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Snapdragon 8 Gen 1", "weight_g": 205, "dimensions": "163.6 x 74.6 x 8.16 mm", "sub_category": "Phones", "camera_layout": "Vertical", "rear_cameras": "Triple", "rear_material": "Glass", "released_year": 2022, "screen_size_in": 6.73}'),
+('a2b3c4d5-e6f7-4a8b-9c0d-1e2f3a4b5c6g', 1, 6, 18, 47, 345, 'electronics/premium-electronics/phones/redmi/redmi-note-11-pro/a2b3c4d5-e6f7-4a8b-9c0d-1e2f3a4b5c6g/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'redmi-note-11-pro', '{"brand": "Redmi", "model": "Redmi Note 11 Pro", "series": "Note", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Helio G96", "weight_g": 202, "dimensions": "164.2 x 76.1 x 8.1 mm", "sub_category": "Phones", "camera_layout": "Vertical", "rear_cameras": "Triple", "rear_material": "Glass", "released_year": 2022, "screen_size_in": 6.67}'),
+('b3c4d5e6-f7a8-4b9c-0d1e-2f3a4b5c6d7h', 1, 6, 18, 47, 346, 'electronics/premium-electronics/phones/redmi/redmi-k50i/b3c4d5e6-f7a8-4b9c-0d1e-2f3a4b5c6d7h/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'redmi-k50i', '{"brand": "Redmi", "model": "Redmi K50i", "series": "K", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Dimensity 8100", "weight_g": 200, "dimensions": "163.6 x 74.3 x 8.9 mm", "sub_category": "Phones", "camera_layout": "Vertical", "rear_cameras": "Triple", "rear_material": "Glass", "released_year": 2022, "screen_size_in": 6.6}'),
+('c4d5e6f7-a8b9-4c0d-1e2f-3a4b5c6d7e8i', 1, 6, 18, 48, 347, 'electronics/premium-electronics/phones/poco/poco-f4/c4d5e6f7-a8b9-4c0d-1e2f-3a4b5c6d7e8i/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'poco-f4', '{"brand": "POCO", "model": "POCO F4", "series": "F", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Snapdragon 870", "weight_g": 195, "dimensions": "163.2 x 75.9 x 7.7 mm", "sub_category": "Phones", "camera_layout": "Vertical", "rear_cameras": "Triple", "rear_material": "Glass", "released_year": 2022, "screen_size_in": 6.67}'),
+('d5e6f7a8-b9c0-4d1e-2f3a-4b5c6d7e8f9d', 1, 6, 18, 48, 348, 'electronics/premium-electronics/phones/poco/poco-x4-gt/d5e6f7a8-b9c0-4d1e-2f3a-4b5c6d7e8f9d/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'poco-x4-gt', '{"brand": "POCO", "model": "POCO X4 GT", "series": "X", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Dimensity 8100", "weight_g": 200, "dimensions": "163.6 x 74.3 x 8.9 mm", "sub_category": "Phones", "camera_layout": "Vertical", "rear_cameras": "Triple", "rear_material": "Glass", "released_year": 2022, "screen_size_in": 6.6}'),
+('e6f7a8b9-c0d1-4e2f-3a4b-5c6d7e8f9a0e', 1, 6, 18, 49, 349, 'electronics/premium-electronics/phones/realme/realme-gt-2-pro/e6f7a8b9-c0d1-4e2f-3a4b-5c6d7e8f9a0e/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'realme-gt-2-pro', '{"brand": "Realme", "model": "Realme GT 2 Pro", "series": "GT", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Snapdragon 8 Gen 1", "weight_g": 189, "dimensions": "163.2 x 74.7 x 8.2 mm", "sub_category": "Phones", "camera_layout": "Square", "rear_cameras": "Triple", "rear_material": "Bioplastic", "released_year": 2022, "screen_size_in": 6.7}'),
+('f7a8b9c0-d1e2-4f3a-4b5c-6d7e8f9a0b1f', 1, 6, 18, 49, 350, 'electronics/premium-electronics/phones/realme/realme-9-pro-plus/f7a8b9c0-d1e2-4f3a-4b5c-6d7e8f9a0b1f/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'realme-9-pro-plus', '{"brand": "Realme", "model": "Realme 9 Pro+", "series": null, "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Dimensity 920", "weight_g": 182, "dimensions": "160.2 x 73.3 x 7.99 mm", "sub_category": "Phones", "camera_layout": "Vertical", "rear_cameras": "Triple", "rear_material": "Glass", "released_year": 2022, "screen_size_in": 6.4}'),
+('a8b9c0d1-e2f3-4a4b-5c6d-7e8f9a0b1c2g', 1, 6, 18, 50, 351, 'electronics/premium-electronics/phones/oneplus/oneplus-10-pro/a8b9c0d1-e2f3-4a4b-5c6d-7e8f9a0b1c2g/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'oneplus-10-pro', '{"brand": "OnePlus", "model": "OnePlus 10 Pro", "series": null, "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Curved", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Snapdragon 8 Gen 1", "weight_g": 201, "dimensions": "163 x 73.9 x 8.55 mm", "sub_category": "Phones", "camera_layout": "Square", "rear_cameras": "Triple", "rear_material": "Glass", "released_year": 2022, "screen_size_in": 6.7}'),
+('b9c0d1e2-f3a4-4b5c-6d7e-8f9a0b1c2d3h', 1, 6, 18, 50, 352, 'electronics/premium-electronics/phones/oneplus/oneplus-10t/b9c0d1e2-f3a4-4b5c-6d7e-8f9a0b1c2d3h/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'oneplus-10t', '{"brand": "OnePlus", "model": "OnePlus 10T", "series": null, "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Snapdragon 8+ Gen 1", "weight_g": 203, "dimensions": "163 x 75.4 x 8.7 mm", "sub_category": "Phones", "camera_layout": "Vertical", "rear_cameras": "Triple", "rear_material": "Glass", "released_year": 2022, "screen_size_in": 6.7}'),
+('c0d1e2f3-a4b5-4c6d-7e8f-9a0b1c2d3e4i', 1, 6, 18, 50, 353, 'electronics/premium-electronics/phones/oneplus/oneplus-nord-2t/c0d1e2f3-a4b5-4c6d-7e8f-9a0b1c2d3e4i/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'oneplus-nord-2t', '{"brand": "OnePlus", "model": "OnePlus Nord 2T", "series": "Nord", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Dimensity 1300", "weight_g": 190, "dimensions": "159.1 x 73.2 x 8.2 mm", "sub_category": "Phones", "camera_layout": "Vertical", "rear_cameras": "Triple", "rear_material": "Glass", "released_year": 2022, "screen_size_in": 6.43}'),
+('d1e2f3a4-b5c6-4d7e-8f9a-0b1c2d3e4f5d', 1, 6, 18, 53, 354, 'electronics/premium-electronics/phones/google/pixel-6a/d1e2f3a4-b5c6-4d7e-8f9a-0b1c2d3e4f5d/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'pixel-6a', '{"brand": "Google", "model": "Pixel 6a", "series": null, "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Rounded", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Tensor", "weight_g": 178, "dimensions": "152.2 x 71.8 x 8.9 mm", "sub_category": "Phones", "camera_layout": "Horizontal Bar", "rear_cameras": "Dual", "rear_material": "Plastic", "released_year": 2022, "screen_size_in": 6.1}'),
+('e2f3a4b5-c6d7-4e8f-9a0b-1c2d3e4f5a6e', 1, 6, 18, 53, 355, 'electronics/premium-electronics/phones/google/pixel-6-pro/e2f3a4b5-c6d7-4e8f-9a0b-1c2d3e4f5a6e/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'pixel-6-pro', '{"brand": "Google", "model": "Pixel 6 Pro", "series": null, "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Curved", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Tensor", "weight_g": 210, "dimensions": "163.9 x 75.9 x 8.9 mm", "sub_category": "Phones", "camera_layout": "Horizontal Bar", "rear_cameras": "Triple", "rear_material": "Glass", "released_year": 2021, "screen_size_in": 6.7}'),
+('f3a4b5c6-d7e8-4f9a-0b1c-2d3e4f5a6b7f', 1, 6, 18, 51, 356, 'electronics/premium-electronics/phones/oppo/oppo-find-x5-pro/f3a4b5c6-d7e8-4f9a-0b1c-2d3e4f5a6b7f/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'oppo-find-x5-pro', '{"brand": "Oppo", "model": "Oppo Find X5 Pro", "series": "Find", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Curved", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Snapdragon 8 Gen 1", "weight_g": 218, "dimensions": "163.7 x 73.9 x 8.5 mm", "sub_category": "Phones", "camera_layout": "Square", "rear_cameras": "Triple", "rear_material": "Ceramic", "released_year": 2022, "screen_size_in": 6.7}'),
+('a4b5c6d7-e8f9-4a0b-1c2d-3e4f5a6b7c8g', 1, 6, 18, 51, 357, 'electronics/premium-electronics/phones/oppo/oppo-reno-8-pro/a4b5c6d7-e8f9-4a0b-1c2d-3e4f5a6b7c8g/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'oppo-reno-8-pro', '{"brand": "Oppo", "model": "Oppo Reno 8 Pro", "series": "Reno", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Curved", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Dimensity 8100-Max", "weight_g": 183, "dimensions": "161.2 x 74.2 x 7.34 mm", "sub_category": "Phones", "camera_layout": "Vertical", "rear_cameras": "Triple", "rear_material": "Glass", "released_year": 2022, "screen_size_in": 6.7}'),
+('b5c6d7e8-f9a0-4b1c-2d3e-4f5a6b7c8d9h', 1, 6, 18, 52, 358, 'electronics/premium-electronics/phones/vivo/vivo-x80-pro/b5c6d7e8-f9a0-4b1c-2d3e-4f5a6b7c8d9h/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'vivo-x80-pro', '{"brand": "Vivo", "model": "Vivo X80 Pro", "series": "X", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Curved", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Snapdragon 8 Gen 1", "weight_g": 219, "dimensions": "164.6 x 75.3 x 9.1 mm", "sub_category": "Phones", "camera_layout": "Circular", "rear_cameras": "Quad", "rear_material": "Ceramic", "released_year": 2022, "screen_size_in": 6.78}'),
+('c6d7e8f9-a0b1-4c2d-3e4f-5a6b7c8d9e0i', 1, 6, 18, 52, 359, 'electronics/premium-electronics/phones/vivo/vivo-v25-pro/c6d7e8f9-a0b1-4c2d-3e4f-5a6b7c8d9e0i/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'vivo-v25-pro', '{"brand": "Vivo", "model": "Vivo V25 Pro", "series": "V", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Curved", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Dimensity 1300", "weight_g": 190, "dimensions": "164.1 x 74.3 x 8.62 mm", "sub_category": "Phones", "camera_layout": "Vertical", "rear_cameras": "Triple", "rear_material": "Glass", "released_year": 2022, "screen_size_in": 6.56}'),
+('d7e8f9a0-b1c2-4d3e-4f5a-6b7c8d9e0f1d', 1, 6, 18, 54, 360, 'electronics/premium-electronics/phones/huawei/huawei-p50-pro/d7e8f9a0-b1c2-4d3e-4f5a-6b7c8d9e0f1d/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'huawei-p50-pro', '{"brand": "Huawei", "model": "Huawei P50 Pro", "series": "P", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Curved", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Snapdragon 888", "weight_g": 195, "dimensions": "158.8 x 72.8 x 8.5 mm", "sub_category": "Phones", "camera_layout": "Dual Circle", "rear_cameras": "Quad", "rear_material": "Glass", "released_year": 2021, "screen_size_in": 6.6}'),
+('e8f9a0b1-c2d3-4e4f-5a6b-7c8d9e0f1a2e', 1, 6, 18, 54, 361, 'electronics/premium-electronics/phones/huawei/huawei-mate-50-pro/e8f9a0b1-c2d3-4e4f-5a6b-7c8d9e0f1a2e/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'huawei-mate-50-pro', '{"brand": "Huawei", "model": "Huawei Mate 50 Pro", "series": "Mate", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Curved", "port_type": "USB-C", "notch_type": "Notch", "processor": "Snapdragon 8+ Gen 1", "weight_g": 209, "dimensions": "162.1 x 75.5 x 8.5 mm", "sub_category": "Phones", "camera_layout": "Circular", "rear_cameras": "Triple", "rear_material": "Glass", "released_year": 2022, "screen_size_in": 6.74}'),
+('f9a0b1c2-d3e4-4f5a-6b7c-8d9e0f1a2b3f', 1, 6, 18, 56, 362, 'electronics/premium-electronics/phones/asus/asus-rog-phone-6/f9a0b1c2-d3e4-4f5a-6b7c-8d9e0f1a2b3f/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'asus-rog-phone-6', '{"brand": "Asus", "model": "Asus ROG Phone 6", "series": "ROG", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "None", "processor": "Snapdragon 8+ Gen 1", "weight_g": 239, "dimensions": "173 x 77 x 10.4 mm", "sub_category": "Phones", "camera_layout": "Horizontal", "rear_cameras": "Triple", "rear_material": "Glass", "released_year": 2022, "screen_size_in": 6.78}'),
+('a0b1c2d3-e4f5-4a6b-7c8d-9e0f1a2b3c4g', 1, 6, 18, 56, 363, 'electronics/premium-electronics/phones/asus/asus-zenfone-9/a0b1c2d3-e4f5-4a6b-7c8d-9e0f1a2b3c4g/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'asus-zenfone-9', '{"brand": "Asus", "model": "Asus Zenfone 9", "series": "Zenfone", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Snapdragon 8+ Gen 1", "weight_g": 169, "dimensions": "146.5 x 68.1 x 9.1 mm", "sub_category": "Phones", "camera_layout": "Vertical", "rear_cameras": "Dual", "rear_material": "Plastic", "released_year": 2022, "screen_size_in": 5.92}'),
+('b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d5h', 1, 6, 18, 57, 364, 'electronics/premium-electronics/phones/sony/sony-xperia-1-iv/b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d5h/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'sony-xperia-1-iv', '{"brand": "Sony", "model": "Sony Xperia 1 IV", "series": "Xperia 1", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "None", "processor": "Snapdragon 8 Gen 1", "weight_g": 185, "dimensions": "165 x 71 x 8.2 mm", "sub_category": "Phones", "camera_layout": "Vertical", "rear_cameras": "Triple", "rear_material": "Frosted Glass", "released_year": 2022, "screen_size_in": 6.5}'),
+('c2d3e4f5-a6b7-4c8d-9e0f-1a2b3c4d5e6i', 1, 6, 18, 57, 365, 'electronics/premium-electronics/phones/sony/sony-xperia-5-iv/c2d3e4f5-a6b7-4c8d-9e0f-1a2b3c4d5e6i/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'sony-xperia-5-iv', '{"brand": "Sony", "model": "Sony Xperia 5 IV", "series": "Xperia 5", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "None", "processor": "Snapdragon 8 Gen 1", "weight_g": 172, "dimensions": "156 x 67 x 8.2 mm", "sub_category": "Phones", "camera_layout": "Vertical", "rear_cameras": "Triple", "rear_material": "Frosted Glass", "released_year": 2022, "screen_size_in": 6.1}'),
+('d3e4f5a6-b7c8-4d9e-0f1a-2b3c4d5e6f7d', 1, 6, 18, 60, 366, 'electronics/premium-electronics/phones/motorola/motorola-edge-30-ultra/d3e4f5a6-b7c8-4d9e-0f1a-2b3c4d5e6f7d/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'motorola-edge-30-ultra', '{"brand": "Motorola", "model": "Motorola Edge 30 Ultra", "series": "Edge", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Curved", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Snapdragon 8+ Gen 1", "weight_g": 198.5, "dimensions": "161.8 x 73 x 8.4 mm", "sub_category": "Phones", "camera_layout": "Circular", "rear_cameras": "Triple", "rear_material": "Vegan Leather", "released_year": 2022, "screen_size_in": 6.67}'),
+('e4f5a6b7-c8d9-4e0f-1a2b-3c4d5e6f7a8e', 1, 6, 18, 60, 367, 'electronics/premium-electronics/phones/motorola/moto-g72/e4f5a6b7-c8d9-4e0f-1a2b-3c4d5e6f7a8e/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'moto-g72', '{"brand": "Motorola", "model": "Moto G72", "series": "G", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Helio G99", "weight_g": 166, "dimensions": "160.5 x 74.4 x 7.9 mm", "sub_category": "Phones", "camera_layout": "Vertical", "rear_cameras": "Triple", "rear_material": "Plastic", "released_year": 2022, "screen_size_in": 6.6}'),
+('f5a6b7c8-d9e0-4f1a-2b3c-4d5e6f7a8b9f', 1, 6, 18, 61, 368, 'electronics/premium-electronics/phones/iqoo/iqoo-9t/f5a6b7c8-d9e0-4f1a-2b3c-4d5e6f7a8b9f/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'iqoo-9t', '{"brand": "iQOO", "model": "iQOO 9T", "series": null, "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Snapdragon 8+ Gen 1", "weight_g": 206, "dimensions": "164.8 x 77.1 x 8.9 mm", "sub_category": "Phones", "camera_layout": "Vertical", "rear_cameras": "Triple", "rear_material": "Glass", "released_year": 2022, "screen_size_in": 6.78}'),
+('a6b7c8d9-e0f1-4a2b-3c4d-5e6f7a8b9c0g', 1, 6, 18, 55, 369, 'electronics/premium-electronics/phones/nokia/nokia-x30/a6b7c8d9-e0f1-4a2b-3c4d-5e6f7a8b9c0g/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'nokia-x30', '{"brand": "Nokia", "model": "Nokia X30", "series": "X", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Snapdragon 695", "weight_g": 185, "dimensions": "158.9 x 73.9 x 7.99 mm", "sub_category": "Phones", "camera_layout": "Circular", "rear_cameras": "Dual", "rear_material": "Recycled Plastic", "released_year": 2022, "screen_size_in": 6.43}'),
+('b7c8d9e0-f1a2-4b3c-4d5e-6f7a8b9c0d1h', 1, 6, 18, 58, 370, 'electronics/premium-electronics/phones/zte/zte-axon-40-ultra/b7c8d9e0-f1a2-4b3c-4d5e-6f7a8b9c0d1h/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'zte-axon-40-ultra', '{"brand": "ZTE", "model": "ZTE Axon 40 Ultra", "series": "Axon", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Curved", "port_type": "USB-C", "notch_type": "Under Display", "processor": "Snapdragon 8 Gen 1", "weight_g": 204, "dimensions": "163.3 x 73.5 x 8.4 mm", "sub_category": "Phones", "camera_layout": "Vertical", "rear_cameras": "Triple", "rear_material": "Vegan Leather", "released_year": 2022, "screen_size_in": 6.8}'),
+('c8d9e0f1-a2b3-4c4d-5e6f-7a8b9c0d1e2i', 1, 6, 18, 65, 371, 'electronics/premium-electronics/phones/black-shark/black-shark-5/c8d9e0f1-a2b3-4c4d-5e6f-7a8b9c0d1e2i/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'black-shark-5', '{"brand": "Black Shark", "model": "Black Shark 5", "series": null, "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Snapdragon 870", "weight_g": 218, "dimensions": "163.8 x 76.5 x 10 mm", "sub_category": "Phones", "camera_layout": "Vertical", "rear_cameras": "Triple", "rear_material": "Glass", "released_year": 2022, "screen_size_in": 6.67}'),
+('d9e0f1a2-b3c4-4d5e-6f7a-8b9c0d1e2f3d', 1, 6, 18, 67, 372, 'electronics/premium-electronics/phones/nothing/nothing-phone-2a/d9e0f1a2-b3c4-4d5e-6f7a-8b9c0d1e2f3d/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'nothing-phone-2a', '{"brand": "Nothing", "model": "Nothing Phone 2a", "series": null, "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Dimensity 7200 Pro", "weight_g": 190, "dimensions": "161.7 x 76.3 x 8.6 mm", "sub_category": "Phones", "camera_layout": "Circular", "rear_cameras": "Dual", "rear_material": "Plastic", "released_year": 2024, "screen_size_in": 6.7}'),
+('e0f1a2b3-c4d5-4e6f-7a8b-9c0d1e2f3a4e', 1, 6, 18, 68, 373, 'electronics/premium-electronics/phones/tecno/tecno-pova-5-pro/e0f1a2b3-c4d5-4e6f-7a8b-9c0d1e2f3a4e/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'tecno-pova-5-pro', '{"brand": "Tecno", "model": "Tecno POVA 5 Pro", "series": "POVA", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Dimensity 6080", "weight_g": 195, "dimensions": "168.6 x 77 x 8.9 mm", "sub_category": "Phones", "camera_layout": "Circular", "rear_cameras": "Triple", "rear_material": "Plastic", "released_year": 2023, "screen_size_in": 6.78}'),
+('f1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5f', 1, 6, 18, 69, 374, 'electronics/premium-electronics/phones/infinix/infinix-gt-10-pro/f1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5f/sample-image.jpg', '2024-10-07 08:00:00', '2024-10-07 08:00:00', 'infinix-gt-10-pro', '{"brand": "Infinix", "model": "Infinix GT 10 Pro", "series": "GT", "category": "Premium Electronics", "biometric": "Fingerprint", "edge_type": "Flat", "port_type": "USB-C", "notch_type": "Punch Hole", "processor": "Dimensity 8050", "weight_g": 205, "dimensions": "164.4 x 76.1 x 8.3 mm", "sub_category": "Phones", "camera_layout": "Vertical", "rear_cameras": "Triple", "rear_material": "Glass", "released_year": 2023, "screen_size_in": 6.67}');
+
+
+-- =============================================
+-- STEP 3: INSERT BRANDS FROM STAGING
+-- =============================================
+-- Extract unique brands from product_info and insert into application.brands
 
 INSERT INTO application.brands (name, slug, is_active, sort_order)
-VALUES
-  ('Apple', 'apple', true, 1),
-  ('Samsung', 'samsung', true, 2),
-  ('Google', 'google', true, 3),
-  ('OnePlus', 'oneplus', true, 4),
-  ('Xiaomi', 'xiaomi', true, 5),
-  ('Sony', 'sony', true, 6),
-  ('LG', 'lg', true, 7),
-  ('Dell', 'dell', true, 8),
-  ('HP', 'hp', true, 9),
-  ('Lenovo', 'lenovo', true, 10),
-  ('ASUS', 'asus', true, 11),
-  ('Acer', 'acer', true, 12),
-  ('Microsoft', 'microsoft', true, 13),
-  ('Razer', 'razer', true, 14),
-  ('MSI', 'msi', true, 15),
-  ('Bose', 'bose', true, 16),
-  ('JBL', 'jbl', true, 17),
-  ('Sennheiser', 'sennheiser', true, 18),
-  ('Audio-Technica', 'audio-technica', true, 19),
-  ('Beats', 'beats', true, 20),
-  ('Canon', 'canon', true, 21),
-  ('Nikon', 'nikon', true, 22),
-  ('Fujifilm', 'fujifilm', true, 23),
-  ('Panasonic', 'panasonic', true, 24),
-  ('GoPro', 'gopro', true, 25),
-  ('Nintendo', 'nintendo', true, 26),
-  ('Valve', 'valve', true, 27),
-  ('IKEA', 'ikea', true, 28),
-  ('Herman Miller', 'herman-miller', true, 29),
-  ('Steelcase', 'steelcase', true, 30),
-  ('Ashley', 'ashley', true, 31),
-  ('West Elm', 'west-elm', true, 32),
-  ('Whirlpool', 'whirlpool', true, 33),
-  ('Bosch', 'bosch', true, 34),
-  ('Dyson', 'dyson', true, 35),
-  ('KitchenAid', 'kitchenaid', true, 36),
-  ('Instant Pot', 'instant-pot', true, 37),
-  ('Nike', 'nike', true, 38),
-  ('Adidas', 'adidas', true, 39),
-  ('Gucci', 'gucci', true, 40),
-  ('Louis Vuitton', 'louis-vuitton', true, 41),
-  ('Zara', 'zara', true, 42),
-  ('Graco', 'graco', true, 43),
-  ('Chicco', 'chicco', true, 44),
-  ('Baby Jogger', 'baby-jogger', true, 45),
-  ('UPPAbaby', 'uppababy', true, 46),
-  ('LEGO', 'lego', true, 47),
-  ('Trek', 'trek', true, 48),
-  ('Giant', 'giant', true, 49),
-  ('Specialized', 'specialized', true, 50),
-  ('Peloton', 'peloton', true, 51),
-  ('NordicTrack', 'nordictrack', true, 52),
-  ('DeWalt', 'dewalt', true, 53),
-  ('Makita', 'makita', true, 54),
-  ('Milwaukee', 'milwaukee', true, 55),
-  ('Black+Decker', 'black-decker', true, 56),
-  ('Husqvarna', 'husqvarna', true, 57),
-  ('Penguin', 'penguin', true, 58),
-  ('Hasbro', 'hasbro', true, 59),
-  ('Criterion', 'criterion', true, 60),
-  ('Funko', 'funko', true, 61),
-  ('Fender', 'fender', true, 62),
-  ('Gibson', 'gibson', true, 63),
-  ('Yamaha', 'yamaha', true, 64),
-  ('Roland', 'roland', true, 65),
-  ('Winsor & Newton', 'winsor-newton', true, 66),
-  ('Toyota', 'toyota', true, 67),
-  ('Honda', 'honda', true, 68),
-  ('BMW', 'bmw', true, 69),
-  ('Mercedes-Benz', 'mercedes-benz', true, 70),
-  ('Tesla', 'tesla', true, 71),
-  ('Ford', 'ford', true, 72),
-  ('Chevrolet', 'chevrolet', true, 73),
-  ('Harley-Davidson', 'harley-davidson', true, 74),
-  ('Kawasaki', 'kawasaki', true, 75),
-  ('Ducati', 'ducati', true, 76),
-  ('Vespa', 'vespa', true, 77),
-  ('Ola', 'ola', true, 78),
-  ('Airstream', 'airstream', true, 79),
-  ('Winnebago', 'winnebago', true, 80)
+SELECT DISTINCT 
+  raw.product_info->>'brand' AS name,
+  LOWER(REPLACE(REPLACE(raw.product_info->>'brand', ' ', '-'), '+', '-plus')) AS slug,
+  true,
+  0
+FROM staging.products_raw raw
+WHERE raw.product_info->>'brand' IS NOT NULL
+  AND NOT EXISTS (
+    SELECT 1 FROM application.brands b 
+    WHERE LOWER(b.name) = LOWER(raw.product_info->>'brand')
+  )
 ON CONFLICT (slug) DO NOTHING;
 
--- =============================================
--- STEP 2: INSERT PRODUCTS
--- Each category uses direct JOINs
--- =============================================
-
--- PHONES (27 products)
-INSERT INTO application.products (barter_type_id, category_id, subcategory_id, brand_id, title, model, description, product_info, is_active)
-SELECT 
-  bt.barter_type_id, c.category_id, s.subcategory_id, b.brand_id,
-  p.title, p.model, p.description, p.product_info::jsonb, true
-FROM (VALUES
-  ('apple', 'iPhone 15 Pro Max', 'iPhone 15 Pro Max', 'Latest flagship with A17 Pro chip and titanium design', '{"released_year": 2023, "processor": "A17 Pro", "screen_size_inches": 6.7, "rear_cameras": "Triple 48MP", "camera_layout": "Square", "notch_type": "Dynamic Island", "edge_type": "Rounded", "rear_material": "Titanium", "biometric": "Face ID", "port_type": "USB-C", "dimensions": "159.9 x 76.7 x 8.25 mm", "weight_grams": 221}'),
-  ('apple', 'iPhone 15 Pro', 'iPhone 15 Pro', 'Pro model with A17 Pro chip', '{"released_year": 2023, "processor": "A17 Pro", "screen_size_inches": 6.1, "rear_cameras": "Triple 48MP", "camera_layout": "Square", "notch_type": "Dynamic Island", "edge_type": "Rounded", "rear_material": "Titanium", "biometric": "Face ID", "port_type": "USB-C", "dimensions": "146.6 x 70.6 x 8.25 mm", "weight_grams": 187}'),
-  ('apple', 'iPhone 15', 'iPhone 15', 'Standard model with A16 chip and Dynamic Island', '{"released_year": 2023, "processor": "A16 Bionic", "screen_size_inches": 6.1, "rear_cameras": "Dual 48MP", "camera_layout": "Diagonal", "notch_type": "Dynamic Island", "edge_type": "Rounded", "rear_material": "Glass", "biometric": "Face ID", "port_type": "USB-C", "dimensions": "147.6 x 71.6 x 7.8 mm", "weight_grams": 171}'),
-  ('apple', 'iPhone 14 Pro Max', 'iPhone 14 Pro Max', 'Previous gen flagship with A16 chip', '{"released_year": 2022, "processor": "A16 Bionic", "screen_size_inches": 6.7, "rear_cameras": "Triple 48MP", "camera_layout": "Square", "notch_type": "Dynamic Island", "edge_type": "Flat", "rear_material": "Glass", "biometric": "Face ID", "port_type": "Lightning", "dimensions": "160.7 x 77.6 x 7.85 mm", "weight_grams": 240}'),
-  ('apple', 'iPhone 14', 'iPhone 14', 'Standard model with A15 chip', '{"released_year": 2022, "processor": "A15 Bionic", "screen_size_inches": 6.1, "rear_cameras": "Dual 12MP", "camera_layout": "Diagonal", "notch_type": "Notch", "edge_type": "Flat", "rear_material": "Glass", "biometric": "Face ID", "port_type": "Lightning", "dimensions": "146.7 x 71.5 x 7.8 mm", "weight_grams": 172}'),
-  ('apple', 'iPhone 13 Pro', 'iPhone 13 Pro', 'Pro model with A15 chip and ProMotion', '{"released_year": 2021, "processor": "A15 Bionic", "screen_size_inches": 6.1, "rear_cameras": "Triple 12MP", "camera_layout": "Square", "notch_type": "Notch", "edge_type": "Flat", "rear_material": "Matte Glass", "biometric": "Face ID", "port_type": "Lightning", "dimensions": "146.7 x 71.5 x 7.65 mm", "weight_grams": 204}'),
-  ('apple', 'iPhone 13', 'iPhone 13', 'Standard model with A15 chip', '{"released_year": 2021, "processor": "A15 Bionic", "screen_size_inches": 6.1, "rear_cameras": "Dual 12MP", "camera_layout": "Diagonal", "notch_type": "Notch", "edge_type": "Flat", "rear_material": "Glass", "biometric": "Face ID", "port_type": "Lightning", "dimensions": "146.7 x 71.5 x 7.65 mm", "weight_grams": 174}'),
-  ('apple', 'iPhone SE (3rd gen)', 'iPhone SE 3rd gen', 'Budget model with A15 chip and Touch ID', '{"released_year": 2022, "processor": "A15 Bionic", "screen_size_inches": 4.7, "rear_cameras": "Single 12MP", "camera_layout": "Single", "notch_type": "None", "edge_type": "Rounded", "rear_material": "Glass", "biometric": "Touch ID", "port_type": "Lightning", "dimensions": "138.4 x 67.3 x 7.3 mm", "weight_grams": 144}'),
-  ('samsung', 'Galaxy S24 Ultra', 'Galaxy S24 Ultra', 'Flagship with S Pen and AI features', '{"released_year": 2024, "processor": "Snapdragon 8 Gen 3", "screen_size_inches": 6.8, "rear_cameras": "Quad 200MP", "camera_layout": "Vertical", "notch_type": "Punch Hole", "edge_type": "Flat", "rear_material": "Titanium", "biometric": "Fingerprint", "port_type": "USB-C", "dimensions": "162.3 x 79 x 8.6 mm", "weight_grams": 232}'),
-  ('samsung', 'Galaxy S24+', 'Galaxy S24+', 'Large screen flagship', '{"released_year": 2024, "processor": "Snapdragon 8 Gen 3", "screen_size_inches": 6.7, "rear_cameras": "Triple 50MP", "camera_layout": "Vertical", "notch_type": "Punch Hole", "edge_type": "Flat", "rear_material": "Glass", "biometric": "Fingerprint", "port_type": "USB-C", "dimensions": "158.5 x 75.9 x 7.7 mm", "weight_grams": 196}'),
-  ('samsung', 'Galaxy S24', 'Galaxy S24', 'Compact flagship', '{"released_year": 2024, "processor": "Snapdragon 8 Gen 3", "screen_size_inches": 6.2, "rear_cameras": "Triple 50MP", "camera_layout": "Vertical", "notch_type": "Punch Hole", "edge_type": "Flat", "rear_material": "Glass", "biometric": "Fingerprint", "port_type": "USB-C", "dimensions": "147 x 70.6 x 7.6 mm", "weight_grams": 167}'),
-  ('samsung', 'Galaxy S23 Ultra', 'Galaxy S23 Ultra', 'Previous gen flagship with S Pen', '{"released_year": 2023, "processor": "Snapdragon 8 Gen 2", "screen_size_inches": 6.8, "rear_cameras": "Quad 200MP", "camera_layout": "Vertical", "notch_type": "Punch Hole", "edge_type": "Curved", "rear_material": "Glass", "biometric": "Fingerprint", "port_type": "USB-C", "dimensions": "163.4 x 78.1 x 8.9 mm", "weight_grams": 234}'),
-  ('samsung', 'Galaxy Z Fold 5', 'Galaxy Z Fold 5', 'Foldable tablet-phone hybrid', '{"released_year": 2023, "processor": "Snapdragon 8 Gen 2", "screen_size_inches": 7.6, "rear_cameras": "Triple 50MP", "camera_layout": "Vertical", "notch_type": "Punch Hole", "edge_type": "Flat", "rear_material": "Glass", "biometric": "Fingerprint", "port_type": "USB-C", "dimensions": "154.9 x 129.9 x 6.1 mm", "weight_grams": 253}'),
-  ('samsung', 'Galaxy Z Flip 5', 'Galaxy Z Flip 5', 'Compact foldable with Flex Window', '{"released_year": 2023, "processor": "Snapdragon 8 Gen 2", "screen_size_inches": 6.7, "rear_cameras": "Dual 12MP", "camera_layout": "Horizontal", "notch_type": "Punch Hole", "edge_type": "Flat", "rear_material": "Glass", "biometric": "Fingerprint", "port_type": "USB-C", "dimensions": "165.1 x 71.9 x 6.9 mm", "weight_grams": 187}'),
-  ('samsung', 'Galaxy A54 5G', 'Galaxy A54 5G', 'Mid-range with flagship features', '{"released_year": 2023, "processor": "Exynos 1380", "screen_size_inches": 6.4, "rear_cameras": "Triple 50MP", "camera_layout": "Vertical", "notch_type": "Punch Hole", "edge_type": "Flat", "rear_material": "Glass", "biometric": "Fingerprint", "port_type": "USB-C", "dimensions": "158.2 x 76.7 x 8.2 mm", "weight_grams": 202}'),
-  ('google', 'Pixel 8 Pro', 'Pixel 8 Pro', 'Google flagship with Tensor G3', '{"released_year": 2023, "processor": "Tensor G3", "screen_size_inches": 6.7, "rear_cameras": "Triple 50MP", "camera_layout": "Horizontal Bar", "notch_type": "Punch Hole", "edge_type": "Curved", "rear_material": "Matte Glass", "biometric": "Fingerprint + Face", "port_type": "USB-C", "dimensions": "162.6 x 76.5 x 8.8 mm", "weight_grams": 213}'),
-  ('google', 'Pixel 8', 'Pixel 8', 'Compact Google phone', '{"released_year": 2023, "processor": "Tensor G3", "screen_size_inches": 6.2, "rear_cameras": "Dual 50MP", "camera_layout": "Horizontal Bar", "notch_type": "Punch Hole", "edge_type": "Rounded", "rear_material": "Matte Glass", "biometric": "Fingerprint + Face", "port_type": "USB-C", "dimensions": "150.5 x 70.8 x 8.9 mm", "weight_grams": 187}'),
-  ('google', 'Pixel 7a', 'Pixel 7a', 'Budget flagship killer', '{"released_year": 2023, "processor": "Tensor G2", "screen_size_inches": 6.1, "rear_cameras": "Dual 64MP", "camera_layout": "Horizontal Bar", "notch_type": "Punch Hole", "edge_type": "Rounded", "rear_material": "Plastic", "biometric": "Fingerprint", "port_type": "USB-C", "dimensions": "152.4 x 72.9 x 9 mm", "weight_grams": 193.5}'),
-  ('google', 'Pixel Fold', 'Pixel Fold', 'Google foldable phone', '{"released_year": 2023, "processor": "Tensor G2", "screen_size_inches": 7.6, "rear_cameras": "Triple 48MP", "camera_layout": "Horizontal Bar", "notch_type": "Punch Hole", "edge_type": "Flat", "rear_material": "Glass", "biometric": "Fingerprint", "port_type": "USB-C", "dimensions": "158.7 x 139.7 x 5.8 mm", "weight_grams": 283}'),
-  ('oneplus', 'OnePlus 12', 'OnePlus 12', 'Flagship with Hasselblad camera', '{"released_year": 2024, "processor": "Snapdragon 8 Gen 3", "screen_size_inches": 6.82, "rear_cameras": "Triple 50MP", "camera_layout": "Circular", "notch_type": "Punch Hole", "edge_type": "Curved", "rear_material": "Glass", "biometric": "Fingerprint", "port_type": "USB-C", "dimensions": "164.3 x 75.8 x 9.15 mm", "weight_grams": 220}'),
-  ('oneplus', 'OnePlus 11', 'OnePlus 11', 'Previous gen flagship', '{"released_year": 2023, "processor": "Snapdragon 8 Gen 2", "screen_size_inches": 6.7, "rear_cameras": "Triple 50MP", "camera_layout": "Circular", "notch_type": "Punch Hole", "edge_type": "Curved", "rear_material": "Glass", "biometric": "Fingerprint", "port_type": "USB-C", "dimensions": "163.1 x 74.1 x 8.53 mm", "weight_grams": 205}'),
-  ('oneplus', 'OnePlus Nord 3', 'OnePlus Nord 3', 'Mid-range with flagship specs', '{"released_year": 2023, "processor": "Dimensity 9000", "screen_size_inches": 6.74, "rear_cameras": "Triple 50MP", "camera_layout": "Vertical", "notch_type": "Punch Hole", "edge_type": "Flat", "rear_material": "Glass", "biometric": "Fingerprint", "port_type": "USB-C", "dimensions": "162.5 x 75.1 x 8.15 mm", "weight_grams": 193.5}'),
-  ('xiaomi', 'Xiaomi 14 Ultra', 'Xiaomi 14 Ultra', 'Photography flagship with Leica', '{"released_year": 2024, "processor": "Snapdragon 8 Gen 3", "screen_size_inches": 6.73, "rear_cameras": "Quad 50MP", "camera_layout": "Circular", "notch_type": "Punch Hole", "edge_type": "Curved", "rear_material": "Vegan Leather", "biometric": "Fingerprint", "port_type": "USB-C", "dimensions": "161.4 x 75.3 x 9.2 mm", "weight_grams": 224}'),
-  ('xiaomi', 'Xiaomi 13 Pro', 'Xiaomi 13 Pro', 'Leica camera flagship', '{"released_year": 2023, "processor": "Snapdragon 8 Gen 2", "screen_size_inches": 6.73, "rear_cameras": "Triple 50MP", "camera_layout": "Square", "notch_type": "Punch Hole", "edge_type": "Curved", "rear_material": "Ceramic", "biometric": "Fingerprint", "port_type": "USB-C", "dimensions": "162.9 x 74.6 x 8.38 mm", "weight_grams": 229}'),
-  ('xiaomi', 'Redmi Note 13 Pro+', 'Redmi Note 13 Pro+', 'Best mid-range value', '{"released_year": 2024, "processor": "Dimensity 7200", "screen_size_inches": 6.67, "rear_cameras": "Triple 200MP", "camera_layout": "Vertical", "notch_type": "Punch Hole", "edge_type": "Curved", "rear_material": "Glass", "biometric": "Fingerprint", "port_type": "USB-C", "dimensions": "161.4 x 74.2 x 8.9 mm", "weight_grams": 204.5}'),
-  ('sony', 'Xperia 1 V', 'Xperia 1 V', 'Cinema-grade display and camera', '{"released_year": 2023, "processor": "Snapdragon 8 Gen 2", "screen_size_inches": 6.5, "rear_cameras": "Triple 52MP", "camera_layout": "Vertical", "notch_type": "None", "edge_type": "Flat", "rear_material": "Frosted Glass", "biometric": "Fingerprint", "port_type": "USB-C", "dimensions": "165 x 71 x 8.3 mm", "weight_grams": 187}')
-) AS p(brand_slug, title, model, description, product_info)
-JOIN application.subcategories s ON s.slug = 'phones'
-JOIN application.categories c ON s.category_id = c.category_id AND c.slug = 'electronics'
-JOIN application.barter_types bt ON c.barter_type_id = bt.barter_type_id
-JOIN application.brands b ON b.slug = p.brand_slug
-ON CONFLICT DO NOTHING;
-
--- LAPTOPS (20 products)
-INSERT INTO application.products (barter_type_id, category_id, subcategory_id, brand_id, title, model, description, product_info, is_active)
-SELECT 
-  bt.barter_type_id, c.category_id, s.subcategory_id, b.brand_id,
-  p.title, p.model, p.description, p.product_info::jsonb, true
-FROM (VALUES
-  ('apple', 'MacBook Pro 16" M3 Max', 'MacBook Pro 16 M3 Max', 'Most powerful MacBook with M3 Max chip', '{"released_year": 2023, "processor": "M3 Max", "ram_gb": 36, "storage_gb": 1000, "screen_size_inches": 16.2, "display_type": "Liquid Retina XDR", "gpu": "M3 Max 40-core", "battery_hours": 22, "weight_kg": 2.14}'),
-  ('apple', 'MacBook Pro 14" M3 Pro', 'MacBook Pro 14 M3 Pro', 'Pro performance in compact form', '{"released_year": 2023, "processor": "M3 Pro", "ram_gb": 18, "storage_gb": 512, "screen_size_inches": 14.2, "display_type": "Liquid Retina XDR", "gpu": "M3 Pro 14-core", "battery_hours": 17, "weight_kg": 1.61}'),
-  ('apple', 'MacBook Air 15" M3', 'MacBook Air 15 M3', 'Thin and light with large display', '{"released_year": 2024, "processor": "M3", "ram_gb": 8, "storage_gb": 256, "screen_size_inches": 15.3, "display_type": "Liquid Retina", "gpu": "M3 10-core", "battery_hours": 18, "weight_kg": 1.51}'),
-  ('apple', 'MacBook Air 13" M3', 'MacBook Air 13 M3', 'Everyday laptop with M3', '{"released_year": 2024, "processor": "M3", "ram_gb": 8, "storage_gb": 256, "screen_size_inches": 13.6, "display_type": "Liquid Retina", "gpu": "M3 8-core", "battery_hours": 18, "weight_kg": 1.24}'),
-  ('apple', 'MacBook Air 13" M2', 'MacBook Air 13 M2', 'Previous gen thin laptop', '{"released_year": 2022, "processor": "M2", "ram_gb": 8, "storage_gb": 256, "screen_size_inches": 13.6, "display_type": "Liquid Retina", "gpu": "M2 8-core", "battery_hours": 18, "weight_kg": 1.24}'),
-  ('dell', 'XPS 15 (2024)', 'XPS 15 2024', 'Premium Windows ultrabook', '{"released_year": 2024, "processor": "Intel Core Ultra 7", "ram_gb": 16, "storage_gb": 512, "screen_size_inches": 15.6, "display_type": "OLED 3.5K", "gpu": "Intel Arc", "battery_hours": 13, "weight_kg": 1.86}'),
-  ('dell', 'XPS 13 Plus', 'XPS 13 Plus', 'Futuristic compact laptop', '{"released_year": 2023, "processor": "Intel Core i7-1360P", "ram_gb": 16, "storage_gb": 512, "screen_size_inches": 13.4, "display_type": "OLED 3.5K", "gpu": "Intel Iris Xe", "battery_hours": 10, "weight_kg": 1.26}'),
-  ('dell', 'Inspiron 16', 'Inspiron 16 2024', 'Everyday productivity laptop', '{"released_year": 2024, "processor": "Intel Core i5-1335U", "ram_gb": 8, "storage_gb": 256, "screen_size_inches": 16, "display_type": "FHD+", "gpu": "Intel UHD", "battery_hours": 8, "weight_kg": 1.87}'),
-  ('hp', 'Spectre x360 16', 'Spectre x360 16', '2-in-1 premium convertible', '{"released_year": 2024, "processor": "Intel Core Ultra 7", "ram_gb": 16, "storage_gb": 1000, "screen_size_inches": 16, "display_type": "OLED 4K", "gpu": "Intel Arc", "battery_hours": 12, "weight_kg": 2.04}'),
-  ('hp', 'Envy x360 15', 'Envy x360 15', 'Versatile 2-in-1 laptop', '{"released_year": 2024, "processor": "AMD Ryzen 7 8840U", "ram_gb": 16, "storage_gb": 512, "screen_size_inches": 15.6, "display_type": "OLED FHD", "gpu": "AMD Radeon 780M", "battery_hours": 11, "weight_kg": 1.91}'),
-  ('hp', 'Pavilion 15', 'Pavilion 15 2024', 'Budget-friendly everyday laptop', '{"released_year": 2024, "processor": "Intel Core i5-1335U", "ram_gb": 8, "storage_gb": 256, "screen_size_inches": 15.6, "display_type": "FHD IPS", "gpu": "Intel Iris Xe", "battery_hours": 8, "weight_kg": 1.75}'),
-  ('lenovo', 'ThinkPad X1 Carbon Gen 12', 'ThinkPad X1 Carbon Gen 12', 'Business ultrabook flagship', '{"released_year": 2024, "processor": "Intel Core Ultra 7", "ram_gb": 16, "storage_gb": 512, "screen_size_inches": 14, "display_type": "2.8K OLED", "gpu": "Intel Arc", "battery_hours": 15, "weight_kg": 1.08}'),
-  ('lenovo', 'ThinkPad T14s Gen 5', 'ThinkPad T14s Gen 5', 'Portable business workhorse', '{"released_year": 2024, "processor": "Intel Core Ultra 5", "ram_gb": 16, "storage_gb": 256, "screen_size_inches": 14, "display_type": "2.8K IPS", "gpu": "Intel Arc", "battery_hours": 12, "weight_kg": 1.24}'),
-  ('lenovo', 'Yoga 9i Gen 9', 'Yoga 9i Gen 9', 'Premium 2-in-1 with soundbar', '{"released_year": 2024, "processor": "Intel Core Ultra 7", "ram_gb": 16, "storage_gb": 512, "screen_size_inches": 14, "display_type": "4K OLED", "gpu": "Intel Arc", "battery_hours": 10, "weight_kg": 1.4}'),
-  ('lenovo', 'IdeaPad Slim 5', 'IdeaPad Slim 5 2024', 'Affordable productivity laptop', '{"released_year": 2024, "processor": "AMD Ryzen 5 7530U", "ram_gb": 8, "storage_gb": 512, "screen_size_inches": 15.6, "display_type": "FHD IPS", "gpu": "AMD Radeon", "battery_hours": 10, "weight_kg": 1.7}'),
-  ('asus', 'ROG Zephyrus G16 (2024)', 'ROG Zephyrus G16 2024', 'Thin gaming powerhouse', '{"released_year": 2024, "processor": "Intel Core Ultra 9", "ram_gb": 32, "storage_gb": 1000, "screen_size_inches": 16, "display_type": "OLED QHD+ 240Hz", "gpu": "RTX 4090", "battery_hours": 10, "weight_kg": 1.85}'),
-  ('asus', 'ROG Strix G16', 'ROG Strix G16 2024', 'Gaming laptop with RGB', '{"released_year": 2024, "processor": "Intel Core i9-14900HX", "ram_gb": 16, "storage_gb": 1000, "screen_size_inches": 16, "display_type": "QHD+ 240Hz", "gpu": "RTX 4070", "battery_hours": 6, "weight_kg": 2.5}'),
-  ('asus', 'ZenBook 14 OLED', 'ZenBook 14 OLED 2024', 'Ultralight OLED laptop', '{"released_year": 2024, "processor": "Intel Core Ultra 7", "ram_gb": 16, "storage_gb": 512, "screen_size_inches": 14, "display_type": "2.8K OLED", "gpu": "Intel Arc", "battery_hours": 13, "weight_kg": 1.28}'),
-  ('asus', 'Vivobook S 15 OLED', 'Vivobook S 15 OLED', 'Stylish everyday laptop', '{"released_year": 2024, "processor": "Snapdragon X Elite", "ram_gb": 16, "storage_gb": 512, "screen_size_inches": 15.6, "display_type": "3K OLED", "gpu": "Qualcomm Adreno", "battery_hours": 18, "weight_kg": 1.42}'),
-  ('acer', 'Swift Go 14', 'Swift Go 14 2024', 'AI-powered ultrabook', '{"released_year": 2024, "processor": "Intel Core Ultra 7", "ram_gb": 16, "storage_gb": 512, "screen_size_inches": 14, "display_type": "2.8K OLED", "gpu": "Intel Arc", "battery_hours": 12, "weight_kg": 1.25}')
-) AS p(brand_slug, title, model, description, product_info)
-JOIN application.subcategories s ON s.slug = 'laptops'
-JOIN application.categories c ON s.category_id = c.category_id AND c.slug = 'electronics'
-JOIN application.barter_types bt ON c.barter_type_id = bt.barter_type_id
-JOIN application.brands b ON b.slug = p.brand_slug
-ON CONFLICT DO NOTHING;
-
--- AUDIO / HEADPHONES (10 products)
-INSERT INTO application.products (barter_type_id, category_id, subcategory_id, brand_id, title, model, description, product_info, is_active)
-SELECT 
-  bt.barter_type_id, c.category_id, s.subcategory_id, b.brand_id,
-  p.title, p.model, p.description, p.product_info::jsonb, true
-FROM (VALUES
-  ('sony', 'Sony WH-1000XM5', 'WH-1000XM5', 'Industry-leading noise cancellation', '{"released_year": 2022, "type": "Over-Ear", "driver_size_mm": 30, "noise_cancelling": true, "battery_hours": 30, "connectivity": "Bluetooth 5.2", "weight_grams": 250}'),
-  ('sony', 'Sony WH-1000XM4', 'WH-1000XM4', 'Previous gen premium ANC', '{"released_year": 2020, "type": "Over-Ear", "driver_size_mm": 40, "noise_cancelling": true, "battery_hours": 30, "connectivity": "Bluetooth 5.0", "weight_grams": 254}'),
-  ('apple', 'AirPods Max', 'AirPods Max', 'Premium Apple over-ear headphones', '{"released_year": 2020, "type": "Over-Ear", "driver_size_mm": 40, "noise_cancelling": true, "battery_hours": 20, "connectivity": "Bluetooth 5.0", "weight_grams": 384}'),
-  ('apple', 'AirPods Pro (2nd gen)', 'AirPods Pro 2nd gen', 'Best ANC earbuds for Apple', '{"released_year": 2022, "type": "In-Ear TWS", "driver_size_mm": 11, "noise_cancelling": true, "battery_hours": 6, "connectivity": "Bluetooth 5.3", "weight_grams": 5.3}'),
-  ('bose', 'QuietComfort Ultra', 'QuietComfort Ultra', 'Premium comfort and sound', '{"released_year": 2023, "type": "Over-Ear", "driver_size_mm": 35, "noise_cancelling": true, "battery_hours": 24, "connectivity": "Bluetooth 5.3", "weight_grams": 250}'),
-  ('bose', 'QuietComfort 45', 'QuietComfort 45', 'Classic ANC headphones', '{"released_year": 2021, "type": "Over-Ear", "driver_size_mm": 35, "noise_cancelling": true, "battery_hours": 24, "connectivity": "Bluetooth 5.1", "weight_grams": 240}'),
-  ('sennheiser', 'Momentum 4 Wireless', 'Momentum 4 Wireless', 'Audiophile wireless headphones', '{"released_year": 2022, "type": "Over-Ear", "driver_size_mm": 42, "noise_cancelling": true, "battery_hours": 60, "connectivity": "Bluetooth 5.2", "weight_grams": 293}'),
-  ('jbl', 'JBL Tour One M2', 'Tour One M2', 'Pro-tuned ANC headphones', '{"released_year": 2023, "type": "Over-Ear", "driver_size_mm": 40, "noise_cancelling": true, "battery_hours": 50, "connectivity": "Bluetooth 5.3", "weight_grams": 268}'),
-  ('audio-technica', 'ATH-M50xBT2', 'ATH-M50xBT2', 'Studio monitor quality wireless', '{"released_year": 2022, "type": "Over-Ear", "driver_size_mm": 45, "noise_cancelling": false, "battery_hours": 50, "connectivity": "Bluetooth 5.0", "weight_grams": 307}'),
-  ('beats', 'Beats Studio Pro', 'Beats Studio Pro', 'Apple ecosystem premium headphones', '{"released_year": 2023, "type": "Over-Ear", "driver_size_mm": 40, "noise_cancelling": true, "battery_hours": 40, "connectivity": "Bluetooth 5.3", "weight_grams": 260}')
-) AS p(brand_slug, title, model, description, product_info)
-JOIN application.subcategories s ON s.slug = 'audio-headphones-speakers'
-JOIN application.categories c ON s.category_id = c.category_id AND c.slug = 'electronics'
-JOIN application.barter_types bt ON c.barter_type_id = bt.barter_type_id
-JOIN application.brands b ON b.slug = p.brand_slug
-ON CONFLICT DO NOTHING;
-
--- CAMERAS (8 products)
-INSERT INTO application.products (barter_type_id, category_id, subcategory_id, brand_id, title, model, description, product_info, is_active)
-SELECT 
-  bt.barter_type_id, c.category_id, s.subcategory_id, b.brand_id,
-  p.title, p.model, p.description, p.product_info::jsonb, true
-FROM (VALUES
-  ('canon', 'Canon EOS R5', 'EOS R5', 'Professional mirrorless with 8K video', '{"released_year": 2020, "type": "Mirrorless", "sensor": "Full Frame 45MP", "video": "8K RAW", "autofocus_points": 5940, "stabilization": "IBIS 8-stop", "weight_grams": 738}'),
-  ('canon', 'Canon EOS R6 Mark II', 'EOS R6 Mark II', 'Versatile full-frame mirrorless', '{"released_year": 2022, "type": "Mirrorless", "sensor": "Full Frame 24.2MP", "video": "4K 60fps", "autofocus_points": 1053, "stabilization": "IBIS 8-stop", "weight_grams": 670}'),
-  ('sony', 'Sony A7 IV', 'A7 IV', 'Hybrid photo/video workhorse', '{"released_year": 2021, "type": "Mirrorless", "sensor": "Full Frame 33MP", "video": "4K 60fps", "autofocus_points": 759, "stabilization": "IBIS 5.5-stop", "weight_grams": 658}'),
-  ('sony', 'Sony A7R V', 'A7R V', 'High resolution flagship', '{"released_year": 2022, "type": "Mirrorless", "sensor": "Full Frame 61MP", "video": "8K", "autofocus_points": 693, "stabilization": "IBIS 8-stop", "weight_grams": 723}'),
-  ('nikon', 'Nikon Z8', 'Z8', 'Compact pro mirrorless', '{"released_year": 2023, "type": "Mirrorless", "sensor": "Full Frame 45.7MP", "video": "8K RAW", "autofocus_points": 493, "stabilization": "IBIS 6-stop", "weight_grams": 910}'),
-  ('fujifilm', 'Fujifilm X-T5', 'X-T5', 'Retro-styled APS-C flagship', '{"released_year": 2022, "type": "Mirrorless", "sensor": "APS-C 40.2MP", "video": "6.2K", "autofocus_points": 425, "stabilization": "IBIS 7-stop", "weight_grams": 557}'),
-  ('panasonic', 'Panasonic Lumix S5 II', 'Lumix S5 II', 'Video-focused full-frame', '{"released_year": 2023, "type": "Mirrorless", "sensor": "Full Frame 24.2MP", "video": "6K", "autofocus_points": 779, "stabilization": "Dual IS 6.5-stop", "weight_grams": 740}'),
-  ('gopro', 'GoPro Hero 12 Black', 'Hero 12 Black', 'Premium action camera', '{"released_year": 2023, "type": "Action Camera", "sensor": "1/1.9 inch 27MP", "video": "5.3K 60fps", "autofocus_points": 0, "stabilization": "HyperSmooth 6.0", "weight_grams": 154}')
-) AS p(brand_slug, title, model, description, product_info)
-JOIN application.subcategories s ON s.slug = 'cameras'
-JOIN application.categories c ON s.category_id = c.category_id AND c.slug = 'electronics'
-JOIN application.barter_types bt ON c.barter_type_id = bt.barter_type_id
-JOIN application.brands b ON b.slug = p.brand_slug
-ON CONFLICT DO NOTHING;
-
--- GAMING CONSOLES (6 products)
-INSERT INTO application.products (barter_type_id, category_id, subcategory_id, brand_id, title, model, description, product_info, is_active)
-SELECT 
-  bt.barter_type_id, c.category_id, s.subcategory_id, b.brand_id,
-  p.title, p.model, p.description, p.product_info::jsonb, true
-FROM (VALUES
-  ('sony', 'PlayStation 5', 'PS5 Disc Edition', 'Current gen console with disc drive', '{"released_year": 2020, "storage_gb": 825, "resolution": "4K 120Hz", "ray_tracing": true, "backwards_compatible": true, "weight_kg": 4.5}'),
-  ('sony', 'PlayStation 5 Digital Edition', 'PS5 Digital Edition', 'Digital-only PS5', '{"released_year": 2020, "storage_gb": 825, "resolution": "4K 120Hz", "ray_tracing": true, "backwards_compatible": true, "weight_kg": 3.9}'),
-  ('sony', 'PlayStation 5 Slim', 'PS5 Slim', 'Smaller form factor PS5', '{"released_year": 2023, "storage_gb": 1000, "resolution": "4K 120Hz", "ray_tracing": true, "backwards_compatible": true, "weight_kg": 3.2}'),
-  ('microsoft', 'Xbox Series X', 'Xbox Series X', 'Most powerful Xbox ever', '{"released_year": 2020, "storage_gb": 1000, "resolution": "4K 120Hz", "ray_tracing": true, "backwards_compatible": true, "weight_kg": 4.45}'),
-  ('nintendo', 'Nintendo Switch OLED', 'Switch OLED', 'Hybrid console with OLED screen', '{"released_year": 2021, "storage_gb": 64, "resolution": "1080p docked", "ray_tracing": false, "backwards_compatible": true, "weight_kg": 0.42}'),
-  ('valve', 'Steam Deck OLED', 'Steam Deck OLED', 'PC gaming handheld', '{"released_year": 2023, "storage_gb": 512, "resolution": "1280x800 90Hz", "ray_tracing": false, "backwards_compatible": true, "weight_kg": 0.64}')
-) AS p(brand_slug, title, model, description, product_info)
-JOIN application.subcategories s ON s.slug = 'gaming-consoles'
-JOIN application.categories c ON s.category_id = c.category_id AND c.slug = 'electronics'
-JOIN application.barter_types bt ON c.barter_type_id = bt.barter_type_id
-JOIN application.brands b ON b.slug = p.brand_slug
-ON CONFLICT DO NOTHING;
-
--- SOFAS (5 products)
-INSERT INTO application.products (barter_type_id, category_id, subcategory_id, brand_id, title, model, description, product_info, is_active)
-SELECT 
-  bt.barter_type_id, c.category_id, s.subcategory_id, b.brand_id,
-  p.title, p.model, p.description, p.product_info::jsonb, true
-FROM (VALUES
-  ('ikea', 'IKEA KIVIK', 'KIVIK 3-Seat Sofa', 'Comfortable deep-seated sofa', '{"material": "Fabric", "seats": 3, "width_cm": 228, "depth_cm": 95, "color": "Hillared Beige"}'),
-  ('ikea', 'IKEA FRIHETEN', 'FRIHETEN Sleeper Sofa', 'Sofa bed with storage', '{"material": "Fabric", "seats": 3, "width_cm": 225, "depth_cm": 105, "color": "Skiftebo Dark Gray"}'),
-  ('ikea', 'IKEA SODERHAMN', 'SODERHAMN 3-Seat', 'Modular low-back sofa', '{"material": "Fabric", "seats": 3, "width_cm": 198, "depth_cm": 99, "color": "Viarp Beige/Brown"}'),
-  ('west-elm', 'West Elm Harmony', 'Harmony 82 inch Sofa', 'Modern clean-lined sofa', '{"material": "Performance Velvet", "seats": 3, "width_cm": 208, "depth_cm": 102, "color": "Slate"}'),
-  ('ashley', 'Ashley Darcy', 'Darcy Sofa', 'Classic comfortable sofa', '{"material": "Microfiber", "seats": 3, "width_cm": 229, "depth_cm": 99, "color": "Cobblestone"}')
-) AS p(brand_slug, title, model, description, product_info)
-JOIN application.subcategories s ON s.slug = 'sofas'
-JOIN application.categories c ON s.category_id = c.category_id AND c.slug = 'home-furniture'
-JOIN application.barter_types bt ON c.barter_type_id = bt.barter_type_id
-JOIN application.brands b ON b.slug = p.brand_slug
-ON CONFLICT DO NOTHING;
-
--- CHAIRS (5 products)
-INSERT INTO application.products (barter_type_id, category_id, subcategory_id, brand_id, title, model, description, product_info, is_active)
-SELECT 
-  bt.barter_type_id, c.category_id, s.subcategory_id, b.brand_id,
-  p.title, p.model, p.description, p.product_info::jsonb, true
-FROM (VALUES
-  ('herman-miller', 'Herman Miller Aeron', 'Aeron Chair Size B', 'Iconic ergonomic office chair', '{"material": "Mesh", "adjustable_arms": true, "lumbar_support": true, "max_weight_kg": 136, "warranty_years": 12}'),
-  ('herman-miller', 'Herman Miller Embody', 'Embody Chair', 'Health-positive seating', '{"material": "Mesh/Fabric", "adjustable_arms": true, "lumbar_support": true, "max_weight_kg": 136, "warranty_years": 12}'),
-  ('steelcase', 'Steelcase Leap', 'Leap V2', 'Adaptive office chair', '{"material": "Fabric", "adjustable_arms": true, "lumbar_support": true, "max_weight_kg": 181, "warranty_years": 12}'),
-  ('ikea', 'IKEA MARKUS', 'MARKUS Office Chair', 'Popular budget ergonomic chair', '{"material": "Mesh/Fabric", "adjustable_arms": false, "lumbar_support": true, "max_weight_kg": 110, "warranty_years": 10}'),
-  ('razer', 'Razer Iskur V2', 'Iskur V2', 'Gaming chair with lumbar support', '{"material": "Leatherette", "adjustable_arms": true, "lumbar_support": true, "max_weight_kg": 136, "warranty_years": 3}')
-) AS p(brand_slug, title, model, description, product_info)
-JOIN application.subcategories s ON s.slug = 'chairs'
-JOIN application.categories c ON s.category_id = c.category_id AND c.slug = 'home-furniture'
-JOIN application.barter_types bt ON c.barter_type_id = bt.barter_type_id
-JOIN application.brands b ON b.slug = p.brand_slug
-ON CONFLICT DO NOTHING;
-
--- STORAGE UNITS (3 products)
-INSERT INTO application.products (barter_type_id, category_id, subcategory_id, brand_id, title, model, description, product_info, is_active)
-SELECT 
-  bt.barter_type_id, c.category_id, s.subcategory_id, b.brand_id,
-  p.title, p.model, p.description, p.product_info::jsonb, true
-FROM (VALUES
-  ('ikea', 'IKEA KALLAX', 'KALLAX 4x4', 'Versatile shelving unit', '{"material": "Particleboard", "shelves": 16, "width_cm": 147, "height_cm": 147, "color": "White"}'),
-  ('ikea', 'IKEA BILLY', 'BILLY Bookcase', 'Classic bookcase', '{"material": "Particleboard", "shelves": 5, "width_cm": 80, "height_cm": 202, "color": "White"}'),
-  ('ikea', 'IKEA BESTA', 'BESTA Storage Combo', 'Modular storage system', '{"material": "Particleboard", "shelves": 6, "width_cm": 180, "height_cm": 128, "color": "White/Oak"}')
-) AS p(brand_slug, title, model, description, product_info)
-JOIN application.subcategories s ON s.slug = 'storage-units'
-JOIN application.categories c ON s.category_id = c.category_id AND c.slug = 'home-furniture'
-JOIN application.barter_types bt ON c.barter_type_id = bt.barter_type_id
-JOIN application.brands b ON b.slug = p.brand_slug
-ON CONFLICT DO NOTHING;
-
--- REFRIGERATORS (4 products)
-INSERT INTO application.products (barter_type_id, category_id, subcategory_id, brand_id, title, model, description, product_info, is_active)
-SELECT 
-  bt.barter_type_id, c.category_id, s.subcategory_id, b.brand_id,
-  p.title, p.model, p.description, p.product_info::jsonb, true
-FROM (VALUES
-  ('samsung', 'Samsung Family Hub', 'RF28T5F01SR', 'Smart refrigerator with screen', '{"capacity_liters": 790, "type": "French Door", "energy_rating": "A++", "smart_features": true, "ice_maker": true}'),
-  ('lg', 'LG InstaView', 'LRMVS3006S', 'See-through door fridge', '{"capacity_liters": 850, "type": "Side by Side", "energy_rating": "A+", "smart_features": true, "ice_maker": true}'),
-  ('whirlpool', 'Whirlpool French Door', 'WRF555SDFZ', 'Reliable family refrigerator', '{"capacity_liters": 708, "type": "French Door", "energy_rating": "A+", "smart_features": false, "ice_maker": true}'),
-  ('bosch', 'Bosch Serie 6', 'KGN39AIAT', 'European-style bottom freezer', '{"capacity_liters": 366, "type": "Bottom Freezer", "energy_rating": "A+++", "smart_features": false, "ice_maker": false}')
-) AS p(brand_slug, title, model, description, product_info)
-JOIN application.subcategories s ON s.slug = 'refrigerators'
-JOIN application.categories c ON s.category_id = c.category_id AND c.slug = 'appliances'
-JOIN application.barter_types bt ON c.barter_type_id = bt.barter_type_id
-JOIN application.brands b ON b.slug = p.brand_slug
-ON CONFLICT DO NOTHING;
-
--- WASHING MACHINES (4 products)
-INSERT INTO application.products (barter_type_id, category_id, subcategory_id, brand_id, title, model, description, product_info, is_active)
-SELECT 
-  bt.barter_type_id, c.category_id, s.subcategory_id, b.brand_id,
-  p.title, p.model, p.description, p.product_info::jsonb, true
-FROM (VALUES
-  ('lg', 'LG TurboWash 360', 'WM4000HWA', 'Fast and efficient front loader', '{"capacity_kg": 12, "type": "Front Load", "energy_rating": "A+++", "smart_features": true, "steam_function": true}'),
-  ('samsung', 'Samsung FlexWash', 'WV60M9900AV', 'Dual washer system', '{"capacity_kg": 15, "type": "Front Load", "energy_rating": "A++", "smart_features": true, "steam_function": true}'),
-  ('bosch', 'Bosch Serie 8', 'WAX32GH4GB', 'German engineering washer', '{"capacity_kg": 10, "type": "Front Load", "energy_rating": "A+++", "smart_features": true, "steam_function": true}'),
-  ('whirlpool', 'Whirlpool Supreme Care', 'FSCR12441', 'Large capacity washer', '{"capacity_kg": 12, "type": "Front Load", "energy_rating": "A+++", "smart_features": false, "steam_function": true}')
-) AS p(brand_slug, title, model, description, product_info)
-JOIN application.subcategories s ON s.slug = 'washing-machines'
-JOIN application.categories c ON s.category_id = c.category_id AND c.slug = 'appliances'
-JOIN application.barter_types bt ON c.barter_type_id = bt.barter_type_id
-JOIN application.brands b ON b.slug = p.brand_slug
-ON CONFLICT DO NOTHING;
-
--- KITCHEN APPLIANCES (5 products)
-INSERT INTO application.products (barter_type_id, category_id, subcategory_id, brand_id, title, model, description, product_info, is_active)
-SELECT 
-  bt.barter_type_id, c.category_id, s.subcategory_id, b.brand_id,
-  p.title, p.model, p.description, p.product_info::jsonb, true
-FROM (VALUES
-  ('kitchenaid', 'KitchenAid Artisan', 'KSM150PS', 'Iconic stand mixer', '{"type": "Stand Mixer", "power_watts": 300, "bowl_capacity_liters": 4.8, "colors_available": 20, "attachments_included": 3}'),
-  ('dyson', 'Dyson V15 Detect', 'V15 Detect Absolute', 'Laser-equipped cordless vacuum', '{"type": "Cordless Vacuum", "power_watts": 240, "battery_minutes": 60, "bin_capacity_liters": 0.76, "weight_kg": 3.1}'),
-  ('dyson', 'Dyson Purifier Hot+Cool', 'HP07', 'Air purifier with heating/cooling', '{"type": "Air Purifier", "power_watts": 2000, "room_coverage_sqm": 46, "hepa_filter": true, "smart_features": true}'),
-  ('instant-pot', 'Instant Pot Duo', 'Duo 7-in-1', 'Multi-use pressure cooker', '{"type": "Pressure Cooker", "power_watts": 1000, "capacity_liters": 5.7, "cooking_programs": 13, "pressure_levels": 2}'),
-  ('kitchenaid', 'KitchenAid Food Processor', 'KFP1319', '13-cup food processor', '{"type": "Food Processor", "power_watts": 500, "bowl_capacity_liters": 3.1, "speed_settings": 2, "dishwasher_safe": true}')
-) AS p(brand_slug, title, model, description, product_info)
-JOIN application.subcategories s ON s.slug = 'kitchen-appliances'
-JOIN application.categories c ON s.category_id = c.category_id AND c.slug = 'appliances'
-JOIN application.barter_types bt ON c.barter_type_id = bt.barter_type_id
-JOIN application.brands b ON b.slug = p.brand_slug
-ON CONFLICT DO NOTHING;
-
--- SHOES (6 products)
-INSERT INTO application.products (barter_type_id, category_id, subcategory_id, brand_id, title, model, description, product_info, is_active)
-SELECT 
-  bt.barter_type_id, c.category_id, s.subcategory_id, b.brand_id,
-  p.title, p.model, p.description, p.product_info::jsonb, true
-FROM (VALUES
-  ('nike', 'Nike Air Max 90', 'Air Max 90', 'Classic sneaker icon', '{"type": "Sneakers", "material": "Leather/Mesh", "sole": "Air Max", "sizes_available": "36-48", "colorways": 50}'),
-  ('nike', 'Nike Air Force 1', 'Air Force 1 07', 'Timeless basketball style', '{"type": "Sneakers", "material": "Leather", "sole": "Air", "sizes_available": "35-52", "colorways": 100}'),
-  ('nike', 'Nike Dunk Low', 'Dunk Low Retro', 'Basketball heritage sneaker', '{"type": "Sneakers", "material": "Leather", "sole": "Rubber", "sizes_available": "35-48", "colorways": 80}'),
-  ('adidas', 'Adidas Ultraboost', 'Ultraboost 23', 'Premium running shoe', '{"type": "Running", "material": "Primeknit", "sole": "Boost", "sizes_available": "36-48", "colorways": 30}'),
-  ('adidas', 'Adidas Stan Smith', 'Stan Smith', 'Classic tennis shoe', '{"type": "Sneakers", "material": "Leather", "sole": "Rubber", "sizes_available": "35-48", "colorways": 25}'),
-  ('adidas', 'Adidas Samba', 'Samba OG', 'Indoor football classic', '{"type": "Sneakers", "material": "Leather/Suede", "sole": "Gum Rubber", "sizes_available": "36-48", "colorways": 20}')
-) AS p(brand_slug, title, model, description, product_info)
-JOIN application.subcategories s ON s.slug = 'shoes'
-JOIN application.categories c ON s.category_id = c.category_id AND c.slug = 'fashion-accessories'
-JOIN application.barter_types bt ON c.barter_type_id = bt.barter_type_id
-JOIN application.brands b ON b.slug = p.brand_slug
-ON CONFLICT DO NOTHING;
-
--- BAGS/HANDBAGS (4 products)
-INSERT INTO application.products (barter_type_id, category_id, subcategory_id, brand_id, title, model, description, product_info, is_active)
-SELECT 
-  bt.barter_type_id, c.category_id, s.subcategory_id, b.brand_id,
-  p.title, p.model, p.description, p.product_info::jsonb, true
-FROM (VALUES
-  ('gucci', 'Gucci GG Marmont', 'GG Marmont Small', 'Iconic matelasse bag', '{"type": "Shoulder Bag", "material": "Leather", "dimensions_cm": "26x15x7", "strap_type": "Chain", "closure": "Flap"}'),
-  ('louis-vuitton', 'Louis Vuitton Neverfull', 'Neverfull MM', 'Classic tote bag', '{"type": "Tote", "material": "Coated Canvas", "dimensions_cm": "31x28x14", "strap_type": "Leather", "closure": "Open Top"}'),
-  ('louis-vuitton', 'Louis Vuitton Speedy', 'Speedy 30', 'Iconic doctor bag', '{"type": "Handbag", "material": "Coated Canvas", "dimensions_cm": "30x21x17", "strap_type": "Handles", "closure": "Zipper"}'),
-  ('gucci', 'Gucci Dionysus', 'Dionysus Small', 'Statement shoulder bag', '{"type": "Shoulder Bag", "material": "GG Supreme Canvas", "dimensions_cm": "25x14x8", "strap_type": "Chain", "closure": "Clasp"}')
-) AS p(brand_slug, title, model, description, product_info)
-JOIN application.subcategories s ON s.slug = 'bags-handbags'
-JOIN application.categories c ON s.category_id = c.category_id AND c.slug = 'fashion-accessories'
-JOIN application.barter_types bt ON c.barter_type_id = bt.barter_type_id
-JOIN application.brands b ON b.slug = p.brand_slug
-ON CONFLICT DO NOTHING;
-
--- STROLLERS (4 products)
-INSERT INTO application.products (barter_type_id, category_id, subcategory_id, brand_id, title, model, description, product_info, is_active)
-SELECT 
-  bt.barter_type_id, c.category_id, s.subcategory_id, b.brand_id,
-  p.title, p.model, p.description, p.product_info::jsonb, true
-FROM (VALUES
-  ('uppababy', 'UPPAbaby Vista V2', 'Vista V2', 'Expandable stroller system', '{"type": "Full-Size", "max_weight_kg": 22, "foldable": true, "reversible_seat": true, "car_seat_compatible": true}'),
-  ('uppababy', 'UPPAbaby Cruz V2', 'Cruz V2', 'Compact city stroller', '{"type": "Full-Size", "max_weight_kg": 22, "foldable": true, "reversible_seat": true, "car_seat_compatible": true}'),
-  ('baby-jogger', 'Baby Jogger City Mini GT2', 'City Mini GT2', 'All-terrain stroller', '{"type": "Full-Size", "max_weight_kg": 29, "foldable": true, "reversible_seat": false, "car_seat_compatible": true}'),
-  ('chicco', 'Chicco Bravo Primo', 'Bravo Primo', 'Travel system stroller', '{"type": "Travel System", "max_weight_kg": 22, "foldable": true, "reversible_seat": false, "car_seat_compatible": true}')
-) AS p(brand_slug, title, model, description, product_info)
-JOIN application.subcategories s ON s.slug = 'strollers'
-JOIN application.categories c ON s.category_id = c.category_id AND c.slug = 'baby-kids'
-JOIN application.barter_types bt ON c.barter_type_id = bt.barter_type_id
-JOIN application.brands b ON b.slug = p.brand_slug
-ON CONFLICT DO NOTHING;
-
--- TOYS (3 products)
-INSERT INTO application.products (barter_type_id, category_id, subcategory_id, brand_id, title, model, description, product_info, is_active)
-SELECT 
-  bt.barter_type_id, c.category_id, s.subcategory_id, b.brand_id,
-  p.title, p.model, p.description, p.product_info::jsonb, true
-FROM (VALUES
-  ('lego', 'LEGO Star Wars Millennium Falcon', '75375', 'Ultimate Collector Series set', '{"pieces": 7541, "age_range": "18+", "dimensions_cm": "84x56x21", "minifigures": 7}'),
-  ('lego', 'LEGO Technic Porsche 911', '42056', 'Detailed Porsche replica', '{"pieces": 2704, "age_range": "16+", "dimensions_cm": "57x25x10", "minifigures": 0}'),
-  ('lego', 'LEGO Creator Expert Taj Mahal', '10256', 'Architectural masterpiece', '{"pieces": 5923, "age_range": "16+", "dimensions_cm": "50x50x41", "minifigures": 0}')
-) AS p(brand_slug, title, model, description, product_info)
-JOIN application.subcategories s ON s.slug = 'toys'
-JOIN application.categories c ON s.category_id = c.category_id AND c.slug = 'baby-kids'
-JOIN application.barter_types bt ON c.barter_type_id = bt.barter_type_id
-JOIN application.brands b ON b.slug = p.brand_slug
-ON CONFLICT DO NOTHING;
-
--- BICYCLES (4 products)
-INSERT INTO application.products (barter_type_id, category_id, subcategory_id, brand_id, title, model, description, product_info, is_active)
-SELECT 
-  bt.barter_type_id, c.category_id, s.subcategory_id, b.brand_id,
-  p.title, p.model, p.description, p.product_info::jsonb, true
-FROM (VALUES
-  ('trek', 'Trek Domane SL 6', 'Domane SL 6', 'Endurance road bike', '{"type": "Road", "frame_material": "Carbon", "groupset": "Shimano Ultegra", "wheel_size_inches": 28, "weight_kg": 9.2}'),
-  ('specialized', 'Specialized Roubaix', 'Roubaix Sport', 'Comfort road bike', '{"type": "Road", "frame_material": "Carbon", "groupset": "Shimano 105", "wheel_size_inches": 28, "weight_kg": 9.5}'),
-  ('giant', 'Giant Defy Advanced', 'Defy Advanced 2', 'All-road endurance bike', '{"type": "Road", "frame_material": "Carbon", "groupset": "Shimano 105", "wheel_size_inches": 28, "weight_kg": 9.1}'),
-  ('trek', 'Trek Fuel EX', 'Fuel EX 8', 'Trail mountain bike', '{"type": "Mountain", "frame_material": "Carbon/Aluminum", "groupset": "Shimano XT", "wheel_size_inches": 29, "weight_kg": 13.5}')
-) AS p(brand_slug, title, model, description, product_info)
-JOIN application.subcategories s ON s.slug = 'bicycles-non-motorized'
-JOIN application.categories c ON s.category_id = c.category_id AND c.slug = 'sports-outdoors'
-JOIN application.barter_types bt ON c.barter_type_id = bt.barter_type_id
-JOIN application.brands b ON b.slug = p.brand_slug
-ON CONFLICT DO NOTHING;
-
--- GYM EQUIPMENT (4 products)
-INSERT INTO application.products (barter_type_id, category_id, subcategory_id, brand_id, title, model, description, product_info, is_active)
-SELECT 
-  bt.barter_type_id, c.category_id, s.subcategory_id, b.brand_id,
-  p.title, p.model, p.description, p.product_info::jsonb, true
-FROM (VALUES
-  ('peloton', 'Peloton Bike+', 'Bike+', 'Interactive spin bike', '{"type": "Spin Bike", "screen_inches": 24, "resistance_levels": 100, "live_classes": true, "weight_kg": 63}'),
-  ('peloton', 'Peloton Tread', 'Tread', 'Smart treadmill', '{"type": "Treadmill", "screen_inches": 32, "speed_max_kmh": 20, "incline_max_percent": 12.5, "weight_kg": 132}'),
-  ('nordictrack', 'NordicTrack Commercial 2950', 'Commercial 2950', 'Premium treadmill', '{"type": "Treadmill", "screen_inches": 22, "speed_max_kmh": 22, "incline_max_percent": 15, "weight_kg": 147}'),
-  ('nordictrack', 'NordicTrack S22i', 'S22i Studio Cycle', 'Interactive bike', '{"type": "Spin Bike", "screen_inches": 22, "resistance_levels": 24, "live_classes": true, "weight_kg": 92}')
-) AS p(brand_slug, title, model, description, product_info)
-JOIN application.subcategories s ON s.slug = 'gym-equipment'
-JOIN application.categories c ON s.category_id = c.category_id AND c.slug = 'sports-outdoors'
-JOIN application.barter_types bt ON c.barter_type_id = bt.barter_type_id
-JOIN application.brands b ON b.slug = p.brand_slug
-ON CONFLICT DO NOTHING;
-
--- POWER TOOLS (5 products)
-INSERT INTO application.products (barter_type_id, category_id, subcategory_id, brand_id, title, model, description, product_info, is_active)
-SELECT 
-  bt.barter_type_id, c.category_id, s.subcategory_id, b.brand_id,
-  p.title, p.model, p.description, p.product_info::jsonb, true
-FROM (VALUES
-  ('dewalt', 'DeWalt 20V MAX Drill', 'DCD791D2', 'Brushless compact drill', '{"type": "Drill", "voltage": 20, "battery_type": "Li-Ion", "max_rpm": 2000, "brushless": true}'),
-  ('dewalt', 'DeWalt 20V MAX Impact Driver', 'DCF887D2', 'High torque impact driver', '{"type": "Impact Driver", "voltage": 20, "battery_type": "Li-Ion", "max_rpm": 3250, "brushless": true}'),
-  ('makita', 'Makita 18V LXT Drill', 'XFD131', 'Compact brushless drill', '{"type": "Drill", "voltage": 18, "battery_type": "Li-Ion", "max_rpm": 2000, "brushless": true}'),
-  ('milwaukee', 'Milwaukee M18 FUEL Hammer Drill', '2804-22', 'Most powerful compact drill', '{"type": "Hammer Drill", "voltage": 18, "battery_type": "Li-Ion", "max_rpm": 2000, "brushless": true}'),
-  ('black-decker', 'Black+Decker 20V MAX Drill', 'LDX120C', 'Budget-friendly drill', '{"type": "Drill", "voltage": 20, "battery_type": "Li-Ion", "max_rpm": 650, "brushless": false}')
-) AS p(brand_slug, title, model, description, product_info)
-JOIN application.subcategories s ON s.slug = 'power-tools'
-JOIN application.categories c ON s.category_id = c.category_id AND c.slug = 'tools-equipment'
-JOIN application.barter_types bt ON c.barter_type_id = bt.barter_type_id
-JOIN application.brands b ON b.slug = p.brand_slug
-ON CONFLICT DO NOTHING;
-
--- GARDENING TOOLS (3 products)
-INSERT INTO application.products (barter_type_id, category_id, subcategory_id, brand_id, title, model, description, product_info, is_active)
-SELECT 
-  bt.barter_type_id, c.category_id, s.subcategory_id, b.brand_id,
-  p.title, p.model, p.description, p.product_info::jsonb, true
-FROM (VALUES
-  ('husqvarna', 'Husqvarna Automower 450X', '450X', 'Premium robotic mower', '{"type": "Robotic Mower", "cutting_width_cm": 24, "area_capacity_sqm": 5000, "gps_navigation": true, "battery_type": "Li-Ion"}'),
-  ('husqvarna', 'Husqvarna 520iLX', '520iLX', 'Professional trimmer', '{"type": "String Trimmer", "cutting_width_cm": 40, "power_type": "Battery", "weight_kg": 4.3, "battery_type": "Li-Ion"}'),
-  ('bosch', 'Bosch Indego S+ 500', 'Indego S+ 500', 'Smart robotic mower', '{"type": "Robotic Mower", "cutting_width_cm": 19, "area_capacity_sqm": 500, "gps_navigation": false, "battery_type": "Li-Ion"}')
-) AS p(brand_slug, title, model, description, product_info)
-JOIN application.subcategories s ON s.slug = 'gardening-tools'
-JOIN application.categories c ON s.category_id = c.category_id AND c.slug = 'tools-equipment'
-JOIN application.barter_types bt ON c.barter_type_id = bt.barter_type_id
-JOIN application.brands b ON b.slug = p.brand_slug
-ON CONFLICT DO NOTHING;
-
--- BOARD GAMES (3 products)
-INSERT INTO application.products (barter_type_id, category_id, subcategory_id, brand_id, title, model, description, product_info, is_active)
-SELECT 
-  bt.barter_type_id, c.category_id, s.subcategory_id, b.brand_id,
-  p.title, p.model, p.description, p.product_info::jsonb, true
-FROM (VALUES
-  ('hasbro', 'Monopoly Classic', 'Monopoly', 'Classic property trading game', '{"players": "2-8", "play_time_minutes": 180, "age_range": "8+", "category": "Strategy"}'),
-  ('hasbro', 'Scrabble Deluxe', 'Scrabble Deluxe', 'Word game with turntable', '{"players": "2-4", "play_time_minutes": 90, "age_range": "10+", "category": "Word"}'),
-  ('hasbro', 'Risk Classic', 'Risk', 'World domination strategy game', '{"players": "2-6", "play_time_minutes": 240, "age_range": "10+", "category": "Strategy"}')
-) AS p(brand_slug, title, model, description, product_info)
-JOIN application.subcategories s ON s.slug = 'board-games'
-JOIN application.categories c ON s.category_id = c.category_id AND c.slug = 'books-media-collectibles'
-JOIN application.barter_types bt ON c.barter_type_id = bt.barter_type_id
-JOIN application.brands b ON b.slug = p.brand_slug
-ON CONFLICT DO NOTHING;
-
--- COLLECTIBLES (3 products)
-INSERT INTO application.products (barter_type_id, category_id, subcategory_id, brand_id, title, model, description, product_info, is_active)
-SELECT 
-  bt.barter_type_id, c.category_id, s.subcategory_id, b.brand_id,
-  p.title, p.model, p.description, p.product_info::jsonb, true
-FROM (VALUES
-  ('funko', 'Funko Pop Star Wars Darth Vader', '01', 'Classic Darth Vader Pop', '{"series": "Star Wars", "number": 1, "exclusive": false, "size_inches": 4, "year": 2011}'),
-  ('funko', 'Funko Pop Marvel Iron Man', '04', 'Original Iron Man Pop', '{"series": "Marvel", "number": 4, "exclusive": false, "size_inches": 4, "year": 2011}'),
-  ('funko', 'Funko Pop Harry Potter', '01', 'Harry Potter with wand', '{"series": "Harry Potter", "number": 1, "exclusive": false, "size_inches": 4, "year": 2015}')
-) AS p(brand_slug, title, model, description, product_info)
-JOIN application.subcategories s ON s.slug = 'collectibles'
-JOIN application.categories c ON s.category_id = c.category_id AND c.slug = 'books-media-collectibles'
-JOIN application.barter_types bt ON c.barter_type_id = bt.barter_type_id
-JOIN application.brands b ON b.slug = p.brand_slug
-ON CONFLICT DO NOTHING;
-
--- MUSICAL INSTRUMENTS (6 products)
-INSERT INTO application.products (barter_type_id, category_id, subcategory_id, brand_id, title, model, description, product_info, is_active)
-SELECT 
-  bt.barter_type_id, c.category_id, s.subcategory_id, b.brand_id,
-  p.title, p.model, p.description, p.product_info::jsonb, true
-FROM (VALUES
-  ('fender', 'Fender Stratocaster', 'Player Stratocaster', 'Classic electric guitar', '{"type": "Electric Guitar", "body": "Alder", "neck": "Maple", "pickups": "3 Single-Coil", "frets": 22}'),
-  ('fender', 'Fender Telecaster', 'Player Telecaster', 'Iconic twang guitar', '{"type": "Electric Guitar", "body": "Alder", "neck": "Maple", "pickups": "2 Single-Coil", "frets": 22}'),
-  ('gibson', 'Gibson Les Paul Standard', 'Les Paul Standard 50s', 'Rock legend guitar', '{"type": "Electric Guitar", "body": "Mahogany", "neck": "Mahogany", "pickups": "2 Humbucker", "frets": 22}'),
-  ('yamaha', 'Yamaha FG800', 'FG800', 'Entry-level acoustic', '{"type": "Acoustic Guitar", "body": "Spruce/Nato", "neck": "Nato", "pickups": "None", "frets": 20}'),
-  ('roland', 'Roland TD-17KVX', 'TD-17KVX', 'Electronic drum kit', '{"type": "Electronic Drums", "pads": 8, "cymbals": 4, "module": "TD-17", "bluetooth": true}'),
-  ('yamaha', 'Yamaha P-125', 'P-125', 'Digital piano', '{"type": "Digital Piano", "keys": 88, "weighted_keys": true, "polyphony": 192, "speakers": "Built-in"}')
-) AS p(brand_slug, title, model, description, product_info)
-JOIN application.subcategories s ON s.slug = 'musical-instruments'
-JOIN application.categories c ON s.category_id = c.category_id AND c.slug = 'hobby-creative'
-JOIN application.barter_types bt ON c.barter_type_id = bt.barter_type_id
-JOIN application.brands b ON b.slug = p.brand_slug
-ON CONFLICT DO NOTHING;
 
 -- =============================================
--- AUTOMOBILE BARTER PRODUCTS
+-- STEP 4: INSERT PRODUCTS INTO APPLICATION.PRODUCTS
+-- =============================================
+-- Map staging data to application.products using current reference tables
+
+INSERT INTO application.products (
+  product_id,
+  barter_type_id,
+  category_id,
+  subcategory_id,
+  brand_id,
+  title,
+  model,
+  description,
+  image_key,
+  product_info,
+  is_active,
+  created_at,
+  updated_at
+)
+SELECT 
+  raw.id AS product_id,
+  bt.barter_type_id,
+  cat.category_id,
+  sub.subcategory_id,
+  br.brand_id,
+  COALESCE(raw.product_info->>'brand', '') || ' ' || COALESCE(raw.product_info->>'model', raw.model_norm) AS title,
+  COALESCE(raw.product_info->>'model', raw.model_norm) AS model,
+  'Imported from legacy system' AS description,
+  raw.product_image AS image_key,
+  -- Clean product_info by removing redundant keys (brand, model, category, sub_category)
+  raw.product_info - 'brand' - 'model' - 'category' - 'sub_category' AS product_info,
+  true AS is_active,
+  raw.created_at,
+  raw.updated_at
+FROM staging.products_raw raw
+-- Join to barter type (always Goods Barter)
+JOIN application.barter_types bt ON bt.slug = 'goods-barter'
+-- Join to category (Electronics)
+JOIN application.categories cat ON cat.slug = 'electronics'
+-- Join to subcategory (Phones)
+JOIN application.subcategories sub ON sub.slug = 'phones' AND sub.category_id = cat.category_id
+-- Join to brand
+JOIN application.brands br ON LOWER(br.name) = LOWER(raw.product_info->>'brand')
+ON CONFLICT (product_id) DO UPDATE SET
+  title = EXCLUDED.title,
+  model = EXCLUDED.model,
+  image_key = EXCLUDED.image_key,
+  product_info = EXCLUDED.product_info,
+  updated_at = NOW();
+
+
+-- =============================================
+-- STEP 5: VERIFICATION QUERIES
 -- =============================================
 
--- SEDAN (4 products)
-INSERT INTO application.products (barter_type_id, category_id, subcategory_id, brand_id, title, model, description, product_info, is_active)
-SELECT 
-  bt.barter_type_id, c.category_id, s.subcategory_id, b.brand_id,
-  p.title, p.model, p.description, p.product_info::jsonb, true
-FROM (VALUES
-  ('toyota', 'Toyota Camry', 'Camry XLE', 'Best-selling midsize sedan', '{"year": 2024, "engine": "2.5L 4-Cyl", "horsepower": 203, "transmission": "8-Speed Auto", "fuel_type": "Gasoline", "mpg_combined": 32}'),
-  ('honda', 'Honda Accord', 'Accord Touring', 'Refined sports sedan', '{"year": 2024, "engine": "2.0L Turbo", "horsepower": 252, "transmission": "10-Speed Auto", "fuel_type": "Gasoline", "mpg_combined": 31}'),
-  ('bmw', 'BMW 3 Series', '330i xDrive', 'Ultimate driving machine', '{"year": 2024, "engine": "2.0L Turbo", "horsepower": 255, "transmission": "8-Speed Auto", "fuel_type": "Gasoline", "mpg_combined": 30}'),
-  ('mercedes-benz', 'Mercedes-Benz C-Class', 'C 300', 'Luxury compact sedan', '{"year": 2024, "engine": "2.0L Turbo", "horsepower": 255, "transmission": "9G-Tronic", "fuel_type": "Gasoline", "mpg_combined": 29}')
-) AS p(brand_slug, title, model, description, product_info)
-JOIN application.subcategories s ON s.slug = 'sedan'
-JOIN application.categories c ON s.category_id = c.category_id AND c.slug = 'cars'
-JOIN application.barter_types bt ON c.barter_type_id = bt.barter_type_id
-JOIN application.brands b ON b.slug = p.brand_slug
-ON CONFLICT DO NOTHING;
+-- Count staging records
+SELECT 'Staging records' AS check_type, COUNT(*) AS count FROM staging.products_raw;
 
--- SUV (4 products)
-INSERT INTO application.products (barter_type_id, category_id, subcategory_id, brand_id, title, model, description, product_info, is_active)
-SELECT 
-  bt.barter_type_id, c.category_id, s.subcategory_id, b.brand_id,
-  p.title, p.model, p.description, p.product_info::jsonb, true
-FROM (VALUES
-  ('toyota', 'Toyota RAV4', 'RAV4 Prime', 'Best-selling compact SUV', '{"year": 2024, "engine": "2.5L Hybrid", "horsepower": 302, "transmission": "CVT", "fuel_type": "Plug-in Hybrid", "mpg_combined": 94}'),
-  ('honda', 'Honda CR-V', 'CR-V Touring', 'Versatile family SUV', '{"year": 2024, "engine": "1.5L Turbo", "horsepower": 190, "transmission": "CVT", "fuel_type": "Gasoline", "mpg_combined": 30}'),
-  ('bmw', 'BMW X5', 'X5 xDrive40i', 'Luxury midsize SUV', '{"year": 2024, "engine": "3.0L Turbo I6", "horsepower": 335, "transmission": "8-Speed Auto", "fuel_type": "Gasoline", "mpg_combined": 24}'),
-  ('mercedes-benz', 'Mercedes-Benz GLE', 'GLE 450', 'Premium SUV', '{"year": 2024, "engine": "3.0L Turbo I6", "horsepower": 362, "transmission": "9G-Tronic", "fuel_type": "Mild Hybrid", "mpg_combined": 23}')
-) AS p(brand_slug, title, model, description, product_info)
-JOIN application.subcategories s ON s.slug = 'suv'
-JOIN application.categories c ON s.category_id = c.category_id AND c.slug = 'cars'
-JOIN application.barter_types bt ON c.barter_type_id = bt.barter_type_id
-JOIN application.brands b ON b.slug = p.brand_slug
-ON CONFLICT DO NOTHING;
+-- Count imported products
+SELECT 'Imported products' AS check_type, COUNT(*) AS count 
+FROM application.products p
+WHERE EXISTS (SELECT 1 FROM staging.products_raw s WHERE s.id = p.product_id);
 
--- ELECTRIC CARS (4 products)
-INSERT INTO application.products (barter_type_id, category_id, subcategory_id, brand_id, title, model, description, product_info, is_active)
-SELECT 
-  bt.barter_type_id, c.category_id, s.subcategory_id, b.brand_id,
-  p.title, p.model, p.description, p.product_info::jsonb, true
-FROM (VALUES
-  ('tesla', 'Tesla Model 3', 'Model 3 Long Range', 'Best-selling electric sedan', '{"year": 2024, "motor": "Dual Motor AWD", "horsepower": 366, "range_miles": 333, "battery_kwh": 82, "zero_to_60_sec": 4.2}'),
-  ('tesla', 'Tesla Model Y', 'Model Y Performance', 'Electric crossover SUV', '{"year": 2024, "motor": "Dual Motor AWD", "horsepower": 456, "range_miles": 303, "battery_kwh": 82, "zero_to_60_sec": 3.5}'),
-  ('tesla', 'Tesla Model S', 'Model S Plaid', 'Premium electric sedan', '{"year": 2024, "motor": "Tri Motor AWD", "horsepower": 1020, "range_miles": 348, "battery_kwh": 100, "zero_to_60_sec": 1.99}'),
-  ('bmw', 'BMW iX', 'iX xDrive50', 'Luxury electric SUV', '{"year": 2024, "motor": "Dual Motor AWD", "horsepower": 516, "range_miles": 324, "battery_kwh": 111.5, "zero_to_60_sec": 4.4}')
-) AS p(brand_slug, title, model, description, product_info)
-JOIN application.subcategories s ON s.slug = 'electric'
-JOIN application.categories c ON s.category_id = c.category_id AND c.slug = 'cars'
-JOIN application.barter_types bt ON c.barter_type_id = bt.barter_type_id
-JOIN application.brands b ON b.slug = p.brand_slug
-ON CONFLICT DO NOTHING;
+-- Check for missing brand matches
+SELECT 'Missing brand matches' AS check_type, COUNT(*) AS count
+FROM staging.products_raw raw
+WHERE NOT EXISTS (
+  SELECT 1 FROM application.brands b 
+  WHERE LOWER(b.name) = LOWER(raw.product_info->>'brand')
+);
 
--- SPORTS MOTORCYCLES (4 products)
-INSERT INTO application.products (barter_type_id, category_id, subcategory_id, brand_id, title, model, description, product_info, is_active)
-SELECT 
-  bt.barter_type_id, c.category_id, s.subcategory_id, b.brand_id,
-  p.title, p.model, p.description, p.product_info::jsonb, true
-FROM (VALUES
-  ('kawasaki', 'Kawasaki Ninja ZX-10R', 'Ninja ZX-10R', 'Superbike champion', '{"year": 2024, "engine_cc": 998, "horsepower": 203, "transmission": "6-Speed", "weight_kg": 207, "top_speed_kmh": 299}'),
-  ('ducati', 'Ducati Panigale V4', 'Panigale V4 S', 'Italian superbike', '{"year": 2024, "engine_cc": 1103, "horsepower": 214, "transmission": "6-Speed", "weight_kg": 195, "top_speed_kmh": 305}'),
-  ('yamaha', 'Yamaha YZF-R1', 'YZF-R1M', 'MotoGP-derived superbike', '{"year": 2024, "engine_cc": 998, "horsepower": 200, "transmission": "6-Speed", "weight_kg": 201, "top_speed_kmh": 299}'),
-  ('honda', 'Honda CBR1000RR-R', 'CBR1000RR-R Fireblade SP', 'Ultimate Honda superbike', '{"year": 2024, "engine_cc": 999, "horsepower": 217, "transmission": "6-Speed", "weight_kg": 201, "top_speed_kmh": 299}')
-) AS p(brand_slug, title, model, description, product_info)
-JOIN application.subcategories s ON s.slug = 'sports'
-JOIN application.categories c ON s.category_id = c.category_id AND c.slug = 'bikes-motorcycles'
-JOIN application.barter_types bt ON c.barter_type_id = bt.barter_type_id
-JOIN application.brands b ON b.slug = p.brand_slug
-ON CONFLICT DO NOTHING;
+-- Check for duplicate product IDs
+SELECT 'Duplicate staging IDs' AS check_type, COUNT(*) AS count
+FROM (
+  SELECT id, COUNT(*) as cnt FROM staging.products_raw GROUP BY id HAVING COUNT(*) > 1
+) dups;
 
--- CRUISER MOTORCYCLES (3 products)
-INSERT INTO application.products (barter_type_id, category_id, subcategory_id, brand_id, title, model, description, product_info, is_active)
-SELECT 
-  bt.barter_type_id, c.category_id, s.subcategory_id, b.brand_id,
-  p.title, p.model, p.description, p.product_info::jsonb, true
-FROM (VALUES
-  ('harley-davidson', 'Harley-Davidson Fat Boy', 'Fat Boy 114', 'Iconic cruiser', '{"year": 2024, "engine_cc": 1868, "horsepower": 90, "transmission": "6-Speed", "weight_kg": 317, "seat_height_mm": 675}'),
-  ('harley-davidson', 'Harley-Davidson Street Glide', 'Street Glide Special', 'Touring cruiser', '{"year": 2024, "engine_cc": 1868, "horsepower": 90, "transmission": "6-Speed", "weight_kg": 379, "seat_height_mm": 695}'),
-  ('honda', 'Honda Rebel 1100', 'Rebel 1100 DCT', 'Modern cruiser', '{"year": 2024, "engine_cc": 1084, "horsepower": 87, "transmission": "DCT 6-Speed", "weight_kg": 233, "seat_height_mm": 700}')
-) AS p(brand_slug, title, model, description, product_info)
-JOIN application.subcategories s ON s.slug = 'cruiser'
-JOIN application.categories c ON s.category_id = c.category_id AND c.slug = 'bikes-motorcycles'
-JOIN application.barter_types bt ON c.barter_type_id = bt.barter_type_id
-JOIN application.brands b ON b.slug = p.brand_slug
-ON CONFLICT DO NOTHING;
+-- List any failed imports (in staging but not in products)
+SELECT 'Failed imports' AS check_type, COUNT(*) AS count
+FROM staging.products_raw raw
+WHERE NOT EXISTS (
+  SELECT 1 FROM application.products p WHERE p.product_id = raw.id
+);
 
--- ELECTRIC SCOOTERS (3 products)
-INSERT INTO application.products (barter_type_id, category_id, subcategory_id, brand_id, title, model, description, product_info, is_active)
+-- Show sample of imported products with their paths preserved
 SELECT 
-  bt.barter_type_id, c.category_id, s.subcategory_id, b.brand_id,
-  p.title, p.model, p.description, p.product_info::jsonb, true
-FROM (VALUES
-  ('vespa', 'Vespa Elettrica', 'Elettrica 70', 'Classic electric scooter', '{"year": 2024, "motor_kw": 4, "range_km": 100, "top_speed_kmh": 70, "charge_hours": 4, "weight_kg": 130}'),
-  ('ola', 'Ola S1 Pro', 'S1 Pro', 'Smart electric scooter', '{"year": 2024, "motor_kw": 8.5, "range_km": 181, "top_speed_kmh": 116, "charge_hours": 6.5, "weight_kg": 125}'),
-  ('ola', 'Ola S1 Air', 'S1 Air', 'Affordable electric scooter', '{"year": 2024, "motor_kw": 4.5, "range_km": 101, "top_speed_kmh": 85, "charge_hours": 5, "weight_kg": 99}')
-) AS p(brand_slug, title, model, description, product_info)
-JOIN application.subcategories s ON s.slug = 'electric-scooter'
-JOIN application.categories c ON s.category_id = c.category_id AND c.slug = 'scooters'
-JOIN application.barter_types bt ON c.barter_type_id = bt.barter_type_id
-JOIN application.brands b ON b.slug = p.brand_slug
-ON CONFLICT DO NOTHING;
+  p.product_id,
+  p.title,
+  p.image_key,
+  b.name as brand_name
+FROM application.products p
+JOIN application.brands b ON p.brand_id = b.brand_id
+WHERE EXISTS (SELECT 1 FROM staging.products_raw s WHERE s.id = p.product_id)
+LIMIT 5;
 
--- LIGHT TRUCKS (3 products)
-INSERT INTO application.products (barter_type_id, category_id, subcategory_id, brand_id, title, model, description, product_info, is_active)
-SELECT 
-  bt.barter_type_id, c.category_id, s.subcategory_id, b.brand_id,
-  p.title, p.model, p.description, p.product_info::jsonb, true
-FROM (VALUES
-  ('ford', 'Ford F-150', 'F-150 Lariat', 'Best-selling pickup truck', '{"year": 2024, "engine": "3.5L EcoBoost V6", "horsepower": 400, "towing_capacity_kg": 6350, "payload_capacity_kg": 1450, "bed_length_feet": 5.5}'),
-  ('chevrolet', 'Chevrolet Silverado', 'Silverado 1500 LTZ', 'Full-size pickup', '{"year": 2024, "engine": "5.3L V8", "horsepower": 355, "towing_capacity_kg": 5170, "payload_capacity_kg": 900, "bed_length_feet": 5.75}'),
-  ('toyota', 'Toyota Tundra', 'Tundra Limited', 'Full-size truck', '{"year": 2024, "engine": "3.5L Twin-Turbo V6", "horsepower": 389, "towing_capacity_kg": 5440, "payload_capacity_kg": 880, "bed_length_feet": 6.5}')
-) AS p(brand_slug, title, model, description, product_info)
-JOIN application.subcategories s ON s.slug = 'light-truck'
-JOIN application.categories c ON s.category_id = c.category_id AND c.slug = 'trucks'
-JOIN application.barter_types bt ON c.barter_type_id = bt.barter_type_id
-JOIN application.brands b ON b.slug = p.brand_slug
-ON CONFLICT DO NOTHING;
-
--- MOTORHOMES / CAMPERS (3 products)
-INSERT INTO application.products (barter_type_id, category_id, subcategory_id, brand_id, title, model, description, product_info, is_active)
-SELECT 
-  bt.barter_type_id, c.category_id, s.subcategory_id, b.brand_id,
-  p.title, p.model, p.description, p.product_info::jsonb, true
-FROM (VALUES
-  ('airstream', 'Airstream Classic', 'Classic 33FB', 'Iconic aluminum travel trailer', '{"year": 2024, "length_feet": 33, "sleeps": 5, "fresh_water_gallons": 54, "dry_weight_kg": 4127, "type": "Travel Trailer"}'),
-  ('airstream', 'Airstream Basecamp', 'Basecamp 20X', 'Adventure-ready trailer', '{"year": 2024, "length_feet": 20, "sleeps": 2, "fresh_water_gallons": 24, "dry_weight_kg": 1542, "type": "Travel Trailer"}'),
-  ('winnebago', 'Winnebago View', 'View 24J', 'Compact Class C motorhome', '{"year": 2024, "length_feet": 25, "sleeps": 4, "fresh_water_gallons": 32, "dry_weight_kg": 4672, "type": "Class C Motorhome"}')
-) AS p(brand_slug, title, model, description, product_info)
-JOIN application.subcategories s ON s.slug = 'motorhome'
-JOIN application.categories c ON s.category_id = c.category_id AND c.slug = 'caravans-campers'
-JOIN application.barter_types bt ON c.barter_type_id = bt.barter_type_id
-JOIN application.brands b ON b.slug = p.brand_slug
-ON CONFLICT DO NOTHING;
 
 COMMIT;
-
--- =============================================
--- SUMMARY:
--- Brands inserted: 80
--- Products inserted: 143 total
---   - Phones: 27
---   - Laptops: 20
---   - Audio: 10
---   - Cameras: 8
---   - Gaming Consoles: 6
---   - Sofas: 5
---   - Chairs: 5
---   - Storage Units: 3
---   - Refrigerators: 4
---   - Washing Machines: 4
---   - Kitchen Appliances: 5
---   - Shoes: 6
---   - Bags: 4
---   - Strollers: 4
---   - Toys: 3
---   - Bicycles: 4
---   - Gym Equipment: 4
---   - Power Tools: 5
---   - Gardening Tools: 3
---   - Board Games: 3
---   - Collectibles: 3
---   - Musical Instruments: 6
---   - Cars (Sedan): 4
---   - Cars (SUV): 4
---   - Cars (Electric): 4
---   - Motorcycles (Sports): 4
---   - Motorcycles (Cruiser): 3
---   - Scooters (Electric): 3
---   - Trucks (Light): 3
---   - Campers/Motorhomes: 3
--- =============================================
