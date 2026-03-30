@@ -28,9 +28,10 @@
  * - Show shimmer loader during re-fetch
  */
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useBarterStore } from "@/lib/store";
+import { useNavigationGuard } from "@/lib/navigation-guard";
 import { getCountryNames, getCitiesForCountry } from "@/lib/countries-data";
 import { toast } from "sonner";
 import {
@@ -58,6 +59,10 @@ interface ProfileTabProps {
 export function ProfileTab({ onProfileComplete }: ProfileTabProps) {
   const { auth, logout, getMyOffers, updateOffer, updateUser } = useBarterStore();
   const router = useRouter();
+  
+  // Navigation guard for unsaved changes
+  const { registerBlocker, unregisterBlocker } = useNavigationGuard();
+  const BLOCKER_ID = "profile-edit";
 
   // ---------------------------------------------------------------------------
   // STATE - Basic Info
@@ -108,6 +113,46 @@ export function ProfileTab({ onProfileComplete }: ProfileTabProps) {
   const [activeSection, setActiveSection] = useState<string>("basic-info");
 
   // ---------------------------------------------------------------------------
+  // DIRTY TRACKING - Track if user has made changes
+  // ---------------------------------------------------------------------------
+  const initialDataRef = useRef<{
+    fullName: string;
+    phone: string;
+    addressCountry: string;
+    addressCity: string;
+    addressState: string;
+    addressZip: string;
+    addressLine1: string;
+    addressLine2: string;
+    pushNotifications: boolean;
+    emailNotifications: boolean;
+    smsNotifications: boolean;
+  } | null>(null);
+
+  // Calculate if form is dirty (has unsaved changes)
+  const isDirty = useMemo(() => {
+    if (!initialDataRef.current) return false;
+    const initial = initialDataRef.current;
+    return (
+      fullName !== initial.fullName ||
+      phone !== initial.phone ||
+      addressCountry !== initial.addressCountry ||
+      addressCity !== initial.addressCity ||
+      addressState !== initial.addressState ||
+      addressZip !== initial.addressZip ||
+      addressLine1 !== initial.addressLine1 ||
+      addressLine2 !== initial.addressLine2 ||
+      pushNotifications !== initial.pushNotifications ||
+      emailNotifications !== initial.emailNotifications ||
+      smsNotifications !== initial.smsNotifications
+    );
+  }, [
+    fullName, phone, addressCountry, addressCity, addressState,
+    addressZip, addressLine1, addressLine2,
+    pushNotifications, emailNotifications, smsNotifications
+  ]);
+
+  // ---------------------------------------------------------------------------
   // COMPUTED
   // ---------------------------------------------------------------------------
   const countries = getCountryNames();
@@ -134,27 +179,137 @@ export function ProfileTab({ onProfileComplete }: ProfileTabProps) {
   // ---------------------------------------------------------------------------
   useEffect(() => {
     if (auth.user) {
-      setFullName(auth.user.name || "");
+      const name = auth.user.name || "";
+      const userPhone = auth.user.phone || "";
+      const country = auth.user.profileAddress?.country || "";
+      const city = auth.user.profileAddress?.city || "";
+      const state = auth.user.profileAddress?.state || "";
+      const zip = auth.user.profileAddress?.zip || "";
+      const line1 = auth.user.profileAddress?.addressLine1 || "";
+      const line2 = auth.user.profileAddress?.addressLine2 || "";
+      const push = auth.user.notificationPrefs?.push ?? true;
+      const emailNotif = auth.user.notificationPrefs?.email ?? true;
+      const sms = auth.user.notificationPrefs?.sms ?? false;
+
+      setFullName(name);
       setEmail(auth.user.email || "");
-      setPhone(auth.user.phone || "");
+      setPhone(userPhone);
       setSupportEmail(auth.user.email || "");
-      
-      if (auth.user.profileAddress) {
-        setAddressCountry(auth.user.profileAddress.country || "");
-        setAddressCity(auth.user.profileAddress.city || "");
-        setAddressState(auth.user.profileAddress.state || "");
-        setAddressZip(auth.user.profileAddress.zip || "");
-        setAddressLine1(auth.user.profileAddress.addressLine1 || "");
-        setAddressLine2(auth.user.profileAddress.addressLine2 || "");
-      }
-      
-      if (auth.user.notificationPrefs) {
-        setPushNotifications(auth.user.notificationPrefs.push);
-        setEmailNotifications(auth.user.notificationPrefs.email);
-        setSmsNotifications(auth.user.notificationPrefs.sms);
-      }
+      setAddressCountry(country);
+      setAddressCity(city);
+      setAddressState(state);
+      setAddressZip(zip);
+      setAddressLine1(line1);
+      setAddressLine2(line2);
+      setPushNotifications(push);
+      setEmailNotifications(emailNotif);
+      setSmsNotifications(sms);
+
+      // Store initial data for dirty tracking
+      initialDataRef.current = {
+        fullName: name,
+        phone: userPhone,
+        addressCountry: country,
+        addressCity: city,
+        addressState: state,
+        addressZip: zip,
+        addressLine1: line1,
+        addressLine2: line2,
+        pushNotifications: push,
+        emailNotifications: emailNotif,
+        smsNotifications: sms,
+      };
     }
   }, [auth.user]);
+
+  // ---------------------------------------------------------------------------
+  // NAVIGATION BLOCKER - Register/unregister based on dirty state
+  // ---------------------------------------------------------------------------
+  const handleSaveRef = useRef<() => Promise<void>>();
+  
+  // Create a stable save function reference
+  const handleSaveForBlocker = useCallback(async () => {
+    if (!fullName.trim()) {
+      toast.error("Full name is required");
+      throw new Error("Validation failed");
+    }
+    if (!addressCountry || !addressCity) {
+      toast.error("Country and City are required");
+      throw new Error("Validation failed");
+    }
+
+    setSaving(true);
+    await new Promise((r) => setTimeout(r, 800));
+
+    updateUser({
+      name: fullName.trim(),
+      phone: phone.trim() || undefined,
+      profileAddress: {
+        country: addressCountry,
+        city: addressCity,
+        state: addressState,
+        zip: addressZip,
+        addressLine1: addressLine1,
+        addressLine2: addressLine2,
+      },
+      notificationPrefs: {
+        push: pushNotifications,
+        email: emailNotifications,
+        sms: smsNotifications,
+      },
+      isProfileComplete: true,
+    });
+
+    // Update initial data ref after save
+    initialDataRef.current = {
+      fullName: fullName.trim(),
+      phone: phone.trim(),
+      addressCountry,
+      addressCity,
+      addressState,
+      addressZip,
+      addressLine1,
+      addressLine2,
+      pushNotifications,
+      emailNotifications,
+      smsNotifications,
+    };
+
+    toast.success("Profile saved successfully");
+    setSaving(false);
+  }, [
+    fullName, phone, addressCountry, addressCity, addressState,
+    addressZip, addressLine1, addressLine2,
+    pushNotifications, emailNotifications, smsNotifications, updateUser
+  ]);
+
+  // Keep the ref updated
+  useEffect(() => {
+    handleSaveRef.current = handleSaveForBlocker;
+  }, [handleSaveForBlocker]);
+
+  // Register/unregister blocker when dirty state changes
+  useEffect(() => {
+    if (isDirty) {
+      registerBlocker({
+        id: BLOCKER_ID,
+        type: "profile-edit",
+        message: "You have unsaved profile changes. Would you like to save them before leaving?",
+        onSave: async () => {
+          if (handleSaveRef.current) {
+            await handleSaveRef.current();
+          }
+        },
+      });
+    } else {
+      unregisterBlocker(BLOCKER_ID);
+    }
+
+    // Cleanup on unmount
+    return () => {
+      unregisterBlocker(BLOCKER_ID);
+    };
+  }, [isDirty, registerBlocker, unregisterBlocker, BLOCKER_ID]);
 
   // Load offer shipping addresses
   const offerIds = myOffers.map(o => o.offerId).join(',');
@@ -246,6 +401,24 @@ export function ProfileTab({ onProfileComplete }: ProfileTabProps) {
       },
       isProfileComplete: true, // Mark profile as complete
     });
+
+    // Update initial data ref to mark form as clean (no unsaved changes)
+    initialDataRef.current = {
+      fullName: fullName.trim(),
+      phone: phone.trim(),
+      addressCountry,
+      addressCity,
+      addressState,
+      addressZip,
+      addressLine1,
+      addressLine2,
+      pushNotifications,
+      emailNotifications,
+      smsNotifications,
+    };
+
+    // Unregister the blocker since changes are saved
+    unregisterBlocker(BLOCKER_ID);
 
     toast.success("Profile saved successfully");
     setSaving(false);

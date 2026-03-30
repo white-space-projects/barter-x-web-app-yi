@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { X, Loader2, Search, Plus, ChevronLeft, Package, ChevronDown, Repeat, Car, Home, Smartphone, Shirt, Sofa, Dumbbell, BookOpen, Gamepad2, Wrench, Baby, Dog, Bike, Truck, Container, Building2, BedDouble, ParkingSquare, Warehouse, Caravan, Cpu, Laptop, Tablet, Headphones, Camera, Watch, Table, Armchair, Archive, Lamp, Refrigerator, WashingMachine, Microwave, AirVent, CookingPot, Footprints, ShoppingBag, Gem, BedSingle, ToyBrick, CarFront, Tent, Trophy, Drill, Shovel, Hammer, Book, Dice5, Film, Star, Table2, Monitor, Printer, Guitar, Paintbrush, Box, CarTaxiFront, Crown, Zap, Gauge, Wind, Fuel, Bus, Users, Castle, Building, ParkingCircle, Lock, Square, LayoutGrid } from "lucide-react";
 import { useBarterStore } from "@/lib/store";
 import { generateGuid } from "@/lib/guid";
@@ -15,6 +15,17 @@ import { PRODUCT_TYPES, getProductTypeCategories, getSubcategories as getTypeSub
 import type { Product, OfferPickupAddress, OfferImage, OfferInfoFieldValue, ProductType } from "@/lib/types";
 import { OfferImageSection } from "./offer-image-section";
 import { OfferInfoSection } from "./offer-info-section";
+import { useNavigationGuard } from "@/lib/navigation-guard";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type Props = {
   open: boolean;
@@ -148,6 +159,12 @@ export function AddOfferModal({ open, onClose, initialProductType }: Props) {
     getBrands,
   } = useBarterStore();
 
+  const { registerBlocker, unregisterBlocker } = useNavigationGuard();
+  const BLOCKER_ID = "offer-creation";
+  
+  // Confirmation dialog for closing with unsaved changes
+  const [showDiscardDialog, setShowDiscardDialog] = useState(false);
+
   // New multi-step flow
   const [step, setStep] = useState<Step>(initialProductType ? "select-category" : "select-type");
   const [selectedProductType, setSelectedProductType] = useState<ProductType | null>(initialProductType || null);
@@ -186,6 +203,47 @@ export function AddOfferModal({ open, onClose, initialProductType }: Props) {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const brands = getBrands();
+
+  // Check if user has started entering offer details (dirty state)
+  const hasOfferData = useMemo(() => {
+    // Only consider dirty if on offer-details step and has started typing
+    if (step !== "offer-details") return false;
+    return (
+      offerTitle.trim() !== "" ||
+      offerDescription.trim() !== "" ||
+      offerImages.length > 0 ||
+      offerInfo.length > 0 ||
+      pickupCountry !== "" ||
+      pickupCity !== ""
+    );
+  }, [step, offerTitle, offerDescription, offerImages, offerInfo, pickupCountry, pickupCity]);
+
+  // Reset state when modal closes (to ensure clean slate on reopen)
+  const prevOpenRef = useRef(open);
+  useEffect(() => {
+    // If modal was closed and is now opening, reset state
+    if (!prevOpenRef.current && open) {
+      resetAll();
+    }
+    prevOpenRef.current = open;
+  }, [open]);
+
+  // Register/unregister navigation blocker when modal has unsaved data
+  useEffect(() => {
+    if (open && hasOfferData) {
+      registerBlocker({
+        id: BLOCKER_ID,
+        type: "offer-creation",
+        message: "You have started creating an offer. Your progress will be lost if you leave now.",
+      });
+    } else {
+      unregisterBlocker(BLOCKER_ID);
+    }
+
+    return () => {
+      unregisterBlocker(BLOCKER_ID);
+    };
+  }, [open, hasOfferData, registerBlocker, unregisterBlocker, BLOCKER_ID]);
   
   // Get available countries and cities
   const countryNames = getCountryNames();
@@ -247,9 +305,26 @@ export function AddOfferModal({ open, onClose, initialProductType }: Props) {
     setErrors({});
   }
 
-  function handleClose() {
+  // Check if closing should show confirmation
+  const handleCloseAttempt = useCallback(() => {
+    if (hasOfferData) {
+      setShowDiscardDialog(true);
+    } else {
+      resetAll();
+      onClose();
+    }
+  }, [hasOfferData, onClose]);
+
+  // Confirmed discard - close without saving
+  const handleConfirmDiscard = useCallback(() => {
+    setShowDiscardDialog(false);
+    unregisterBlocker(BLOCKER_ID);
     resetAll();
     onClose();
+  }, [unregisterBlocker, BLOCKER_ID, onClose]);
+
+  function handleClose() {
+    handleCloseAttempt();
   }
 
   function handleSelectType(type: ProductType) {
@@ -361,9 +436,13 @@ export function AddOfferModal({ open, onClose, initialProductType }: Props) {
       offerInfo: offerInfo.length > 0 ? offerInfo : undefined,
     });
 
+    // Unregister blocker since offer was saved successfully
+    unregisterBlocker(BLOCKER_ID);
+
     setLoading(false);
     toast.success("Your offer has been added.");
-    handleClose();
+    resetAll();
+    onClose();
   }
 
   if (!open) return null;
@@ -906,6 +985,26 @@ export function AddOfferModal({ open, onClose, initialProductType }: Props) {
           )}
         </div>
       </div>
+
+      {/* Discard Confirmation Dialog */}
+      <AlertDialog open={showDiscardDialog} onOpenChange={setShowDiscardDialog}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Discard Offer?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You have started creating an offer. Your progress will be lost if you leave now.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setShowDiscardDialog(false)}>
+              Continue Editing
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDiscard}>
+              Discard
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

@@ -16,7 +16,7 @@
  * - Mobile: Bottom navigation bar (app-like experience)
  */
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { GlobalNav } from "@/components/global-nav";
 import { useBarterStore } from "@/lib/store";
@@ -31,19 +31,29 @@ import { ProfileTab } from "@/components/app/profile-tab";
 import { PickupReadinessModal } from "@/components/app/pickup-readiness-modal";
 import { SidebarNav } from "@/components/app/sidebar-nav";
 import { BottomNav } from "@/components/app/bottom-nav";
+import { NavigationConfirmDialog } from "@/components/app/navigation-confirm-dialog";
+import { NavigationGuardProvider, useNavigationGuard } from "@/lib/navigation-guard";
 import { Loader2, ShieldCheck } from "lucide-react";
 import type { ProductType } from "@/lib/types";
 
 // Tab type definition - profile is now a utility tab shown in tab content
 type UtilityTab = "my-offers" | "chat" | "admin" | "simulate" | "profile";
 
-export default function WorkspacePage() {
+// Inner component that uses the navigation guard
+function WorkspaceContent() {
   // ---------------------------------------------------------------------------
   // STORE & ROUTER
   // ---------------------------------------------------------------------------
   const { auth, authReady, getUnreadCount, getTotalUnreadMessages } = useBarterStore();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const {
+    hasBlocker,
+    setPendingNavigation,
+    setShowConfirmDialog,
+    pendingNavigation,
+    clearAllBlockers,
+  } = useNavigationGuard();
   
   // ---------------------------------------------------------------------------
   // LOCAL STATE
@@ -52,6 +62,56 @@ export default function WorkspacePage() {
   const [activeUtilityTab, setActiveUtilityTab] = useState<UtilityTab | null>(null);
   const [addOfferOpen, setAddOfferOpen] = useState(false);
   const [pickupModalOfferId, setPickupModalOfferId] = useState<string | null>(null);
+
+  // ---------------------------------------------------------------------------
+  // NAVIGATION HANDLERS WITH GUARD
+  // ---------------------------------------------------------------------------
+  const handleSelectProductType = useCallback((type: ProductType) => {
+    // Check if there are unsaved changes (either offer creation or profile editing)
+    if (hasBlocker()) {
+      setPendingNavigation({ type: "product-type", value: type });
+      setShowConfirmDialog(true);
+      return;
+    }
+    // Close offer modal if open (no unsaved changes)
+    if (addOfferOpen) {
+      setAddOfferOpen(false);
+    }
+    setActiveProductType(type);
+    setActiveUtilityTab(null);
+  }, [hasBlocker, addOfferOpen, setPendingNavigation, setShowConfirmDialog]);
+
+  const handleSelectUtilityTab = useCallback((tab: UtilityTab | null) => {
+    // Check if there are unsaved changes (either offer creation or profile editing)
+    if (hasBlocker()) {
+      setPendingNavigation({ type: "utility-tab", value: tab });
+      setShowConfirmDialog(true);
+      return;
+    }
+    // Close offer modal if open (no unsaved changes)
+    if (addOfferOpen) {
+      setAddOfferOpen(false);
+    }
+    setActiveUtilityTab(tab);
+  }, [hasBlocker, addOfferOpen, setPendingNavigation, setShowConfirmDialog]);
+
+  // Handle confirmed navigation (after user confirms discard/save)
+  const handleConfirmNavigation = useCallback(() => {
+    // Close offer modal if it was open
+    if (addOfferOpen) {
+      setAddOfferOpen(false);
+    }
+    
+    if (pendingNavigation) {
+      if (pendingNavigation.type === "product-type") {
+        setActiveProductType(pendingNavigation.value as ProductType);
+        setActiveUtilityTab(null);
+      } else if (pendingNavigation.type === "utility-tab") {
+        setActiveUtilityTab(pendingNavigation.value as UtilityTab | null);
+      }
+      setPendingNavigation(null);
+    }
+  }, [pendingNavigation, setPendingNavigation, addOfferOpen]);
 
   // ---------------------------------------------------------------------------
   // COMPUTED VALUES (all hooks must be before conditional returns)
@@ -169,8 +229,8 @@ export default function WorkspacePage() {
           <SidebarNav
             activeProductType={activeProductType}
             activeUtilityTab={activeUtilityTab}
-            onSelectProductType={showNavigation ? setActiveProductType : () => {}}
-            onSelectUtilityTab={showNavigation ? setActiveUtilityTab : () => {}}
+            onSelectProductType={showNavigation ? handleSelectProductType : () => {}}
+            onSelectUtilityTab={showNavigation ? handleSelectUtilityTab : () => {}}
             onAddOffer={showNavigation ? () => setAddOfferOpen(true) : () => {}}
             isAdmin={isAdmin}
             unreadCount={totalUnread}
@@ -224,7 +284,8 @@ export default function WorkspacePage() {
               {activeUtilityTab === "profile" && (
                 <ProfileTab 
                   onProfileComplete={() => {
-                    // Navigate to main screen (Goods Barter tab by default)
+                    // Clear any blockers and navigate to main screen
+                    clearAllBlockers();
                     setActiveUtilityTab(null);
                     setActiveProductType("goods");
                   }} 
@@ -244,8 +305,8 @@ export default function WorkspacePage() {
           <BottomNav
             activeProductType={activeProductType}
             activeUtilityTab={activeUtilityTab}
-            onSelectProductType={setActiveProductType}
-            onSelectUtilityTab={setActiveUtilityTab}
+            onSelectProductType={handleSelectProductType}
+            onSelectUtilityTab={handleSelectUtilityTab}
             onAddOffer={() => setAddOfferOpen(true)}
             isAdmin={isAdmin}
             unreadCount={totalUnread}
@@ -266,6 +327,18 @@ export default function WorkspacePage() {
           onClose={() => setPickupModalOfferId(null)}
         />
       )}
+
+      {/* Navigation Confirmation Dialog */}
+      <NavigationConfirmDialog onConfirmNavigation={handleConfirmNavigation} />
     </div>
+  );
+}
+
+// Main export wrapped with NavigationGuardProvider
+export default function WorkspacePage() {
+  return (
+    <NavigationGuardProvider>
+      <WorkspaceContent />
+    </NavigationGuardProvider>
   );
 }
