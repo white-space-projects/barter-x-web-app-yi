@@ -67,8 +67,10 @@ function WorkspaceContent() {
   // NAVIGATION HANDLERS WITH GUARD
   // ---------------------------------------------------------------------------
   const handleSelectProductType = useCallback((type: ProductType) => {
+    console.log("[v0] handleSelectProductType called:", type, "hasBlocker:", hasBlocker(), "addOfferOpen:", addOfferOpen);
     // Check if there are unsaved changes (either offer creation or profile editing)
     if (hasBlocker()) {
+      console.log("[v0] Blocker detected, showing confirm dialog");
       setPendingNavigation({ type: "product-type", value: type });
       setShowConfirmDialog(true);
       return;
@@ -77,13 +79,16 @@ function WorkspaceContent() {
     if (addOfferOpen) {
       setAddOfferOpen(false);
     }
+    console.log("[v0] Setting activeProductType to:", type, "and activeUtilityTab to null");
     setActiveProductType(type);
     setActiveUtilityTab(null);
   }, [hasBlocker, addOfferOpen, setPendingNavigation, setShowConfirmDialog]);
 
   const handleSelectUtilityTab = useCallback((tab: UtilityTab | null) => {
+    console.log("[v0] handleSelectUtilityTab called:", tab, "hasBlocker:", hasBlocker(), "addOfferOpen:", addOfferOpen);
     // Check if there are unsaved changes (either offer creation or profile editing)
     if (hasBlocker()) {
+      console.log("[v0] Blocker detected, showing confirm dialog");
       setPendingNavigation({ type: "utility-tab", value: tab });
       setShowConfirmDialog(true);
       return;
@@ -92,6 +97,7 @@ function WorkspaceContent() {
     if (addOfferOpen) {
       setAddOfferOpen(false);
     }
+    console.log("[v0] Setting activeUtilityTab to:", tab);
     setActiveUtilityTab(tab);
   }, [hasBlocker, addOfferOpen, setPendingNavigation, setShowConfirmDialog]);
 
@@ -292,8 +298,13 @@ function WorkspaceContent() {
                 />
               )}
               
-              {/* Product type tabs */}
-              {!activeUtilityTab && <ProductsTab productType={activeProductType} />}
+              {/* Product type tabs - key forces remount when switching types */}
+              {!activeUtilityTab && (
+                <ProductsTab 
+                  key={activeProductType} 
+                  productType={activeProductType} 
+                />
+              )}
             </div>
           </div>
         </main>

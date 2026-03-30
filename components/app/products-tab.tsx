@@ -99,8 +99,12 @@ export function ProductsTab({ productType = "goods" }: Props) {
 
   // Sync the active product type with the store when it changes
   // This ensures filters are stored/retrieved per exchange type
+  // Also reset selection when product type changes
   useEffect(() => {
     setActiveProductTypeForFilters(productType);
+    // Reset any open product detail view when switching product types
+    setSelectedProduct(null);
+    setInlineAddProduct(null);
   }, [productType, setActiveProductTypeForFilters]);
 
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
