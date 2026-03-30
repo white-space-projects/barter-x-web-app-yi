@@ -57,10 +57,10 @@ export function TabContentWrapper({
           <div className="flex items-center gap-3 min-w-0">
             <button
               onClick={onCloseDetail}
-              className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+              className="flex h-8 w-8 items-center justify-center rounded-md text-primary hover:text-primary/80 hover:bg-primary/10 transition-colors"
               aria-label="Go back"
             >
-              <ArrowLeft className="h-4 w-4" />
+              <ArrowLeft className="h-5 w-5" />
             </button>
             <div className="min-w-0">
               {detailTitle && (

@@ -12,7 +12,7 @@
  */
 
 import { useState, useMemo } from "react";
-import { AlertCircle, Package, MoreHorizontal, Eye, ArrowRightLeft, Pencil, Plus, X } from "lucide-react";
+import { AlertCircle, Package, ArrowRightLeft, Pencil, Plus, X } from "lucide-react";
 import { useBarterStore } from "@/lib/store";
 import type { Product, HookStatus } from "@/lib/types";
 import { HookOfferModal } from "./hook-offer-modal";
@@ -154,7 +154,6 @@ export function ViewOffersPanel({ product, onAddOffer }: Props) {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {offers.map((offer) => {
                 const isOwn = offer.ownerUserId === auth.user?.userId;
-                const isExpanded = expandedOfferId === offer.offerId;
                 const displayStatus = isOwn ? getOfferDisplayStatus(offer.offerId) : null;
                 const showConfirmPickup = isOwn && hasReservedHook(offer.offerId) && !offer.readyForCommit;
                 const showPickupDate = isOwn && offer.readyForCommit && offer.pickupReadyDate;
@@ -164,10 +163,8 @@ export function ViewOffersPanel({ product, onAddOffer }: Props) {
                     key={offer.offerId} 
                     className="rounded-xl border border-border bg-card overflow-hidden w-full card-shadow-primary cursor-pointer hover:border-primary/30 transition-colors"
                     onClick={() => {
-                      // On desktop, toggle expand; on mobile, do nothing (use 3-dots)
-                      if (window.innerWidth >= 640) {
-                        setExpandedOfferId(isExpanded ? null : offer.offerId);
-                      }
+                      // Click anywhere on card opens offer details
+                      setViewDetailsOfferId(offer.offerId);
                     }}
                   >
                     <div className="p-4 min-h-[88px]">
@@ -184,47 +181,47 @@ export function ViewOffersPanel({ product, onAddOffer }: Props) {
 
                         <div className="flex-1 min-w-0 flex flex-col justify-center">
                           <p className="text-sm font-medium text-foreground truncate">{offer.title}</p>
-                          <p className="text-xs text-muted-foreground">{product.subcategory} . {product.brand}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {isOwn ? `Hooks ${offer.outgoingHookCount}/3` : `${offer.hookedCount} ${offer.hookedCount === 1 ? "person" : "people"} hooked this`}
+                          <p className="text-xs text-muted-foreground flex items-center gap-1">
+                            {product.subcategory} <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary" /> {product.brand}
+                          </p>
+                          <p className="text-xs text-primary font-medium">
+                            {isOwn 
+                              ? `Hooks ${offer.outgoingHookCount}/3` 
+                              : offer.outgoingHookCount === 0 
+                                ? "Not hooked yet"
+                                : `Hooked to ${offer.outgoingHookCount} ${offer.outgoingHookCount === 1 ? "offer" : "offers"}`
+                            }
                           </p>
                         </div>
 
                         <div className="flex flex-col items-end justify-start flex-shrink-0 gap-1">
                           {showPickupDate && (
-                            <button onClick={() => setPickupOfferId(offer.offerId)} className="text-xs text-primary hover:underline">
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); setPickupOfferId(offer.offerId); }} 
+                              className="text-xs text-primary hover:underline"
+                            >
                               Pickup: <span className="underline">{offer.pickupReadyDate}</span>
                             </button>
                           )}
                           
-                          <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                            <button onClick={() => setViewDetailsOfferId(offer.offerId)} className="p-1.5 rounded-md text-primary border border-primary/30 hover:bg-primary/10 transition-colors" title="View offer details">
-                              <Eye className="h-3.5 w-3.5" />
-                            </button>
-                            {isOwn && (
-                              <button onClick={() => setEditOfferId(offer.offerId)} className="p-1 text-muted-foreground hover:text-foreground transition-colors" title="Edit offer">
+                          {/* Only show edit icon for own offers */}
+                          {isOwn && (
+                            <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                              <button 
+                                onClick={() => setEditOfferId(offer.offerId)} 
+                                className="p-1.5 text-muted-foreground hover:text-foreground transition-colors" 
+                                title="Edit offer"
+                              >
                                 <Pencil className="h-4 w-4" />
                               </button>
-                            )}
-                            {/* 3-dots menu - mobile only, on desktop click card to expand */}
-                            <button onClick={() => setExpandedOfferId(isExpanded ? null : offer.offerId)} className="p-1 text-muted-foreground hover:text-foreground transition-colors sm:hidden">
-                              <MoreHorizontal className="h-5 w-5" />
-                            </button>
-                          </div>
+                            </div>
+                          )}
                           
                           {displayStatus && (
                             <p className={`text-xs font-medium ${HOOK_STATUS_COLORS[displayStatus]}`}>{HOOK_STATUS_LABELS[displayStatus]}</p>
                           )}
                         </div>
                       </div>
-
-                      {isExpanded && (
-                        <div className="mt-3 pt-3 border-t border-border/50">
-                          <p className="text-xs text-muted-foreground mb-2">Description:</p>
-                          <p className="text-sm text-foreground">{offer.description}</p>
-                          <p className="mt-2 text-xs text-muted-foreground/70 italic">Pickup address will be visible after hook is reserved and pickup is confirmed.</p>
-                        </div>
-                      )}
 
                       <div className="mt-3 pt-2 border-t border-border/50 flex flex-col gap-2" onClick={(e) => e.stopPropagation()}>
                         {isOwn ? (

@@ -53,8 +53,6 @@ import { useState } from "react";
 import {
   Package,
   Pencil,
-  MoreHorizontal,
-  Eye,
   ArrowRightLeft,
   Unlink,
   MapPin,
@@ -354,7 +352,10 @@ export function OfferCard({
   // ---------------------------------------------------------------------------
   
   return (
-    <div className="rounded-xl border border-border bg-card overflow-hidden w-full card-shadow-primary">
+    <div 
+      className="rounded-xl border border-border bg-card overflow-hidden w-full card-shadow-primary cursor-pointer hover:border-primary/30 transition-colors"
+      onClick={() => onViewDetails?.(offer.offerId)}
+    >
       {/* Main card content - 88px min height */}
       <div className="p-4 min-h-[88px]">
         <div className="flex gap-3">
@@ -372,67 +373,45 @@ export function OfferCard({
             )}
           </div>
 
-          {/* Offer info */}
-          <div className="flex-1 min-w-0 flex flex-col justify-center">
-            <p className="text-sm font-medium text-foreground truncate">
-              {offer.title}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {offerProduct?.subcategory} . {offerProduct?.brand}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {variant === "own"
-                ? `Hooks ${offer.outgoingHookCount}/3`
-                : `${offer.hookedCount} ${offer.hookedCount === 1 ? "person" : "people"} hooked this`}
-            </p>
-          </div>
+{/* Offer info */}
+            <div className="flex-1 min-w-0 flex flex-col justify-center">
+              <p className="text-sm font-medium text-foreground truncate">
+                {offer.title}
+              </p>
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                {offerProduct?.subcategory} <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary" /> {offerProduct?.brand}
+              </p>
+              <p className="text-xs text-primary font-medium">
+                {variant === "own"
+                  ? `Hooks ${offer.outgoingHookCount}/3`
+                  : offer.outgoingHookCount === 0
+                    ? "Not hooked yet"
+                    : `Hooked to ${offer.outgoingHookCount} ${offer.outgoingHookCount === 1 ? "offer" : "offers"}`}
+              </p>
+            </div>
 
           {/* Right side actions */}
-          <div className="flex flex-col items-end justify-between flex-shrink-0">
-            {/* Top row: Date/status or details button */}
-            <div className="flex items-center gap-1">
-              {/* Pickup date (own offers with confirmed pickup) */}
-              {showPickupDate && (
-                <button
-                  onClick={() => onConfirmPickup?.(offer.offerId)}
-                  className="text-xs text-primary hover:underline"
-                >
-                  Pickup: <span className="underline">{offer.pickupReadyDate}</span>
-                </button>
-              )}
-              
-              {/* View details icon (other offers) */}
-              {variant === "other" && onViewDetails && (
-                <button
-                  onClick={() => onViewDetails(offer.offerId)}
-                  className="p-1 text-primary hover:text-primary/80 transition-colors"
-                  title="View details"
-                >
-                  <Eye className="h-4 w-4" />
-                </button>
-              )}
-              
-              {/* Edit button (own offers) */}
-              {variant === "own" && onEdit && (
-                <button
-                  onClick={() => onEdit(offer.offerId)}
-                  className="p-1 text-muted-foreground hover:text-foreground transition-colors"
-                  title="Edit offer"
-                >
-                  <Pencil className="h-4 w-4" />
-                </button>
-              )}
-
-              {/* Expand/collapse button */}
-              {(variant === "own" && showHooks) || variant === "other" ? (
-                <button
-                  onClick={() => setIsExpanded(!isExpanded)}
-                  className="p-1 text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <MoreHorizontal className="h-5 w-5" />
-                </button>
-              ) : null}
-            </div>
+          <div className="flex flex-col items-end justify-start flex-shrink-0 gap-1">
+            {/* Pickup date (own offers with confirmed pickup) */}
+            {showPickupDate && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onConfirmPickup?.(offer.offerId); }}
+                className="text-xs text-primary hover:underline"
+              >
+                Pickup: <span className="underline">{offer.pickupReadyDate}</span>
+              </button>
+            )}
+            
+            {/* Edit button (own offers only) */}
+            {variant === "own" && onEdit && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onEdit(offer.offerId); }}
+                className="p-1.5 text-muted-foreground hover:text-foreground transition-colors"
+                title="Edit offer"
+              >
+                <Pencil className="h-4 w-4" />
+              </button>
+            )}
 
             {/* Status badge (own offers only) */}
             {displayStatus && (
@@ -442,17 +421,6 @@ export function OfferCard({
             )}
           </div>
         </div>
-
-        {/* Expanded description (other offers) */}
-        {variant === "other" && isExpanded && (
-          <div className="mt-3 pt-3 border-t border-border/50">
-            <p className="text-xs text-muted-foreground mb-1">Description:</p>
-            <p className="text-sm text-foreground">{offer.description}</p>
-            <p className="mt-2 text-xs text-muted-foreground/70 italic">
-              Pickup address will be visible after hook is reserved and pickup is confirmed.
-            </p>
-          </div>
-        )}
 
         {/* Action buttons area */}
         <div className="mt-3 pt-2 border-t border-border/50 flex flex-wrap gap-2 justify-end">

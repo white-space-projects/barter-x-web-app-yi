@@ -313,10 +313,10 @@ export function ProductsTab({ productType = "goods" }: Props) {
           <div className="flex items-center gap-3 min-w-0">
             <button
               onClick={() => setSelectedProduct(null)}
-              className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+              className="flex h-8 w-8 items-center justify-center rounded-md text-primary hover:text-primary/80 hover:bg-primary/10 transition-colors"
               aria-label="Go back"
             >
-              <ArrowLeft className="h-4 w-4" />
+              <ArrowLeft className="h-5 w-5" />
             </button>
             <div className="min-w-0">
               <h2 className="text-sm font-semibold text-foreground truncate">
