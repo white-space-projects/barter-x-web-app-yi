@@ -16,7 +16,7 @@
  * - Mobile: Bottom navigation bar (app-like experience)
  */
 
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { GlobalNav } from "@/components/global-nav";
 import { useBarterStore } from "@/lib/store";
@@ -62,15 +62,16 @@ function WorkspaceContent() {
   const [activeUtilityTab, setActiveUtilityTab] = useState<UtilityTab | null>(null);
   const [addOfferOpen, setAddOfferOpen] = useState(false);
   const [pickupModalOfferId, setPickupModalOfferId] = useState<string | null>(null);
+  
+  // Ref for scrollable content area - used to reset scroll on tab change
+  const contentScrollRef = useRef<HTMLDivElement>(null);
 
   // ---------------------------------------------------------------------------
   // NAVIGATION HANDLERS WITH GUARD
   // ---------------------------------------------------------------------------
   const handleSelectProductType = useCallback((type: ProductType) => {
-    console.log("[v0] handleSelectProductType called:", type, "hasBlocker:", hasBlocker(), "addOfferOpen:", addOfferOpen);
     // Check if there are unsaved changes (either offer creation or profile editing)
     if (hasBlocker()) {
-      console.log("[v0] Blocker detected, showing confirm dialog");
       setPendingNavigation({ type: "product-type", value: type });
       setShowConfirmDialog(true);
       return;
@@ -79,16 +80,13 @@ function WorkspaceContent() {
     if (addOfferOpen) {
       setAddOfferOpen(false);
     }
-    console.log("[v0] Setting activeProductType to:", type, "and activeUtilityTab to null");
     setActiveProductType(type);
     setActiveUtilityTab(null);
   }, [hasBlocker, addOfferOpen, setPendingNavigation, setShowConfirmDialog]);
 
   const handleSelectUtilityTab = useCallback((tab: UtilityTab | null) => {
-    console.log("[v0] handleSelectUtilityTab called:", tab, "hasBlocker:", hasBlocker(), "addOfferOpen:", addOfferOpen);
     // Check if there are unsaved changes (either offer creation or profile editing)
     if (hasBlocker()) {
-      console.log("[v0] Blocker detected, showing confirm dialog");
       setPendingNavigation({ type: "utility-tab", value: tab });
       setShowConfirmDialog(true);
       return;
@@ -97,7 +95,6 @@ function WorkspaceContent() {
     if (addOfferOpen) {
       setAddOfferOpen(false);
     }
-    console.log("[v0] Setting activeUtilityTab to:", tab);
     setActiveUtilityTab(tab);
   }, [hasBlocker, addOfferOpen, setPendingNavigation, setShowConfirmDialog]);
 
@@ -193,6 +190,13 @@ function WorkspaceContent() {
     }
   }, [authReady, auth.isAuthenticated, isNewUser, activeUtilityTab]);
 
+  // Reset scroll position to top when switching tabs
+  useEffect(() => {
+    if (contentScrollRef.current) {
+      contentScrollRef.current.scrollTo({ top: 0, behavior: "instant" });
+    }
+  }, [activeProductType, activeUtilityTab]);
+
   // ---------------------------------------------------------------------------
   // LOADING STATES (after all hooks)
   // ---------------------------------------------------------------------------
@@ -280,7 +284,7 @@ function WorkspaceContent() {
           </div>
 
           {/* Tab content - scrollable area for all tab content */}
-          <div className="flex-1 overflow-y-auto pb-20 lg:pb-0">
+          <div ref={contentScrollRef} className="flex-1 overflow-y-auto pb-20 lg:pb-0">
             <div className="px-4 py-6 lg:px-6">
               {/* Utility tabs */}
               {activeUtilityTab === "my-offers" && <MyOffersTab />}
