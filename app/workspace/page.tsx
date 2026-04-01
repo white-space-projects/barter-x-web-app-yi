@@ -24,7 +24,7 @@ import { ProductsTab } from "@/components/app/products-tab";
 import { MyOffersTab } from "@/components/app/my-offers-tab";
 import { TabContentWrapper } from "@/components/app/tab-content-wrapper";
 import { ChatTab } from "@/components/app/chat-tab";
-import { AddOfferModal } from "@/components/app/add-offer-modal";
+import { AddOfferFlow } from "@/components/app/add-offer-flow";
 import { AdminPanel } from "@/components/app/admin-panel";
 import { SimulateTab } from "@/components/app/simulate-tab";
 import { ProfileTab } from "@/components/app/profile-tab";
@@ -329,10 +329,14 @@ function WorkspaceContent() {
         </div>
       )}
 
-      {/* Global Add Offer Modal */}
-      <AddOfferModal
+      {/* Global Add Offer Flow - Full Screen */}
+      <AddOfferFlow
         open={addOfferOpen}
         onClose={() => setAddOfferOpen(false)}
+        onSuccess={() => {
+          setAddOfferOpen(false);
+          setActiveUtilityTab("my-offers");
+        }}
       />
 
       {/* Pickup Readiness Modal - triggered from notifications */}
