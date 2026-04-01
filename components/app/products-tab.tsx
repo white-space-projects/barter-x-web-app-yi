@@ -25,7 +25,7 @@ import {
   ParkingCircle, Lock, Square, LayoutGrid
 } from "lucide-react";
 import { ViewOffersPanel } from "./view-offers-panel";
-import { InlineAddOffer } from "./inline-add-offer";
+import { AddOfferFlow } from "./add-offer-flow";
 import { ArrowLeft } from "lucide-react";
 import type { Product, ProductType } from "@/lib/types";
 import { useProducts } from "@/hooks/use-products";
@@ -342,12 +342,11 @@ export function ProductsTab({ productType = "goods" }: Props) {
           onAddOffer={() => setInlineAddProduct(selectedProduct)}
         />
         
-        {inlineAddProduct && (
-          <InlineAddOffer
-            product={inlineAddProduct}
-            onClose={() => setInlineAddProduct(null)}
-          />
-        )}
+        <AddOfferFlow
+          open={!!inlineAddProduct}
+          onClose={() => setInlineAddProduct(null)}
+          initialProduct={inlineAddProduct || undefined}
+        />
       </div>
     );
   }
@@ -792,12 +791,11 @@ export function ProductsTab({ productType = "goods" }: Props) {
         </>
       )}
 
-      {inlineAddProduct && (
-        <InlineAddOffer
-          product={inlineAddProduct}
-          onClose={() => setInlineAddProduct(null)}
-        />
-      )}
+      <AddOfferFlow
+        open={!!inlineAddProduct}
+        onClose={() => setInlineAddProduct(null)}
+        initialProduct={inlineAddProduct || undefined}
+      />
     </div>
   );
 }

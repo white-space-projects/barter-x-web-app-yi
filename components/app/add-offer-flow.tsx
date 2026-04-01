@@ -543,7 +543,6 @@ function ProgressSidebar({
   onStepClick,
   isCollapsed,
   onToggleCollapse,
-  productSpecFields,
 }: {
   currentStep: Step;
   selections: {
@@ -559,7 +558,6 @@ function ProgressSidebar({
   onStepClick: (step: Step) => void;
   isCollapsed: boolean;
   onToggleCollapse: () => void;
-  productSpecFields: { fieldName: string; value: string }[];
 }) {
   const steps = [
     { number: 1, title: "Product", completed: currentStep > 1 },
@@ -699,24 +697,6 @@ function ProgressSidebar({
           <div className="flex items-center gap-2 p-2 rounded-lg bg-secondary/50">
             <span className="text-xs text-muted-foreground">Model:</span>
             <span className="text-xs font-medium text-foreground truncate">{selections.model}</span>
-          </div>
-        )}
-
-        {/* Product specs (show fields after subcategory selected) */}
-        {selections.subcategory && productSpecFields.length > 0 && (
-          <div className="p-2 rounded-lg bg-secondary/30 space-y-1.5">
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Specifications</p>
-            {productSpecFields.slice(0, 4).map((spec, i) => (
-              <div key={i} className="flex justify-between text-xs">
-                <span className="text-muted-foreground truncate">{spec.fieldName}</span>
-                <span className={`font-medium truncate ml-2 ${spec.value ? "text-foreground" : "text-muted-foreground/50"}`}>
-                  {spec.value || "—"}
-                </span>
-              </div>
-            ))}
-            {productSpecFields.length > 4 && (
-              <p className="text-[10px] text-muted-foreground">+{productSpecFields.length - 4} more</p>
-            )}
           </div>
         )}
 
@@ -916,19 +896,6 @@ export function AddOfferFlow({ open, onClose, onSuccess, initialProductType, ini
       .map(p => ({ id: p.productId, name: p.title, imageUrl: p.imageUrl }))
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [products, selectedBarterType, selectedCategory, selectedSubcategory, selectedBrand]);
-
-  // Product spec fields (empty until model selected, then populated)
-  const productSpecFields = useMemo(() => {
-    if (selectedProduct) {
-      return getProductInfo(selectedProduct.productId);
-    }
-    if (selectedSubcategory) {
-      // Get fields from subcategory but without values
-      const fields = getOfferInfoFieldsForSubcategory(selectedSubcategory.name);
-      return fields.map((f: { fieldName: string }) => ({ fieldName: f.fieldName, value: "" }));
-    }
-    return [];
-  }, [selectedProduct, selectedSubcategory]);
 
   // Offer count for selected product
   const productOfferCount = useMemo(() => {
@@ -1363,7 +1330,6 @@ export function AddOfferFlow({ open, onClose, onSuccess, initialProductType, ini
             onStepClick={goToStep}
             isCollapsed={sidebarCollapsed}
             onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
-            productSpecFields={productSpecFields}
           />
         </div>
 
@@ -1593,7 +1559,6 @@ export function AddOfferFlow({ open, onClose, onSuccess, initialProductType, ini
                       )}
                     </div>
                   )}
-                  </div>
                 </div>
 
                 {/* Navigation */}
@@ -1647,8 +1612,8 @@ export function AddOfferFlow({ open, onClose, onSuccess, initialProductType, ini
                     value={offerDescription}
                     onChange={(e) => setOfferDescription(e.target.value)}
                     placeholder={selectedProduct?.subcategory ? getOfferDescPlaceholder(selectedProduct.subcategory) : "Describe your offer in detail..."}
-                    rows={7}
-                    className="w-full rounded-lg border border-input bg-secondary px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none min-h-[140px]"
+                    rows={5}
+                    className="w-full rounded-lg border border-input bg-secondary px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
                   />
                 </div>
 
@@ -1671,7 +1636,6 @@ export function AddOfferFlow({ open, onClose, onSuccess, initialProductType, ini
                       />
                     </div>
                   )}
-                  </div>
                 </div>
 
                 {/* Navigation */}
@@ -1718,9 +1682,8 @@ export function AddOfferFlow({ open, onClose, onSuccess, initialProductType, ini
                   <span className="text-sm font-medium text-foreground">Same as registered address</span>
                 </label>
 
-                {/* Address form with darker container (like login form) */}
-                <div className="rounded-xl border border-border bg-card p-5">
-                  <div className="grid grid-cols-2 gap-3">
+                {/* Address form - tighter spacing matching profile */}
+                <div className="grid grid-cols-2 gap-3">
                   {/* Country */}
                   <div>
                     <label className="mb-1.5 block text-sm font-medium text-foreground">
@@ -1813,7 +1776,6 @@ export function AddOfferFlow({ open, onClose, onSuccess, initialProductType, ini
                       placeholder="Apartment, suite, etc."
                       className="h-11 w-full rounded-lg border border-input bg-secondary px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
                     />
-                  </div>
                   </div>
                 </div>
 

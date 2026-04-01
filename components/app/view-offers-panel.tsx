@@ -12,12 +12,12 @@
  */
 
 import { useState, useMemo } from "react";
-import { AlertCircle, Package, ArrowRightLeft, Pencil, Plus, X } from "lucide-react";
+import { AlertCircle, Package, ArrowRightLeft, Pencil, Plus } from "lucide-react";
 import { useBarterStore } from "@/lib/store";
 import type { Product, HookStatus } from "@/lib/types";
 import { HookOfferModal } from "./hook-offer-modal";
 import { OfferDetailsModal } from "./offer-details-modal";
-import { InlineAddOffer } from "./inline-add-offer";
+import { AddOfferFlow } from "./add-offer-flow";
 import { PickupReadinessModal } from "./pickup-readiness-modal";
 import { EditOfferModal } from "./edit-offer-modal";
 import { toast } from "sonner";
@@ -118,25 +118,12 @@ export function ViewOffersPanel({ product, onAddOffer }: Props) {
     <>
       {/* Content panel - renders inline within TabContentWrapper */}
       <div className="w-full">
-          {/* Inline Add Offer Form - shows when Add Offer is clicked */}
-          {showInlineAdd && (
-            <div className="mb-4 rounded-xl border border-primary/30 bg-primary/5 p-4">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-medium text-foreground">Add New Offer</h3>
-                <button 
-                  onClick={() => setShowInlineAdd(false)}
-                  className="p-1 text-muted-foreground hover:text-foreground"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-              <InlineAddOffer 
-                product={product} 
-                onClose={() => setShowInlineAdd(false)}
-                onOfferAdded={() => setShowInlineAdd(false)}
-              />
-            </div>
-          )}
+          {/* Add Offer Flow Modal - shows when Add Offer is clicked */}
+          <AddOfferFlow
+            open={showInlineAdd}
+            onClose={() => setShowInlineAdd(false)}
+            initialProduct={product}
+          />
 
           {offers.length === 0 && !showInlineAdd ? (
             <div className="flex flex-col items-center py-12 text-muted-foreground">
@@ -288,24 +275,12 @@ export function ViewOffersPanel({ product, onAddOffer }: Props) {
         />
       )}
 
-      {navigateToProduct && (
-        <div className="fixed inset-0 lg:left-56 z-[80] bg-background/70 backdrop-blur-sm flex items-center justify-center p-4 lg:p-8">
-          <div className="w-full max-w-md rounded-xl border border-border bg-card overflow-hidden">
-            <div className="flex items-center justify-between border-b border-border p-4">
-              <div>
-                <h3 className="text-sm font-semibold text-foreground">Add offer to {navigateToProduct.title}</h3>
-                <p className="text-xs text-muted-foreground">{navigateToProduct.subcategory} / {navigateToProduct.brand}</p>
-              </div>
-              <button onClick={() => setNavigateToProductId(null)} className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:text-foreground" aria-label="Close">
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            <div className="p-4">
-              <InlineAddOffer product={navigateToProduct} onOfferAdded={() => setNavigateToProductId(null)} />
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Add Offer Flow for navigate to product */}
+      <AddOfferFlow
+        open={!!navigateToProduct}
+        onClose={() => setNavigateToProductId(null)}
+        initialProduct={navigateToProduct || undefined}
+      />
     </>
   );
 }
