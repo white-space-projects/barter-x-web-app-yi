@@ -338,29 +338,41 @@ function BrandModelSelector({
         )}
       </div>
 
-      {/* List of items */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 max-h-[280px] overflow-y-auto">
+      {/* List of items - polished brand tiles */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 max-h-[280px] overflow-y-auto">
         {filteredItems.map((item) => {
           const isSelected = selectedValue === item.name;
+          const isApple = item.name.toLowerCase() === "apple";
+          const isSamsung = item.name.toLowerCase() === "samsung";
+          const hasLogo = isApple || isSamsung;
+          
           return (
             <button
               key={item.id}
               type="button"
               onClick={() => onSelect(item.name)}
-              className={`flex flex-col items-center gap-2 p-3 rounded-xl text-center transition-all ${
+              className={`flex flex-col items-center gap-2.5 p-4 rounded-xl text-center transition-all ${
                 isSelected 
-                  ? "bg-primary text-primary-foreground ring-2 ring-primary" 
-                  : "bg-secondary/50 hover:bg-secondary text-foreground hover:ring-1 hover:ring-primary/30"
+                  ? "bg-primary text-primary-foreground ring-2 ring-primary shadow-md" 
+                  : "bg-secondary/50 hover:bg-secondary text-foreground hover:ring-1 hover:ring-primary/30 hover:shadow-sm"
               }`}
             >
-              <div className={`w-10 h-10 rounded-lg overflow-hidden flex items-center justify-center ${isSelected ? "bg-primary-foreground/20" : "bg-background"}`}>
+              <div className={`w-12 h-12 rounded-xl overflow-hidden flex items-center justify-center ${
+                isSelected ? "bg-primary-foreground/20" : hasLogo ? "bg-background" : "bg-secondary"
+              }`}>
                 {item.imageUrl ? (
                   <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
+                ) : isApple ? (
+                  <svg className={`w-7 h-7 ${isSelected ? "text-primary-foreground" : "text-foreground"}`} viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
+                  </svg>
+                ) : isSamsung ? (
+                  <span className={`text-lg font-bold tracking-tight ${isSelected ? "text-primary-foreground" : "text-foreground"}`}>S</span>
                 ) : (
-                  <Package className={`h-5 w-5 ${isSelected ? "text-primary-foreground" : "text-muted-foreground"}`} />
+                  <Package className={`h-6 w-6 ${isSelected ? "text-primary-foreground" : "text-muted-foreground"}`} />
                 )}
               </div>
-              <span className="text-xs font-medium leading-tight truncate w-full">{item.name}</span>
+              <span className="text-sm font-medium leading-tight truncate w-full">{item.name}</span>
             </button>
           );
         })}
@@ -425,7 +437,7 @@ function ProductCardPreview({
 }
 
 // =============================================================================
-// IMAGE GRID (2x3 with portrait preview)
+// IMAGE GRID (2-column x 3-row balanced grid)
 // =============================================================================
 function ImageGrid({
   images,
@@ -433,27 +445,28 @@ function ImageGrid({
   onSelectImage,
   onDeleteImage,
   onAddImage,
+  onOpenEnlarged,
   maxImages = 6,
-  isMobile,
 }: {
   images: OfferImage[];
   selectedIndex: number;
   onSelectImage: (index: number) => void;
   onDeleteImage: (index: number) => void;
   onAddImage: () => void;
+  onOpenEnlarged?: () => void;
   maxImages?: number;
   isMobile: boolean;
 }) {
   const selectedImage = images[selectedIndex];
-  
-  // Thumbnail size: balanced for mobile usability
-  const thumbSize = isMobile ? "w-[72px] h-[72px]" : "w-16 h-16";
 
   return (
-    <div className="flex gap-4">
-      {/* Portrait preview - NO delete button here */}
-      <div className="flex-shrink-0">
-        <div className={`relative rounded-xl overflow-hidden bg-secondary border-2 border-primary ${isMobile ? "w-[140px] h-[180px]" : "w-[180px] h-[220px]"}`}>
+    <div className="grid grid-cols-2 gap-3">
+      {/* Main/Portrait image - spans 3 rows, dominant left column */}
+      <div className="row-span-3">
+        <div 
+          className="relative w-full h-full min-h-[280px] md:min-h-[320px] rounded-xl overflow-hidden bg-secondary border-2 border-primary cursor-pointer"
+          onClick={() => selectedImage && onOpenEnlarged?.()}
+        >
           {selectedImage ? (
             <img 
               src={selectedImage.url} 
@@ -462,74 +475,86 @@ function ImageGrid({
               crossOrigin="anonymous"
             />
           ) : (
-            <div className="w-full h-full flex flex-col items-center justify-center gap-2">
-              <Camera className="h-8 w-8 text-muted-foreground/40" />
-              <span className="text-xs text-muted-foreground">Main Image</span>
+            <div className="w-full h-full flex flex-col items-center justify-center gap-3">
+              <Camera className="h-12 w-12 text-muted-foreground/40" />
+              <span className="text-sm text-muted-foreground">Main Image</span>
+            </div>
+          )}
+          {selectedImage && (
+            <div className="absolute bottom-2 left-2 px-2 py-1 rounded-md bg-black/60 text-white text-xs">
+              Tap to edit
             </div>
           )}
         </div>
       </div>
 
-      {/* Thumbnail grid 2 rows x 3 cols */}
-      <div className="flex-1">
-        <div className="grid grid-cols-3 gap-2">
-          {Array.from({ length: maxImages }).map((_, index) => {
-            const image = images[index];
-            const isSelected = index === selectedIndex;
-            
-            if (image) {
-              return (
-                <div 
-                  key={image.imageId} 
-                  className={`relative ${thumbSize} rounded-lg overflow-hidden cursor-pointer transition-all ${
-                    isSelected ? "ring-2 ring-primary ring-offset-1 ring-offset-background" : "ring-1 ring-border hover:ring-primary/50"
-                  }`}
-                  onClick={() => onSelectImage(index)}
-                >
-                  <img 
-                    src={image.url} 
-                    alt={`Image ${index + 1}`} 
-                    className="w-full h-full object-cover" 
-                    crossOrigin="anonymous"
-                  />
-                  {/* Delete button on thumbnail only */}
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); onDeleteImage(index); }}
-                    className="absolute top-0.5 right-0.5 p-1 rounded-full bg-destructive/90 text-white hover:bg-destructive transition-colors"
+      {/* Right column - 3 rows with 2 thumbnails each */}
+      {[0, 1, 2].map((row) => {
+        const slot1Index = row * 2 + 1;
+        const slot2Index = row * 2 + 2;
+        
+        return (
+          <div key={row} className="grid grid-cols-2 gap-2">
+            {[slot1Index, slot2Index].map((index) => {
+              if (index >= maxImages) return null;
+              
+              const image = images[index];
+              const isSelected = index === selectedIndex;
+              
+              if (image) {
+                return (
+                  <div 
+                    key={image.imageId} 
+                    className={`relative aspect-square rounded-lg overflow-hidden cursor-pointer transition-all ${
+                      isSelected ? "ring-2 ring-primary ring-offset-1 ring-offset-background" : "ring-1 ring-border hover:ring-primary/50"
+                    }`}
+                    onClick={() => onSelectImage(index)}
                   >
-                    <X className="h-3 w-3" />
+                    <img 
+                      src={image.url} 
+                      alt={`Image ${index + 1}`} 
+                      className="w-full h-full object-cover" 
+                      crossOrigin="anonymous"
+                    />
+                    {/* Delete button on thumbnail only */}
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); onDeleteImage(index); }}
+                      className="absolute top-1 right-1 p-1.5 rounded-full bg-destructive/90 text-white hover:bg-destructive transition-colors"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                );
+              }
+              
+              // Empty slot (next available)
+              if (index === images.length && images.length < maxImages) {
+                return (
+                  <button
+                    key={`empty-${index}`}
+                    type="button"
+                    onClick={onAddImage}
+                    className="aspect-square rounded-lg border-2 border-dashed border-primary/30 flex items-center justify-center hover:border-primary hover:bg-primary/5 transition-colors"
+                  >
+                    <Plus className="h-6 w-6 text-primary" />
                   </button>
+                );
+              }
+
+              // Future empty slot
+              return (
+                <div
+                  key={`future-${index}`}
+                  className="aspect-square rounded-lg border border-border bg-secondary/30 flex items-center justify-center"
+                >
+                  <span className="text-sm text-muted-foreground">{index + 1}</span>
                 </div>
               );
-            }
-            
-            // Empty slot (next available)
-            if (index === images.length && images.length < maxImages) {
-              return (
-                <button
-                  key={`empty-${index}`}
-                  type="button"
-                  onClick={onAddImage}
-                  className={`${thumbSize} rounded-lg border-2 border-dashed border-primary/30 flex items-center justify-center hover:border-primary hover:bg-primary/5 transition-colors`}
-                >
-                  <Plus className="h-5 w-5 text-primary" />
-                </button>
-              );
-            }
-
-            // Future empty slot
-            return (
-              <div
-                key={`future-${index}`}
-                className={`${thumbSize} rounded-lg border border-border bg-secondary/30 flex items-center justify-center`}
-              >
-                <span className="text-xs text-muted-foreground">{index + 1}</span>
-              </div>
-            );
-          })}
-        </div>
-      </div>
+            })}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -833,6 +858,7 @@ export function AddOfferFlow({ open, onClose, onSuccess, initialProductType, ini
   const [offerImages, setOfferImages] = useState<OfferImage[]>([]);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [showQrModal, setShowQrModal] = useState(false);
+  const [showEnlargedImage, setShowEnlargedImage] = useState(false);
 
   // Step 3: Offer details
   const [offerTitle, setOfferTitle] = useState("");
@@ -1517,6 +1543,7 @@ export function AddOfferFlow({ open, onClose, onSuccess, initialProductType, ini
                         setShowQrModal(true);
                       }
                     }}
+                    onOpenEnlarged={() => setShowEnlargedImage(true)}
                     maxImages={6}
                     isMobile={isMobile}
                   />
@@ -1612,8 +1639,8 @@ export function AddOfferFlow({ open, onClose, onSuccess, initialProductType, ini
                     value={offerDescription}
                     onChange={(e) => setOfferDescription(e.target.value)}
                     placeholder={selectedProduct?.subcategory ? getOfferDescPlaceholder(selectedProduct.subcategory) : "Describe your offer in detail..."}
-                    rows={5}
-                    className="w-full rounded-lg border border-input bg-secondary px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
+                    rows={7}
+                    className="w-full rounded-lg border border-input bg-secondary px-3 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none min-h-[140px]"
                   />
                 </div>
 
@@ -1682,8 +1709,9 @@ export function AddOfferFlow({ open, onClose, onSuccess, initialProductType, ini
                   <span className="text-sm font-medium text-foreground">Same as registered address</span>
                 </label>
 
-                {/* Address form - tighter spacing matching profile */}
-                <div className="grid grid-cols-2 gap-3">
+                {/* Address form - dark container matching login/profile forms */}
+                <div className="rounded-xl border border-border bg-card p-4 md:p-5">
+                  <div className="grid grid-cols-2 gap-4">
                   {/* Country */}
                   <div>
                     <label className="mb-1.5 block text-sm font-medium text-foreground">
@@ -1777,6 +1805,7 @@ export function AddOfferFlow({ open, onClose, onSuccess, initialProductType, ini
                       className="h-11 w-full rounded-lg border border-input bg-secondary px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
                     />
                   </div>
+                  </div>
                 </div>
 
                 {/* Navigation */}
@@ -1809,6 +1838,75 @@ export function AddOfferFlow({ open, onClose, onSuccess, initialProductType, ini
           </div>
         </div>
       </div>
+
+      {/* Enlarged Image Editor Modal */}
+      {showEnlargedImage && offerImages[selectedImageIndex] && (
+        <div className="fixed inset-0 z-50 bg-black/90 flex flex-col">
+          <div className="flex items-center justify-between p-4 border-b border-white/10">
+            <button
+              type="button"
+              onClick={() => setShowEnlargedImage(false)}
+              className="flex items-center gap-2 text-white hover:text-white/80"
+            >
+              <X className="h-5 w-5" />
+              <span className="text-sm font-medium">Close</span>
+            </button>
+            <span className="text-white/60 text-sm">Edit Image</span>
+            <div className="w-16" />
+          </div>
+          
+          <div className="flex-1 flex items-center justify-center p-4 overflow-hidden">
+            <img
+              src={offerImages[selectedImageIndex].url}
+              alt="Enlarged preview"
+              className="max-w-full max-h-full object-contain rounded-lg"
+              crossOrigin="anonymous"
+            />
+          </div>
+          
+          <div className="p-4 border-t border-white/10">
+            <div className="flex justify-center gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  // Crop functionality placeholder
+                  toast.info("Crop feature coming soon");
+                }}
+                className="flex flex-col items-center gap-1 px-4 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors"
+              >
+                <LayoutGrid className="h-5 w-5" />
+                <span className="text-xs">Crop</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  // Reposition functionality placeholder
+                  toast.info("Reposition feature coming soon");
+                }}
+                className="flex flex-col items-center gap-1 px-4 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors"
+              >
+                <ArrowLeft className="h-5 w-5" />
+                <span className="text-xs">Reposition</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowEnlargedImage(false);
+                  if (isMobile) {
+                    document.getElementById("mobile-camera-input")?.click();
+                  } else {
+                    setShowQrModal(true);
+                  }
+                }}
+                className="flex flex-col items-center gap-1 px-4 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors"
+              >
+                <Camera className="h-5 w-5" />
+                <span className="text-xs">Retake</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* QR Modal for desktop image capture */}
       {showQrModal && (
