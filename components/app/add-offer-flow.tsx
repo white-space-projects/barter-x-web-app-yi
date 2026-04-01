@@ -109,6 +109,13 @@ const TYPE_COLORS: Record<ProductType, { bg: string; text: string; border: strin
   "home-spaces": { bg: "bg-green-500/10", text: "text-green-500", border: "border-green-500/30" },
 };
 
+// Barter type descriptions
+const TYPE_DESCRIPTIONS: Record<ProductType, string> = {
+  goods: "Electronics, furniture, clothing & more",
+  automobile: "Cars, bikes, boats & vehicles",
+  "home-spaces": "Properties, rentals & spaces",
+};
+
 // =============================================================================
 // HELPER: Get icon component from string name
 // =============================================================================
@@ -389,7 +396,7 @@ function ProductCardPreview({
   offerCount: number;
 }) {
   return (
-    <div className="rounded-xl border border-border bg-card overflow-hidden w-full h-[88px]">
+    <div className="rounded-xl border border-border bg-card overflow-hidden w-full h-[88px] card-shadow-primary">
       <div className="p-4 h-full">
         <div className="flex gap-3 h-full">
           {/* Product image - 64x64 */}
@@ -438,43 +445,32 @@ function ImageGrid({
   isMobile: boolean;
 }) {
   const selectedImage = images[selectedIndex];
+  
+  // Thumbnail size: balanced for mobile usability
+  const thumbSize = isMobile ? "w-[72px] h-[72px]" : "w-16 h-16";
 
   return (
     <div className="flex gap-4">
-      {/* Portrait preview */}
+      {/* Portrait preview - NO delete button here */}
       <div className="flex-shrink-0">
         <div className={`relative rounded-xl overflow-hidden bg-secondary border-2 border-primary ${isMobile ? "w-[140px] h-[180px]" : "w-[180px] h-[220px]"}`}>
           {selectedImage ? (
-            <>
-              <img 
-                src={selectedImage.url} 
-                alt="Main preview" 
-                className="w-full h-full object-cover" 
-                crossOrigin="anonymous"
-              />
-              {/* Actions overlay */}
-              <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/60 to-transparent">
-                <div className="flex justify-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => onDeleteImage(selectedIndex)}
-                    className="p-1.5 rounded-full bg-destructive/80 text-white hover:bg-destructive transition-colors"
-                    title="Delete"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              </div>
-            </>
+            <img 
+              src={selectedImage.url} 
+              alt="Main preview" 
+              className="w-full h-full object-cover" 
+              crossOrigin="anonymous"
+            />
           ) : (
-            <div className="w-full h-full flex items-center justify-center">
+            <div className="w-full h-full flex flex-col items-center justify-center gap-2">
               <Camera className="h-8 w-8 text-muted-foreground/40" />
+              <span className="text-xs text-muted-foreground">Main Image</span>
             </div>
           )}
         </div>
       </div>
 
-      {/* Thumbnail grid 2x3 */}
+      {/* Thumbnail grid 2 rows x 3 cols */}
       <div className="flex-1">
         <div className="grid grid-cols-3 gap-2">
           {Array.from({ length: maxImages }).map((_, index) => {
@@ -485,8 +481,8 @@ function ImageGrid({
               return (
                 <div 
                   key={image.imageId} 
-                  className={`relative w-16 h-16 rounded-lg overflow-hidden cursor-pointer transition-all ${
-                    isSelected ? "ring-2 ring-primary" : "ring-1 ring-border hover:ring-primary/50"
+                  className={`relative ${thumbSize} rounded-lg overflow-hidden cursor-pointer transition-all ${
+                    isSelected ? "ring-2 ring-primary ring-offset-1 ring-offset-background" : "ring-1 ring-border hover:ring-primary/50"
                   }`}
                   onClick={() => onSelectImage(index)}
                 >
@@ -496,25 +492,26 @@ function ImageGrid({
                     className="w-full h-full object-cover" 
                     crossOrigin="anonymous"
                   />
+                  {/* Delete button on thumbnail only */}
                   <button
                     type="button"
                     onClick={(e) => { e.stopPropagation(); onDeleteImage(index); }}
-                    className="absolute top-0.5 right-0.5 p-0.5 rounded-full bg-destructive/80 text-white hover:bg-destructive transition-colors"
+                    className="absolute top-0.5 right-0.5 p-1 rounded-full bg-destructive/90 text-white hover:bg-destructive transition-colors"
                   >
-                    <X className="h-2.5 w-2.5" />
+                    <X className="h-3 w-3" />
                   </button>
                 </div>
               );
             }
             
-            // Empty slot
+            // Empty slot (next available)
             if (index === images.length && images.length < maxImages) {
               return (
                 <button
                   key={`empty-${index}`}
                   type="button"
                   onClick={onAddImage}
-                  className="w-16 h-16 rounded-lg border-2 border-dashed border-primary/30 flex items-center justify-center hover:border-primary hover:bg-primary/5 transition-colors"
+                  className={`${thumbSize} rounded-lg border-2 border-dashed border-primary/30 flex items-center justify-center hover:border-primary hover:bg-primary/5 transition-colors`}
                 >
                   <Plus className="h-5 w-5 text-primary" />
                 </button>
@@ -525,7 +522,7 @@ function ImageGrid({
             return (
               <div
                 key={`future-${index}`}
-                className="w-16 h-16 rounded-lg border border-border bg-secondary/30 flex items-center justify-center"
+                className={`${thumbSize} rounded-lg border border-border bg-secondary/30 flex items-center justify-center`}
               >
                 <span className="text-xs text-muted-foreground">{index + 1}</span>
               </div>
@@ -600,14 +597,14 @@ function ProgressSidebar({
                       : "opacity-50 cursor-not-allowed"
                 }`}
               >
-                <div className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium ${
+                <div className={`flex h-7 w-7 items-center justify-center rounded-full text-sm font-medium ${
                   isActive 
                     ? "bg-primary text-primary-foreground" 
                     : isCompleted 
-                      ? "bg-primary/20 text-primary" 
+                      ? "bg-primary/15 text-primary" 
                       : "bg-secondary text-muted-foreground"
                 }`}>
-                  {isCompleted ? <Check className="h-4 w-4" /> : step.number}
+                  {isCompleted ? <Check className="h-3.5 w-3.5" /> : step.number}
                 </div>
               </button>
             );
@@ -648,14 +645,14 @@ function ProgressSidebar({
                     : "opacity-50 cursor-not-allowed"
               }`}
             >
-              <div className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-medium ${
+              <div className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium ${
                 isActive 
                   ? "bg-primary text-primary-foreground" 
                   : isCompleted 
-                    ? "bg-primary/20 text-primary" 
+                    ? "bg-primary/15 text-primary" 
                     : "bg-secondary text-muted-foreground"
               }`}>
-                {isCompleted ? <Check className="h-3.5 w-3.5" /> : step.number}
+                {isCompleted ? <Check className="h-3 w-3" /> : step.number}
               </div>
               <span className={`text-sm font-medium ${isActive ? "text-foreground" : "text-muted-foreground"}`}>
                 {step.title}
@@ -1418,6 +1415,9 @@ export function AddOfferFlow({ open, onClose, onSuccess, initialProductType, ini
                           <span className={`text-sm font-medium ${isSelected ? TYPE_COLORS[type.id].text : "text-foreground"}`}>
                             {type.name.replace(" Barter", "")}
                           </span>
+                          <span className={`text-xs text-center ${isSelected ? TYPE_COLORS[type.id].text : "text-muted-foreground"}`}>
+                            {TYPE_DESCRIPTIONS[type.id]}
+                          </span>
                         </button>
                       );
                     })}
@@ -1697,25 +1697,27 @@ export function AddOfferFlow({ open, onClose, onSuccess, initialProductType, ini
                 STEP 4: Pickup Address
             ================================================================= */}
             {currentStep === 4 && (
-              <div className="space-y-6">
-                <h2 className="text-lg font-semibold text-foreground">Pickup Address</h2>
-                <p className="text-sm text-muted-foreground">
-                  This is where the buyer will pick up the item after a successful exchange.
-                </p>
+              <div className="space-y-4">
+                <div>
+                  <h2 className="text-lg font-semibold text-foreground">Pickup Address</h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    This is where the buyer will pick up the item after a successful exchange.
+                  </p>
+                </div>
 
-                {/* Same as profile checkbox */}
-                <label className="flex items-center gap-3 p-4 rounded-xl border border-border bg-secondary/30 cursor-pointer hover:bg-secondary/50 transition-colors">
+                {/* Same as profile checkbox - brand yellow accent */}
+                <label className="flex items-center gap-3 p-3 rounded-xl border border-border bg-secondary/30 cursor-pointer hover:bg-secondary/50 transition-colors">
                   <input
                     type="checkbox"
                     checked={sameAsProfile}
                     onChange={(e) => handleSameAsProfile(e.target.checked)}
-                    className="h-5 w-5 rounded border-primary text-primary focus:ring-primary accent-primary"
+                    className="h-5 w-5 rounded border-primary text-primary focus:ring-primary/50 accent-primary"
                   />
                   <span className="text-sm font-medium text-foreground">Same as registered address</span>
                 </label>
 
-                {/* Address form */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Address form - tighter spacing matching profile */}
+                <div className="grid grid-cols-2 gap-3">
                   {/* Country */}
                   <div>
                     <label className="mb-1.5 block text-sm font-medium text-foreground">
