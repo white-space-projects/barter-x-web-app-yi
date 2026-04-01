@@ -997,6 +997,8 @@ export function AddOfferFlow({ open, onClose, onSuccess, initialProductType, ini
       setSelectedModel(initialProduct.title);
       setSelectedProduct(initialProduct);
       setOpenAccordion(null);
+      // Start at Step 2 since Step 1 data is already populated
+      setCurrentStep(2);
     }
   }, [open, initialProduct]);
 
@@ -1504,9 +1506,10 @@ export function AddOfferFlow({ open, onClose, onSuccess, initialProductType, ini
                     type="button"
                     onClick={nextStep}
                     disabled={!step1Complete}
-                    className="w-full py-3 rounded-xl bg-primary text-primary-foreground font-medium transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full py-3 rounded-xl bg-primary text-primary-foreground font-medium transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1"
                   >
-                    Continue to Images
+                    Capture Images
+                    <ChevronRight className="h-4 w-4" />
                   </button>
                 </div>
               </div>
@@ -1595,7 +1598,8 @@ export function AddOfferFlow({ open, onClose, onSuccess, initialProductType, ini
                     onClick={prevStep}
                     className="flex-1 py-3 rounded-xl border border-input bg-background text-foreground font-medium hover:bg-secondary transition-colors"
                   >
-                    Back
+                    <ChevronLeft className="h-4 w-4" />
+                    Step 1
                   </button>
                   <button
                     type="button"
@@ -1604,6 +1608,7 @@ export function AddOfferFlow({ open, onClose, onSuccess, initialProductType, ini
                     className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground font-medium transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Continue to Details
+                    <ChevronRight className="h-4 w-4" />
                   </button>
                 </div>
               </div>
@@ -1672,7 +1677,8 @@ export function AddOfferFlow({ open, onClose, onSuccess, initialProductType, ini
                     onClick={prevStep}
                     className="flex-1 py-3 rounded-xl border border-input bg-background text-foreground font-medium hover:bg-secondary transition-colors"
                   >
-                    Back
+                    <ChevronLeft className="h-4 w-4" />
+                    Step 2
                   </button>
                   <button
                     type="button"
@@ -1680,7 +1686,8 @@ export function AddOfferFlow({ open, onClose, onSuccess, initialProductType, ini
                     disabled={!step3Complete}
                     className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground font-medium transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Continue to Address
+                    Add Address
+                    <ChevronRight className="h-4 w-4" />
                   </button>
                 </div>
               </div>
@@ -1815,7 +1822,8 @@ export function AddOfferFlow({ open, onClose, onSuccess, initialProductType, ini
                     onClick={prevStep}
                     className="flex-1 py-3 rounded-xl border border-input bg-background text-foreground font-medium hover:bg-secondary transition-colors"
                   >
-                    Back
+                    <ChevronLeft className="h-4 w-4" />
+                    Step 3
                   </button>
                   <button
                     type="button"
