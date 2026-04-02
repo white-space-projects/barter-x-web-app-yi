@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Package, ChevronDown, ChevronUp, MapPin, MessageSquare, Pencil, MoreVertical, X, Link2Off, Eye } from "lucide-react";
+import { Package, ChevronDown, ChevronUp, MapPin, MessageSquare, Pencil, MoreHorizontal, X, Link2Off, Eye } from "lucide-react";
 import { useBarterStore } from "@/lib/store";
 import type { HookStatus, LockLevel } from "@/lib/types";
 import { LOCK_LEVEL_LABELS, LOCK_LEVEL_COLORS, LOCK_LEVEL_BG_COLORS, LOCK_LEVEL_HELPER_TEXT } from "@/lib/types";
@@ -188,7 +188,7 @@ export function MyOffersTab() {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 items-start">
           {displayedOffers.map((offer) => {
             const product = getProductForOffer(offer);
             const hooks = getHooksByFromOffer(offer.offerId);
@@ -205,9 +205,10 @@ export function MyOffersTab() {
             return (
               <div
                 key={offer.offerId}
-                className="rounded-xl border border-border bg-card overflow-hidden w-full card-shadow-primary relative"
+                className="rounded-xl border border-border bg-card overflow-hidden w-full min-w-[320px] card-shadow-primary relative"
               >
-                <div className="p-4 min-h-[88px]">
+                {/* Card header - compact 88px with 12px top/bottom, 16px left/right padding */}
+                <div className="py-3 px-4">
                   <div className="flex gap-3">
                     {/* Clickable card area - opens View Offer */}
                     <div 
@@ -258,67 +259,67 @@ export function MyOffersTab() {
                       </div>
                     </div>
 
-                    {/* Right side: 3-dots menu (mobile only, vertically centered) */}
-                    <div className="flex-shrink-0 flex items-center lg:hidden">
+                    {/* Right side: status badge and 3-dots menu */}
+                    <div className="flex-shrink-0 flex flex-col items-end justify-between h-16">
+                      {/* 3-dots menu (mobile only) - horizontal dots */}
                       <button
                         onClick={(e) => { e.stopPropagation(); setMobileMenuOffer(offer.offerId); }}
-                        className="p-1.5 text-muted-foreground hover:text-foreground transition-colors"
+                        className="p-1 text-muted-foreground hover:text-foreground transition-colors lg:hidden"
                         aria-label="More options"
                       >
-                        <MoreVertical className="h-5 w-5" />
+                        <MoreHorizontal className="h-5 w-5" />
                       </button>
-                    </div>
-                  </div>
-
-                  {/* Status badge with down arrow - accordion trigger (bottom right of card header) */}
-                  <div className="flex justify-end mt-2">
-                    {activeSubTab === "open" && (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setExpandedOffer(isExpanded ? null : offer.offerId); }}
-                        className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium transition-colors ${LOCK_LEVEL_BG_COLORS[offer.lockLevel]} ${LOCK_LEVEL_COLORS[offer.lockLevel]} hover:opacity-80`}
-                      >
-                        {LOCK_LEVEL_LABELS[offer.lockLevel]}
-                        {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                      </button>
-                    )}
-                    {activeSubTab === "closed" && (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setExpandedOffer(isExpanded ? null : offer.offerId); }}
-                        className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium transition-colors ${LOCK_LEVEL_BG_COLORS[3]} ${LOCK_LEVEL_COLORS[3]} hover:opacity-80`}
-                      >
-                        {LOCK_LEVEL_LABELS[3]}
-                        {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Confirm Pickup / Ready for Pickup section */}
-                  {showConfirmPickup && (
-                    <div className="mt-3 pt-3 border-t border-border/50 flex justify-end">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setPickupOffer(offer.offerId); }}
-                        className="px-3 py-1.5 text-xs font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-                      >
-                        Confirm Pickup Readiness
-                      </button>
-                    </div>
-                  )}
-                  
-                  {/* Show Ready for Pickup label when confirmed */}
-                  {showReadyLabel && !showConfirmPickup && (
-                    <div className="mt-3 pt-3 border-t border-border/50 flex justify-between items-center">
-                      <span className="text-xs text-green-500 font-medium">Ready for Pick-up</span>
-                      {canUnconfirmReady && (
+                      
+                      {/* Status badge with down arrow - accordion trigger */}
+                      {activeSubTab === "open" && (
                         <button
-                          onClick={(e) => { e.stopPropagation(); handleUnconfirmReadiness(offer.offerId); }}
-                          className="text-xs text-muted-foreground hover:text-foreground underline"
+                          onClick={(e) => { e.stopPropagation(); setExpandedOffer(isExpanded ? null : offer.offerId); }}
+                          className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium transition-colors ${LOCK_LEVEL_BG_COLORS[offer.lockLevel]} ${LOCK_LEVEL_COLORS[offer.lockLevel]} hover:opacity-80`}
                         >
-                          Cancel readiness
+                          {LOCK_LEVEL_LABELS[offer.lockLevel]}
+                          {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                        </button>
+                      )}
+                      {activeSubTab === "closed" && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setExpandedOffer(isExpanded ? null : offer.offerId); }}
+                          className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium transition-colors ${LOCK_LEVEL_BG_COLORS[3]} ${LOCK_LEVEL_COLORS[3]} hover:opacity-80`}
+                        >
+                          {LOCK_LEVEL_LABELS[3]}
+                          {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
                         </button>
                       )}
                     </div>
-                  )}
+                  </div>
+
                 </div>
+
+                {/* Confirm Pickup / Ready for Pickup section - shown outside main header */}
+                {showConfirmPickup && (
+                  <div className="px-4 pb-3 pt-2 border-t border-border/50 flex justify-end">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setPickupOffer(offer.offerId); }}
+                      className="px-3 py-1.5 text-xs font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                    >
+                      Confirm Pickup Readiness
+                    </button>
+                  </div>
+                )}
+                
+                {/* Show Ready for Pickup label when confirmed */}
+                {showReadyLabel && !showConfirmPickup && (
+                  <div className="px-4 pb-3 pt-2 border-t border-border/50 flex justify-between items-center">
+                    <span className="text-xs text-green-500 font-medium">Ready for Pick-up</span>
+                    {canUnconfirmReady && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleUnconfirmReadiness(offer.offerId); }}
+                        className="text-xs text-muted-foreground hover:text-foreground underline"
+                      >
+                        Cancel readiness
+                      </button>
+                    )}
+                  </div>
+                )}
 
                 {/* Expanded section: outgoing hooks */}
                 {isExpanded && (
@@ -353,12 +354,13 @@ export function MyOffersTab() {
                           return (
                             <div
                               key={hook.hookId}
-                              className="rounded-xl border border-border bg-card overflow-hidden card-shadow-primary"
+                              className="rounded-lg border border-border bg-card overflow-hidden card-shadow-primary"
                             >
-                              <div className="p-4 min-h-[88px]">
-                                <div className="flex gap-3">
-                                  {/* 64x64 Image - show target offer's first image if available, else product image */}
-                                  <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-lg bg-secondary overflow-hidden">
+                              {/* Compact hooked offer card - smaller padding and image */}
+                              <div className="p-3">
+                                <div className="flex gap-2.5 items-center">
+                                  {/* 48x48 Image - smaller than main cards */}
+                                  <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-secondary overflow-hidden">
                                     {targetOffer?.images && targetOffer.images.length > 0 ? (
                                       <img
                                         src={targetOffer.images[0].url}
@@ -374,60 +376,54 @@ export function MyOffersTab() {
                                         crossOrigin="anonymous"
                                       />
                                     ) : (
-                                      <Package className="h-6 w-6 text-muted-foreground/40" />
+                                      <Package className="h-5 w-5 text-muted-foreground/40" />
                                     )}
                                   </div>
 
                                   {/* Target offer info */}
-                                  <div className="flex-1 min-w-0 flex flex-col justify-center">
+                                  <div className="flex-1 min-w-0">
                                     <p className="text-sm font-medium text-foreground truncate">
                                       {targetOffer?.title || "Unknown Offer"}
                                     </p>
                                     <p className="text-xs text-muted-foreground">
                                       {targetProduct?.subcategory} . {targetProduct?.brand}
                                     </p>
-                                    {hook.targetUserDistance && (
-                                      <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                                        <MapPin className="h-3 w-3" />
-                                        {hook.targetUserDistance} km away
-                                      </p>
-                                    )}
                                   </div>
-                                </div>
 
-                                {/* Status badge (bottom right) - using target offer's lock level */}
-                                <div className="flex justify-end mt-2">
-                                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${LOCK_LEVEL_BG_COLORS[targetLockLevel]} ${LOCK_LEVEL_COLORS[targetLockLevel]}`}>
+                                  {/* Status badge - inline right side */}
+                                  <span className={`flex-shrink-0 px-2 py-0.5 rounded-full text-xs font-medium ${LOCK_LEVEL_BG_COLORS[targetLockLevel]} ${LOCK_LEVEL_COLORS[targetLockLevel]}`}>
                                     {LOCK_LEVEL_LABELS[targetLockLevel]}
                                   </span>
                                 </div>
 
-                                {/* Actions row */}
-                                <div className="flex items-center justify-end gap-3 mt-2 pt-2 border-t border-border/50">
-                                  {canRemoveHook(hook) && (
-                                    <button
-                                      onClick={() => handleUnhook(hook.hookId, hook)}
-                                      className="flex items-center gap-1 text-xs text-destructive hover:underline"
-                                    >
-                                      <Link2Off className="h-3 w-3" />
-                                      Unhook
-                                    </button>
-                                  )}
-                                  {!canRemoveHook(hook) && hook.lockLevel > 0 && (
-                                    <span className="text-xs text-muted-foreground italic">
-                                      Locked
-                                    </span>
-                                  )}
-                                  {(hook.status === "reserved" || hook.status === "processing") && (
-                                    <button
-                                      onClick={() => handleOpenChat(hook.hookId, offer.offerId, hook.toOfferId)}
-                                      className="flex items-center gap-1 text-xs text-primary hover:underline"
-                                    >
-                                      <MessageSquare className="h-3 w-3" />
-                                      Chat
-                                    </button>
-                                  )}
-                                </div>
+                                {/* Actions row - only show if there are actions */}
+                                {(canRemoveHook(hook) || (!canRemoveHook(hook) && hook.lockLevel > 0) || hook.status === "reserved" || hook.status === "processing") && (
+                                  <div className="flex items-center justify-end gap-3 mt-2 pt-2 border-t border-border/50">
+                                    {canRemoveHook(hook) && (
+                                      <button
+                                        onClick={() => handleUnhook(hook.hookId, hook)}
+                                        className="flex items-center gap-1 text-xs text-destructive hover:underline"
+                                      >
+                                        <Link2Off className="h-3 w-3" />
+                                        Unhook
+                                      </button>
+                                    )}
+                                    {!canRemoveHook(hook) && hook.lockLevel > 0 && (
+                                      <span className="text-xs text-muted-foreground italic">
+                                        Locked
+                                      </span>
+                                    )}
+                                    {(hook.status === "reserved" || hook.status === "processing") && (
+                                      <button
+                                        onClick={() => handleOpenChat(hook.hookId, offer.offerId, hook.toOfferId)}
+                                        className="flex items-center gap-1 text-xs text-primary hover:underline"
+                                      >
+                                        <MessageSquare className="h-3 w-3" />
+                                        Chat
+                                      </button>
+                                    )}
+                                  </div>
+                                )}
 
                                 {/* Show pickup address if hook is processing/committed */}
                                 {hook.status === "processing" && targetOffer?.pickupAddress && (
