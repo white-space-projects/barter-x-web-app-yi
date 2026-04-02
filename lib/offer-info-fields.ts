@@ -179,6 +179,7 @@ const FASHION_FIELDS: OfferInfoFieldDefinition[] = [
 // Map subcategories to their field definitions
 export const SUBCATEGORY_OFFER_FIELDS: SubcategoryOfferInfoFields = {
   // Electronics
+  "Phones": SMARTPHONES_FIELDS,
   "Smartphones": SMARTPHONES_FIELDS,
   "Laptops": LAPTOPS_FIELDS,
   "Headphones": ELECTRONICS_FIELDS,

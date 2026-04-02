@@ -20,6 +20,7 @@ import { useBarterStore } from "@/lib/store";
 import type { Offer, Product, OfferImage, LockLevel } from "@/lib/types";
 import { LOCK_LEVEL_LABELS, LOCK_LEVEL_COLORS, LOCK_LEVEL_BG_COLORS } from "@/lib/types";
 import { toast } from "sonner";
+import { getProductInfo } from "@/lib/offer-info-fields";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -412,7 +413,7 @@ export function ViewOfferDetails({ offerId, onClose, onEdit, onAddOfferToProduct
 
   const address = offer.pickupAddress;
   const offerInfo = offer.offerInfo?.filter((info) => info.value && (Array.isArray(info.value) ? info.value.length > 0 : info.value.trim() !== ""));
-  const productSpecs = product.productInfo;
+  const productSpecs = getProductInfo(product.productId);
 
   return (
     <>

@@ -871,8 +871,8 @@ export function AddOfferModal({ open, onClose, initialProductType }: Props) {
               {/* Offer Info Section */}
               <OfferInfoSection
                 subcategory={subcategoryForPlaceholder}
-                offerInfo={offerInfo}
-                onOfferInfoChange={setOfferInfo}
+                values={offerInfo}
+                onChange={setOfferInfo}
               />
 
               {/* Pickup Location Section */}

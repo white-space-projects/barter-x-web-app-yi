@@ -1799,10 +1799,8 @@ export function AddOfferFlow({
               {/* Optional Info Fields */}
               <OfferInfoSection
                 subcategory={selectedSubcategory?.name || ""}
-                offerInfo={offerInfo}
-                setOfferInfo={setOfferInfo}
-                showOfferInfo={showOfferInfo}
-                setShowOfferInfo={setShowOfferInfo}
+                values={offerInfo}
+                onChange={setOfferInfo}
               />
 
               {/* Navigation */}
