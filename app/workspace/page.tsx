@@ -61,6 +61,7 @@ function WorkspaceContent() {
   const [activeProductType, setActiveProductType] = useState<ProductType>("goods");
   const [activeUtilityTab, setActiveUtilityTab] = useState<UtilityTab | null>(null);
   const [addOfferOpen, setAddOfferOpen] = useState(false);
+  const [addOfferStep, setAddOfferStep] = useState<1 | 2 | 3 | 4>(1);
   const [pickupModalOfferId, setPickupModalOfferId] = useState<string | null>(null);
   
   // Ref for scrollable content area - used to reset scroll on tab change
@@ -241,9 +242,14 @@ function WorkspaceContent() {
             activeUtilityTab={activeUtilityTab}
             onSelectProductType={showNavigation ? handleSelectProductType : () => {}}
             onSelectUtilityTab={showNavigation ? handleSelectUtilityTab : () => {}}
-            onAddOffer={showNavigation ? () => setAddOfferOpen(true) : () => {}}
+            onAddOffer={showNavigation ? () => { setAddOfferOpen(true); setAddOfferStep(1); } : () => {}}
             isAdmin={isAdmin}
             unreadCount={totalUnread}
+            addOfferMode={addOfferOpen ? {
+              currentStep: addOfferStep,
+              onStepClick: (step) => setAddOfferStep(step),
+              onClose: () => setAddOfferOpen(false),
+            } : null}
           />
           {/* Blur overlay for new users */}
           {!showNavigation && (
@@ -259,14 +265,15 @@ function WorkspaceContent() {
               {/* Current view title */}
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium text-foreground">
-                  {activeUtilityTab === "my-offers" && "My Offers"}
-                  {activeUtilityTab === "chat" && "Chat"}
-                  {activeUtilityTab === "admin" && "Admin Panel"}
-                  {activeUtilityTab === "simulate" && "Simulate"}
-                  {activeUtilityTab === "profile" && "Profile"}
-                  {!activeUtilityTab && activeProductType === "goods" && "General Goods Barter"}
-                  {!activeUtilityTab && activeProductType === "automobile" && "Automobile Barter"}
-                  {!activeUtilityTab && activeProductType === "home-spaces" && "Homes & Spaces Barter"}
+                  {addOfferOpen && `Add New Offer - Step ${addOfferStep}`}
+                  {!addOfferOpen && activeUtilityTab === "my-offers" && "My Offers"}
+                  {!addOfferOpen && activeUtilityTab === "chat" && "Chat"}
+                  {!addOfferOpen && activeUtilityTab === "admin" && "Admin Panel"}
+                  {!addOfferOpen && activeUtilityTab === "simulate" && "Simulate"}
+                  {!addOfferOpen && activeUtilityTab === "profile" && "Profile"}
+                  {!addOfferOpen && !activeUtilityTab && activeProductType === "goods" && "General Goods Barter"}
+                  {!addOfferOpen && !activeUtilityTab && activeProductType === "automobile" && "Automobile Barter"}
+                  {!addOfferOpen && !activeUtilityTab && activeProductType === "home-spaces" && "Homes & Spaces Barter"}
                 </span>
               </div>
               
@@ -286,12 +293,27 @@ function WorkspaceContent() {
           {/* Tab content - scrollable area for all tab content */}
           <div ref={contentScrollRef} className="flex-1 overflow-y-auto pb-20 lg:pb-0">
             <div className="px-4 py-6 lg:px-6">
-              {/* Utility tabs */}
-              {activeUtilityTab === "my-offers" && <MyOffersTab />}
-              {activeUtilityTab === "chat" && <ChatTab onOpenPickupModal={setPickupModalOfferId} />}
-              {activeUtilityTab === "admin" && isAdmin && <AdminPanel />}
-              {activeUtilityTab === "simulate" && isAdmin && <SimulateTab />}
-              {activeUtilityTab === "profile" && (
+              {/* Add Offer Flow - renders inline in tab content area */}
+              {addOfferOpen && (
+                <AddOfferFlow
+                  open={true}
+                  embedded={true}
+                  currentStep={addOfferStep}
+                  onStepChange={setAddOfferStep}
+                  onClose={() => setAddOfferOpen(false)}
+                  onSuccess={() => {
+                    setAddOfferOpen(false);
+                    setActiveUtilityTab("my-offers");
+                  }}
+                />
+              )}
+
+              {/* Utility tabs - hidden when Add Offer is open */}
+              {!addOfferOpen && activeUtilityTab === "my-offers" && <MyOffersTab />}
+              {!addOfferOpen && activeUtilityTab === "chat" && <ChatTab onOpenPickupModal={setPickupModalOfferId} />}
+              {!addOfferOpen && activeUtilityTab === "admin" && isAdmin && <AdminPanel />}
+              {!addOfferOpen && activeUtilityTab === "simulate" && isAdmin && <SimulateTab />}
+              {!addOfferOpen && activeUtilityTab === "profile" && (
                 <ProfileTab 
                   onProfileComplete={() => {
                     // Clear any blockers and navigate to main screen
@@ -303,7 +325,7 @@ function WorkspaceContent() {
               )}
               
               {/* Product type tabs - key forces remount when switching types */}
-              {!activeUtilityTab && (
+              {!addOfferOpen && !activeUtilityTab && (
                 <ProductsTab 
                   key={activeProductType} 
                   productType={activeProductType} 
@@ -314,30 +336,22 @@ function WorkspaceContent() {
         </main>
       </div>
 
-      {/* Mobile Bottom Navigation - hidden for new users until profile is complete */}
-      {showNavigation && (
+      {/* Mobile Bottom Navigation - hidden for new users or when Add Offer is open */}
+      {showNavigation && !addOfferOpen && (
         <div className="lg:hidden">
           <BottomNav
             activeProductType={activeProductType}
             activeUtilityTab={activeUtilityTab}
             onSelectProductType={handleSelectProductType}
             onSelectUtilityTab={handleSelectUtilityTab}
-            onAddOffer={() => setAddOfferOpen(true)}
+            onAddOffer={() => { setAddOfferOpen(true); setAddOfferStep(1); }}
             isAdmin={isAdmin}
             unreadCount={totalUnread}
           />
         </div>
       )}
 
-      {/* Global Add Offer Flow - Full Screen */}
-      <AddOfferFlow
-        open={addOfferOpen}
-        onClose={() => setAddOfferOpen(false)}
-        onSuccess={() => {
-          setAddOfferOpen(false);
-          setActiveUtilityTab("my-offers");
-        }}
-      />
+
 
       {/* Pickup Readiness Modal - triggered from notifications */}
       {pickupModalOfferId && (

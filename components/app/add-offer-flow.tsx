@@ -72,15 +72,19 @@ import {
 // =============================================================================
 // TYPES
 // =============================================================================
+type Step = 1 | 2 | 3 | 4;
+
 type Props = {
   open: boolean;
   onClose: () => void;
   onSuccess?: () => void;
   initialProductType?: ProductType;
   initialProduct?: Product; // Pre-selected product when opening from product view
+  // Embedded mode - renders content only (no overlay), step controlled by parent
+  embedded?: boolean;
+  currentStep?: Step;
+  onStepChange?: (step: Step) => void;
 };
-
-type Step = 1 | 2 | 3 | 4;
 
 type AccordionType = "barter-type" | "category" | "subcategory" | "brand" | "model" | null;
 
@@ -889,7 +893,16 @@ function MobileCameraCapture({
 // =============================================================================
 // MAIN COMPONENT
 // =============================================================================
-export function AddOfferFlow({ open, onClose, onSuccess, initialProductType, initialProduct }: Props) {
+export function AddOfferFlow({ 
+  open, 
+  onClose, 
+  onSuccess, 
+  initialProductType, 
+  initialProduct,
+  embedded = false,
+  currentStep: controlledStep,
+  onStepChange,
+}: Props) {
   const { auth, products, addProduct, addOffer, getBrands, getOffersByProduct } = useBarterStore();
   const { registerBlocker, unregisterBlocker } = useNavigationGuard();
   const BLOCKER_ID = "offer-creation-flow";
@@ -900,11 +913,19 @@ export function AddOfferFlow({ open, onClose, onSuccess, initialProductType, ini
     setIsMobile(isMobileDevice());
   }, []);
 
-  // Sidebar collapse state (desktop)
+  // Sidebar collapse state (desktop) - not used in embedded mode
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
-  // Step state
-  const [currentStep, setCurrentStep] = useState<Step>(1);
+  // Step state - controlled by parent in embedded mode
+  const [internalStep, setInternalStep] = useState<Step>(1);
+  const currentStep = embedded && controlledStep !== undefined ? controlledStep : internalStep;
+  const setCurrentStep = (step: Step) => {
+    if (embedded && onStepChange) {
+      onStepChange(step);
+    } else {
+      setInternalStep(step);
+    }
+  };
 
   // Step 1: Product selection
   const [openAccordion, setOpenAccordion] = useState<AccordionType>("barter-type");
@@ -1344,7 +1365,544 @@ export function AddOfferFlow({ open, onClose, onSuccess, initialProductType, ini
   if (!open) return null;
 
   // ==========================================================================
-  // RENDER
+  // EMBEDDED MODE - Renders content only, no overlay wrapper
+  // Parent controls step via props and sidebar is handled by workspace
+  // ==========================================================================
+  if (embedded) {
+    return (
+      <>
+        {/* Mobile: Show progress indicator */}
+        <div className="lg:hidden mb-4">
+          <MobileProgressIndicator currentStep={currentStep} onBack={currentStep > 1 ? prevStep : undefined} />
+        </div>
+
+        {/* Step content - same as overlay mode but without wrapper */}
+        <div className="max-w-3xl mx-auto space-y-6">
+          {/* STEP 1: Choose Product */}
+          {currentStep === 1 && (
+            <div className="space-y-4">
+              <h2 className="text-lg font-semibold text-foreground">Choose or Create Product</h2>
+              
+              {/* Barter Type Accordion */}
+              <AccordionItem
+                title="Barter Type"
+                subtitle="Select the type of barter"
+                value={selectedBarterType ? PRODUCT_TYPES.find(t => t.id === selectedBarterType)?.name : undefined}
+                isOpen={openAccordion === "barter-type"}
+                isDisabled={false}
+                onToggle={() => setOpenAccordion(openAccordion === "barter-type" ? null : "barter-type")}
+                icon={selectedBarterType ? (() => { const Icon = TYPE_ICONS[selectedBarterType]; return <Icon className={`h-5 w-5 ${TYPE_COLORS[selectedBarterType].text}`} />; })() : undefined}
+              >
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {PRODUCT_TYPES.map((type) => {
+                    const Icon = TYPE_ICONS[type.id];
+                    const isSelected = selectedBarterType === type.id;
+                    return (
+                      <button
+                        key={type.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedBarterType(type.id);
+                          setSelectedCategory(null);
+                          setSelectedSubcategory(null);
+                          setSelectedBrand("");
+                          setSelectedModel("");
+                          setSelectedProduct(null);
+                          setOpenAccordion("category");
+                        }}
+                        className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
+                          isSelected 
+                            ? `${TYPE_COLORS[type.id].border} ${TYPE_COLORS[type.id].bg}` 
+                            : "border-border hover:border-primary/30"
+                        }`}
+                      >
+                        <Icon className={`h-8 w-8 ${isSelected ? TYPE_COLORS[type.id].text : "text-muted-foreground"}`} />
+                        <span className={`text-sm font-medium ${isSelected ? TYPE_COLORS[type.id].text : "text-foreground"}`}>
+                          {type.name.replace(" Barter", "")}
+                        </span>
+                        <span className={`text-xs text-center ${isSelected ? TYPE_COLORS[type.id].text : "text-muted-foreground"}`}>
+                          {TYPE_DESCRIPTIONS[type.id]}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </AccordionItem>
+
+              {/* Category Accordion */}
+              <AccordionItem
+                title="Category"
+                subtitle="Select or create a category"
+                value={selectedCategory?.name}
+                isOpen={openAccordion === "category"}
+                isDisabled={!selectedBarterType}
+                onToggle={() => setOpenAccordion(openAccordion === "category" ? null : "category")}
+              >
+                <IconGridSelector
+                  items={categories.map(c => ({ id: c.id, name: c.name, icon: c.icon }))}
+                  selectedId={selectedCategory?.id || ""}
+                  onSelect={handleSelectCategory}
+                  searchPlaceholder="Search or type new category..."
+                  onCreate={handleCreateCategory}
+                  createLabel="Create new category"
+                />
+              </AccordionItem>
+
+              {/* Subcategory Accordion */}
+              <AccordionItem
+                title="Subcategory"
+                subtitle="Select or create a subcategory"
+                value={selectedSubcategory?.name}
+                isOpen={openAccordion === "subcategory"}
+                isDisabled={!selectedCategory}
+                onToggle={() => setOpenAccordion(openAccordion === "subcategory" ? null : "subcategory")}
+              >
+                <IconGridSelector
+                  items={subcategories.map(s => ({ id: s.id, name: s.name, icon: s.icon }))}
+                  selectedId={selectedSubcategory?.id || ""}
+                  onSelect={handleSelectSubcategory}
+                  searchPlaceholder="Search or type new subcategory..."
+                  onCreate={handleCreateSubcategory}
+                  createLabel="Create new subcategory"
+                />
+              </AccordionItem>
+
+              {/* Brand Accordion (skip for home-spaces) */}
+              {selectedBarterType !== "home-spaces" && (
+                <AccordionItem
+                  title="Brand"
+                  subtitle="Select or create a brand"
+                  value={selectedBrand}
+                  isOpen={openAccordion === "brand"}
+                  isDisabled={!selectedSubcategory}
+                  onToggle={() => setOpenAccordion(openAccordion === "brand" ? null : "brand")}
+                >
+                  <BrandModelSelector
+                    items={availableBrands}
+                    selectedValue={selectedBrand}
+                    onSelect={handleSelectBrand}
+                    searchPlaceholder="Search or type new brand..."
+                    onCreate={handleCreateBrand}
+                    createLabel="Create new brand"
+                    type="brand"
+                  />
+                </AccordionItem>
+              )}
+
+              {/* Model Accordion (skip for home-spaces) */}
+              {selectedBarterType !== "home-spaces" && (
+                <AccordionItem
+                  title="Model"
+                  subtitle="Select or create a model"
+                  value={selectedModel}
+                  isOpen={openAccordion === "model"}
+                  isDisabled={!selectedBrand}
+                  onToggle={() => setOpenAccordion(openAccordion === "model" ? null : "model")}
+                >
+                  <BrandModelSelector
+                    items={availableModels}
+                    selectedValue={selectedModel}
+                    onSelect={handleSelectModel}
+                    searchPlaceholder="Search or type new model..."
+                    onCreate={handleCreateModel}
+                    createLabel="Create new model"
+                    type="model"
+                  />
+                </AccordionItem>
+              )}
+
+              {/* Next button */}
+              <div className="pt-4">
+                <button
+                  type="button"
+                  onClick={nextStep}
+                  disabled={!step1Complete}
+                  className="w-full py-3 rounded-xl bg-primary text-primary-foreground font-medium transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+                >
+                  <span>Capture Images</span>
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 2: Images */}
+          {currentStep === 2 && (
+            <div className="space-y-4">
+              <h2 className="text-lg font-semibold text-foreground">Add Images</h2>
+              
+              {/* Product Card Preview */}
+              {selectedProduct && (
+                <ProductCardPreview product={selectedProduct} offerCount={productOfferCount} />
+              )}
+
+              {/* Image grid */}
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Add up to 7 images. First image will be the main display image.
+                </p>
+
+                <ImageGrid
+                  images={offerImages}
+                  selectedIndex={selectedImageIndex}
+                  onSelectImage={setSelectedImageIndex}
+                  onDeleteImage={handleImageDelete}
+                  onReorderImages={setOfferImages}
+                  onAddImage={() => {
+                    if (isMobile) {
+                      document.getElementById("mobile-camera-input")?.click();
+                    } else {
+                      setShowQrModal(true);
+                    }
+                  }}
+                  onOpenEnlarged={() => setShowEnlargedImage(true)}
+                  maxImages={7}
+                  isMobile={isMobile}
+                />
+
+                {/* Capture options */}
+                {offerImages.length < 7 && (
+                  <div className="flex flex-wrap gap-2">
+                    {isMobile ? (
+                      <>
+                        <input
+                          id="mobile-camera-input"
+                          type="file"
+                          accept="image/*"
+                          capture="environment"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              const reader = new FileReader();
+                              reader.onload = () => {
+                                handleImageCapture(reader.result as string);
+                              };
+                              reader.readAsDataURL(file);
+                            }
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => document.getElementById("mobile-camera-input")?.click()}
+                          className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors"
+                        >
+                          <Camera className="h-4 w-4" />
+                          <span>Take Photo</span>
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setShowQrModal(true)}
+                        className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors"
+                      >
+                        <QrCode className="h-4 w-4" />
+                        <span>Scan to Capture</span>
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Navigation */}
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={prevStep}
+                  className="flex-1 py-3 rounded-xl border border-input bg-background text-foreground font-medium hover:bg-secondary transition-colors flex items-center justify-center gap-1.5"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  <span>Step 1</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={nextStep}
+                  disabled={!step2Complete}
+                  className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground font-medium transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+                >
+                  <span>Continue to Details</span>
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 3: Offer Details */}
+          {currentStep === 3 && (
+            <div className="space-y-4">
+              <h2 className="text-lg font-semibold text-foreground">Offer Details</h2>
+              
+              {/* Title */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Title</label>
+                <input
+                  type="text"
+                  value={offerTitle}
+                  onChange={(e) => setOfferTitle(e.target.value)}
+                  placeholder={selectedProduct?.subcategory ? getOfferTitlePlaceholder(selectedProduct.subcategory) : "Enter offer title..."}
+                  className="w-full rounded-lg border border-input bg-secondary px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                />
+              </div>
+
+              {/* Description */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Description</label>
+                <textarea
+                  value={offerDescription}
+                  onChange={(e) => setOfferDescription(e.target.value)}
+                  placeholder={selectedProduct?.subcategory ? getOfferDescPlaceholder(selectedProduct.subcategory) : "Describe your offer in detail..."}
+                  rows={7}
+                  className="w-full rounded-lg border border-input bg-secondary px-3 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none min-h-[140px]"
+                />
+              </div>
+
+              {/* Optional Info Fields */}
+              <OfferInfoSection
+                subcategory={selectedSubcategory?.name || ""}
+                offerInfo={offerInfo}
+                setOfferInfo={setOfferInfo}
+                showOfferInfo={showOfferInfo}
+                setShowOfferInfo={setShowOfferInfo}
+              />
+
+              {/* Navigation */}
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={prevStep}
+                  className="flex-1 py-3 rounded-xl border border-input bg-background text-foreground font-medium hover:bg-secondary transition-colors flex items-center justify-center gap-1.5"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  <span>Step 2</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={nextStep}
+                  disabled={!step3Complete}
+                  className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground font-medium transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+                >
+                  <span>Add Address</span>
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 4: Pickup Address */}
+          {currentStep === 4 && (
+            <div className="space-y-4">
+              <h2 className="text-lg font-semibold text-foreground">Pickup Address</h2>
+              
+              {/* Same as profile checkbox */}
+              <label className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50 border border-border cursor-pointer hover:bg-secondary transition-colors">
+                <input
+                  type="checkbox"
+                  checked={sameAsProfile}
+                  onChange={(e) => handleSameAsProfile(e.target.checked)}
+                  className="w-4 h-4 rounded border-input accent-primary"
+                />
+                <div className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-medium text-foreground">Same as my profile address</span>
+                </div>
+              </label>
+
+              {/* Address form */}
+              <div className="rounded-xl border border-border bg-card p-4 md:p-5">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="col-span-2 sm:col-span-1">
+                    <label className="text-xs font-medium text-muted-foreground">Country</label>
+                    <select
+                      value={pickupCountry}
+                      onChange={(e) => { setPickupCountry(e.target.value); setPickupCity(""); }}
+                      disabled={sameAsProfile}
+                      className="mt-1 w-full rounded-lg border border-input bg-secondary px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
+                    >
+                      <option value="">Select country</option>
+                      {getCountryNames().map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+                  <div className="col-span-2 sm:col-span-1">
+                    <label className="text-xs font-medium text-muted-foreground">City</label>
+                    <select
+                      value={pickupCity}
+                      onChange={(e) => setPickupCity(e.target.value)}
+                      disabled={sameAsProfile || !pickupCountry}
+                      className="mt-1 w-full rounded-lg border border-input bg-secondary px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
+                    >
+                      <option value="">Select city</option>
+                      {pickupCountry && getCitiesForCountry(pickupCountry).map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+                  <div className="col-span-2 sm:col-span-1">
+                    <label className="text-xs font-medium text-muted-foreground">State/Province</label>
+                    <input
+                      type="text"
+                      value={pickupState}
+                      onChange={(e) => setPickupState(e.target.value)}
+                      disabled={sameAsProfile}
+                      placeholder="Optional"
+                      className="mt-1 w-full rounded-lg border border-input bg-secondary px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
+                    />
+                  </div>
+                  <div className="col-span-2 sm:col-span-1">
+                    <label className="text-xs font-medium text-muted-foreground">ZIP/Postal Code</label>
+                    <input
+                      type="text"
+                      value={pickupZip}
+                      onChange={(e) => setPickupZip(e.target.value)}
+                      disabled={sameAsProfile}
+                      placeholder="Optional"
+                      className="mt-1 w-full rounded-lg border border-input bg-secondary px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="text-xs font-medium text-muted-foreground">Address Line 1</label>
+                    <input
+                      type="text"
+                      value={pickupAddressLine1}
+                      onChange={(e) => setPickupAddressLine1(e.target.value)}
+                      disabled={sameAsProfile}
+                      placeholder="Street address"
+                      className="mt-1 w-full rounded-lg border border-input bg-secondary px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="text-xs font-medium text-muted-foreground">Address Line 2</label>
+                    <input
+                      type="text"
+                      value={pickupAddressLine2}
+                      onChange={(e) => setPickupAddressLine2(e.target.value)}
+                      disabled={sameAsProfile}
+                      placeholder="Apartment, suite, etc. (optional)"
+                      className="mt-1 w-full rounded-lg border border-input bg-secondary px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Navigation */}
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={prevStep}
+                  className="flex-1 py-3 rounded-xl border border-input bg-background text-foreground font-medium hover:bg-secondary transition-colors flex items-center justify-center gap-1.5"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  <span>Step 3</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCreateOffer}
+                  disabled={!canCreate || loading}
+                  className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground font-medium transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+                >
+                  {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                  <span>{loading ? "Creating..." : "Create Offer"}</span>
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Discard dialog */}
+        <AlertDialog open={showDiscardDialog} onOpenChange={setShowDiscardDialog}>
+          <AlertDialogContent className="max-w-md">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Discard Changes?</AlertDialogTitle>
+              <AlertDialogDescription>
+                You have unsaved changes. Are you sure you want to close? Your progress will be lost.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setShowDiscardDialog(false)}>
+                Continue Editing
+              </AlertDialogCancel>
+              <AlertDialogAction onClick={handleConfirmDiscard} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                Discard
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Enlarged Image Editor Modal */}
+        {showEnlargedImage && offerImages[selectedImageIndex] && (
+          <div className="fixed inset-0 z-50 bg-black/90 flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-white/10">
+              <button
+                type="button"
+                onClick={() => setShowEnlargedImage(false)}
+                className="flex items-center gap-2 text-white hover:text-white/80"
+              >
+                <X className="h-5 w-5" />
+                <span className="text-sm font-medium">Close</span>
+              </button>
+              <span className="text-white/60 text-sm">Edit Image</span>
+              <div className="w-16" />
+            </div>
+            
+            <div className="flex-1 flex items-center justify-center p-4 overflow-hidden">
+              <img
+                src={offerImages[selectedImageIndex].url}
+                alt="Enlarged preview"
+                className="max-w-full max-h-full object-contain rounded-lg"
+                crossOrigin="anonymous"
+              />
+            </div>
+            
+            <div className="p-4 border-t border-white/10">
+              <div className="flex justify-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => toast.info("Crop feature coming soon")}
+                  className="flex flex-col items-center gap-1 px-4 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors"
+                >
+                  <LayoutGrid className="h-5 w-5" />
+                  <span className="text-xs">Crop</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => toast.info("Reposition feature coming soon")}
+                  className="flex flex-col items-center gap-1 px-4 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors"
+                >
+                  <ArrowLeft className="h-5 w-5" />
+                  <span className="text-xs">Reposition</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEnlargedImage(false);
+                    if (isMobile) {
+                      document.getElementById("mobile-camera-input")?.click();
+                    } else {
+                      setShowQrModal(true);
+                    }
+                  }}
+                  className="flex flex-col items-center gap-1 px-4 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors"
+                >
+                  <Camera className="h-5 w-5" />
+                  <span className="text-xs">Retake</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* QR Modal for desktop image capture */}
+        {showQrModal && (
+          <OfferCaptureQrModal
+            open={showQrModal}
+            onClose={() => setShowQrModal(false)}
+            onCapture={handleImageCapture}
+          />
+        )}
+      </>
+    );
+  }
+
+  // ==========================================================================
+  // OVERLAY MODE - Legacy full screen overlay
   // ==========================================================================
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col">

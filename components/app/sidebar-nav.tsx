@@ -13,8 +13,20 @@ import {
   ChevronRight,
   Plus,
   User,
+  Check,
+  X,
 } from "lucide-react";
 import type { ProductType } from "@/lib/types";
+
+// Add Offer progress step type
+type AddOfferStep = 1 | 2 | 3 | 4;
+
+// Add Offer mode props
+type AddOfferModeProps = {
+  currentStep: AddOfferStep;
+  onStepClick: (step: AddOfferStep) => void;
+  onClose: () => void;
+};
 
 type NavItem = {
   id: string;
@@ -96,6 +108,8 @@ type Props = {
   onAddOffer: () => void;
   isAdmin: boolean;
   unreadCount?: number;
+  // Add Offer mode - when set, shows progress steps instead of nav items
+  addOfferMode?: AddOfferModeProps | null;
 };
 
 export function SidebarNav({
@@ -106,8 +120,104 @@ export function SidebarNav({
   onAddOffer,
   isAdmin,
   unreadCount = 0,
+  addOfferMode,
 }: Props) {
   const [collapsed, setCollapsed] = useState(false);
+
+  // Add Offer mode - show progress steps instead of normal nav
+  if (addOfferMode) {
+    const steps = [
+      { number: 1 as AddOfferStep, title: "Product" },
+      { number: 2 as AddOfferStep, title: "Images" },
+      { number: 3 as AddOfferStep, title: "Details" },
+      { number: 4 as AddOfferStep, title: "Address" },
+    ];
+
+    return (
+      <aside
+        className={`hidden lg:flex flex-col border-r border-border bg-card/50 transition-all duration-300 h-full ${
+          collapsed ? "w-16" : "w-56"
+        }`}
+      >
+        {/* Collapse toggle */}
+        <div className="flex items-center justify-end p-2 border-b border-border">
+          <button
+            onClick={() => setCollapsed(!collapsed)}
+            className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {collapsed ? (
+              <ChevronRight className="h-4 w-4" />
+            ) : (
+              <ChevronLeft className="h-4 w-4" />
+            )}
+          </button>
+        </div>
+
+        {/* Close/Cancel Button */}
+        <div className="p-3">
+          <button
+            onClick={addOfferMode.onClose}
+            className={`flex items-center justify-center gap-2 rounded-lg border border-border bg-secondary text-foreground font-medium transition-colors hover:bg-secondary/80 ${
+              collapsed ? "w-10 h-10 p-0" : "w-full py-2.5 px-3"
+            }`}
+          >
+            <X className="h-4 w-4" />
+            {!collapsed && <span className="text-sm">Cancel</span>}
+          </button>
+        </div>
+
+        {/* Progress Steps */}
+        <div className="flex-1 overflow-y-auto px-3 py-2">
+          {!collapsed && (
+            <p className="px-2 mb-2 text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
+              Progress
+            </p>
+          )}
+          <nav className="flex flex-col gap-1">
+            {steps.map((step) => {
+              const isActive = step.number === addOfferMode.currentStep;
+              const isCompleted = step.number < addOfferMode.currentStep;
+              const isClickable = step.number <= addOfferMode.currentStep;
+
+              return (
+                <button
+                  key={step.number}
+                  onClick={() => isClickable && addOfferMode.onStepClick(step.number)}
+                  disabled={!isClickable}
+                  className={`flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors ${
+                    collapsed ? "justify-center" : ""
+                  } ${
+                    isActive
+                      ? "bg-primary/10 text-primary border border-primary/30"
+                      : isCompleted
+                        ? "bg-secondary/50 text-foreground hover:bg-secondary cursor-pointer"
+                        : "text-muted-foreground/50 cursor-not-allowed"
+                  }`}
+                  title={collapsed ? step.title : undefined}
+                >
+                  <div
+                    className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium flex-shrink-0 ${
+                      isActive
+                        ? "bg-primary text-primary-foreground"
+                        : isCompleted
+                          ? "bg-primary/15 text-primary"
+                          : "bg-secondary text-muted-foreground"
+                    }`}
+                  >
+                    {isCompleted ? <Check className="h-3 w-3" /> : step.number}
+                  </div>
+                  {!collapsed && (
+                    <span className="text-sm font-medium truncate">{step.title}</span>
+                  )}
+                </button>
+              );
+            })}
+          </nav>
+        </div>
+      </aside>
+    );
+  }
 
   const productTypeItems = NAV_ITEMS.filter((item) => item.type === "product-type");
   const utilityItems = NAV_ITEMS.filter(
