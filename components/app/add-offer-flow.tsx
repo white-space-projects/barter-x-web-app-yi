@@ -29,7 +29,7 @@ import React, { useState, useMemo, useEffect, useCallback, useRef } from "react"
 import { 
   X, ArrowLeft, Search, Plus, ChevronDown, ChevronRight, Check, 
   Package, Car, Home, ShoppingBag, Loader2, Trash2, GripVertical,
-  Camera, QrCode, MapPin, ChevronLeft,
+  Camera, QrCode, MapPin, ChevronLeft, Info,
   // Category icons
   Cpu, Sofa, Shirt, Baby, Dumbbell, Wrench, BookOpen, Monitor, Palette,
   Smartphone, Laptop, Tablet, Headphones, Gamepad2, Watch, BedDouble, Table2, Armchair,
@@ -52,7 +52,7 @@ import {
   type CategoryDefinition,
   type SubcategoryDefinition 
 } from "@/lib/product-types";
-import type { Product, OfferPickupAddress, OfferImage, OfferInfoFieldValue, ProductType } from "@/lib/types";
+import type { Product, Offer, OfferPickupAddress, OfferImage, OfferInfoFieldValue, ProductType } from "@/lib/types";
 import { OfferInfoSection } from "./offer-info-section";
 import { OfferCaptureQrModal } from "./offer-capture-qr-modal";
 import { getOfferInfoFieldsForSubcategory, getProductInfo } from "@/lib/offer-info-fields";
@@ -86,6 +86,8 @@ type Props = {
   onStepChange?: (step: Step) => void;
   // Callback to expose the cancel attempt handler to parent (for sidebar cancel button)
   onRegisterCancelHandler?: (handler: () => void) => void;
+  // Edit mode - pre-populate with existing offer, Step 1 locked, Save instead of Create
+  editOffer?: Offer;
 };
 
 type AccordionType = "barter-type" | "category" | "subcategory" | "brand" | "model" | null;
@@ -636,6 +638,7 @@ function ProgressSidebar({
   onStepClick,
   isCollapsed,
   onToggleCollapse,
+  isEditMode = false,
 }: {
   currentStep: Step;
   selections: {
@@ -651,12 +654,13 @@ function ProgressSidebar({
   onStepClick: (step: Step) => void;
   isCollapsed: boolean;
   onToggleCollapse: () => void;
+  isEditMode?: boolean;
 }) {
   const steps = [
-    { number: 1, title: "Product", completed: currentStep > 1 },
-    { number: 2, title: "Images", completed: currentStep > 2 },
-    { number: 3, title: "Details", completed: currentStep > 3 },
-    { number: 4, title: "Address", completed: currentStep > 4 },
+    { number: 1, title: "Product", completed: currentStep > 1, locked: isEditMode },
+    { number: 2, title: "Images", completed: currentStep > 2, locked: false },
+    { number: 3, title: "Details", completed: currentStep > 3, locked: false },
+    { number: 4, title: "Address", completed: currentStep > 4, locked: false },
   ];
 
   if (isCollapsed) {
@@ -673,7 +677,8 @@ function ProgressSidebar({
           {steps.map((step) => {
             const isActive = step.number === currentStep;
             const isCompleted = step.completed;
-            const isClickable = step.number <= currentStep;
+            const isLocked = step.locked;
+            const isClickable = step.number <= currentStep && !isLocked;
             
             return (
               <button
@@ -681,21 +686,25 @@ function ProgressSidebar({
                 onClick={() => isClickable && onStepClick(step.number as Step)}
                 disabled={!isClickable}
                 className={`w-full flex items-center justify-center p-2 rounded-lg transition-all ${
-                  isActive 
-                    ? "bg-primary/10" 
-                    : isCompleted 
-                      ? "hover:bg-secondary cursor-pointer" 
-                      : "opacity-50 cursor-not-allowed"
+                  isLocked
+                    ? "bg-secondary/50 cursor-not-allowed"
+                    : isActive 
+                      ? "bg-primary/10" 
+                      : isCompleted 
+                        ? "hover:bg-secondary cursor-pointer" 
+                        : "opacity-50 cursor-not-allowed"
                 }`}
               >
                 <div className={`flex h-7 w-7 items-center justify-center rounded-full text-sm font-medium ${
-                  isActive 
-                    ? "bg-primary text-primary-foreground" 
-                    : isCompleted 
-                      ? "bg-primary/15 text-primary" 
-                      : "bg-secondary text-muted-foreground"
+                  isLocked
+                    ? "bg-muted text-muted-foreground"
+                    : isActive 
+                      ? "bg-primary text-primary-foreground" 
+                      : isCompleted 
+                        ? "bg-primary/15 text-primary" 
+                        : "bg-secondary text-muted-foreground"
                 }`}>
-                  {isCompleted ? <Check className="h-3.5 w-3.5" /> : step.number}
+                  {isLocked ? <Lock className="h-3 w-3" /> : isCompleted ? <Check className="h-3.5 w-3.5" /> : step.number}
                 </div>
               </button>
             );
@@ -721,7 +730,8 @@ function ProgressSidebar({
         {steps.map((step) => {
           const isActive = step.number === currentStep;
           const isCompleted = step.completed;
-          const isClickable = step.number <= currentStep;
+          const isLocked = step.locked;
+          const isClickable = step.number <= currentStep && !isLocked;
           
           return (
             <button
@@ -729,25 +739,34 @@ function ProgressSidebar({
               onClick={() => isClickable && onStepClick(step.number as Step)}
               disabled={!isClickable}
               className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-all text-left ${
-                isActive 
-                  ? "bg-primary/10 border border-primary/30" 
-                  : isCompleted 
-                    ? "bg-secondary/50 hover:bg-secondary cursor-pointer" 
-                    : "opacity-50 cursor-not-allowed"
+                isLocked
+                  ? "bg-secondary/30 cursor-not-allowed border border-border/50"
+                  : isActive 
+                    ? "bg-primary/10 border border-primary/30" 
+                    : isCompleted 
+                      ? "bg-secondary/50 hover:bg-secondary cursor-pointer" 
+                      : "opacity-50 cursor-not-allowed"
               }`}
             >
               <div className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium ${
-                isActive 
-                  ? "bg-primary text-primary-foreground" 
-                  : isCompleted 
-                    ? "bg-primary/15 text-primary" 
-                    : "bg-secondary text-muted-foreground"
+                isLocked
+                  ? "bg-muted text-muted-foreground"
+                  : isActive 
+                    ? "bg-primary text-primary-foreground" 
+                    : isCompleted 
+                      ? "bg-primary/15 text-primary" 
+                      : "bg-secondary text-muted-foreground"
               }`}>
-                {isCompleted ? <Check className="h-3 w-3" /> : step.number}
+                {isLocked ? <Lock className="h-3 w-3" /> : isCompleted ? <Check className="h-3 w-3" /> : step.number}
               </div>
-              <span className={`text-sm font-medium ${isActive ? "text-foreground" : "text-muted-foreground"}`}>
-                {step.title}
-              </span>
+              <div className="flex-1 min-w-0">
+                <span className={`text-sm font-medium ${isLocked ? "text-muted-foreground" : isActive ? "text-foreground" : "text-muted-foreground"}`}>
+                  {step.title}
+                </span>
+                {isLocked && (
+                  <p className="text-xs text-muted-foreground/70 truncate">Locked in edit mode</p>
+                )}
+              </div>
             </button>
           );
         })}
@@ -905,8 +924,12 @@ export function AddOfferFlow({
   currentStep: controlledStep,
   onStepChange,
   onRegisterCancelHandler,
+  editOffer,
 }: Props) {
-  const { auth, products, addProduct, addOffer, getBrands, getOffersByProduct } = useBarterStore();
+  const { auth, products, addProduct, addOffer, updateOffer, getBrands, getOffersByProduct, getProductById } = useBarterStore();
+  
+  // Edit mode flag
+  const isEditMode = !!editOffer;
   const { registerBlocker, unregisterBlocker } = useNavigationGuard();
   const BLOCKER_ID = "offer-creation-flow";
   
@@ -1074,9 +1097,9 @@ export function AddOfferFlow({
     setSidebarCollapsed(false);
   }, [initialProductType]);
 
-  // Initialize from initialProduct if provided
+  // Initialize from initialProduct if provided (not in edit mode)
   useEffect(() => {
-    if (open && initialProduct) {
+    if (open && initialProduct && !editOffer) {
       setSelectedBarterType(initialProduct.productType);
       setSelectedCategory({ id: initialProduct.category, name: initialProduct.category });
       if (initialProduct.subcategory) {
@@ -1089,25 +1112,66 @@ export function AddOfferFlow({
       // Start at Step 2 since Step 1 data is already populated
       setCurrentStep(2);
     }
-  }, [open, initialProduct]);
+  }, [open, initialProduct, editOffer]);
+
+  // Initialize from editOffer for edit mode
+  useEffect(() => {
+    if (open && editOffer) {
+      const editProduct = getProductById(editOffer.productId);
+      if (editProduct) {
+        // Set Step 1 data (locked in edit mode)
+        setSelectedBarterType(editProduct.productType);
+        setSelectedCategory({ id: editProduct.category, name: editProduct.category });
+        if (editProduct.subcategory) {
+          setSelectedSubcategory({ id: editProduct.subcategory, name: editProduct.subcategory });
+        }
+        setSelectedBrand(editProduct.brand || "");
+        setSelectedModel(editProduct.title);
+        setSelectedProduct(editProduct);
+        setOpenAccordion(null);
+        
+        // Set Step 2 data (images)
+        setOfferImages(editOffer.images || []);
+        
+        // Set Step 3 data (details)
+        setOfferTitle(editOffer.title);
+        setOfferDescription(editOffer.description);
+        setOfferInfo(editOffer.offerInfo || []);
+        setShowOfferInfo((editOffer.offerInfo?.length || 0) > 0);
+        
+        // Set Step 4 data (address)
+        if (editOffer.pickupAddress) {
+          setPickupCountry(editOffer.pickupAddress.country || "");
+          setPickupCity(editOffer.pickupAddress.city || "");
+          setPickupState(editOffer.pickupAddress.state || "");
+          setPickupZip(editOffer.pickupAddress.zip || "");
+          setPickupAddressLine1(editOffer.pickupAddress.addressLine1 || "");
+          setPickupAddressLine2(editOffer.pickupAddress.addressLine2 || "");
+        }
+        
+        // Start at Step 2 (Step 1 is locked in edit mode)
+        setCurrentStep(2);
+      }
+    }
+  }, [open, editOffer, getProductById]);
 
   // Reset on close
   const prevOpenRef = useRef(open);
   useEffect(() => {
     if (!prevOpenRef.current && open) {
-      if (!initialProduct) {
+      if (!initialProduct && !editOffer) {
         resetAll();
       }
     }
     prevOpenRef.current = open;
-  }, [open, resetAll, initialProduct]);
+  }, [open, resetAll, initialProduct, editOffer]);
 
   // Navigation blocker
   useEffect(() => {
     if (open && hasData) {
       registerBlocker({
         id: BLOCKER_ID,
-        type: "offer-creation",
+        type: isEditMode ? "offer-editing" : "offer-creation",
         message: "You have unsaved changes. Are you sure you want to close?",
       });
     } else {
@@ -1178,7 +1242,7 @@ export function AddOfferFlow({
     setSelectedImageIndex(prev => Math.max(0, Math.min(prev, offerImages.length - 2)));
   }, [offerImages.length]);
 
-  // Handle create offer
+  // Handle create or save offer (depending on edit mode)
   const handleCreateOffer = useCallback(async () => {
     if (!canCreate || !auth.user || !selectedProduct) return;
 
@@ -1197,75 +1261,100 @@ export function AddOfferFlow({
     // Simulate API call
     await new Promise(r => setTimeout(r, 1000));
 
-    // Add the offer
-    addOffer({
-      offerId: generateGuid(),
-      productId: selectedProduct.productId,
-      ownerUserId: auth.user.userId,
-      title: offerTitle.trim(),
-      description: offerDescription.trim(),
-      hookedCount: 0,
-      outgoingHookCount: 0,
-      readyForCommit: false,
-      pickupAddress,
-      images: offerImages,
-      offerInfo: offerInfo.length > 0 ? offerInfo : undefined,
-      // Workflow fields - initialized for new offers
-      readyState: false,
-      lockLevel: 0,
-      notificationState: 0,
-      isActive: true,
-    });
+    if (isEditMode && editOffer) {
+      // UPDATE existing offer
+      updateOffer(editOffer.offerId, {
+        title: offerTitle.trim(),
+        description: offerDescription.trim(),
+        pickupAddress,
+        images: offerImages,
+        offerInfo: offerInfo.length > 0 ? offerInfo : undefined,
+      });
 
-    // Fire confetti
-    const colors = ["#FBBF24", "#F59E0B", "#EF4444", "#10B981", "#3B82F6", "#8B5CF6"];
-    const duration = isMobile ? 2000 : 3000;
-    const particleCount = isMobile ? 100 : 200;
-    
-    confetti({
-      particleCount,
-      spread: isMobile ? 60 : 120,
-      origin: { y: 0.6 },
-      colors,
-      disableForReducedMotion: true,
-    });
+      unregisterBlocker(BLOCKER_ID);
 
-    if (!isMobile) {
-      // Additional bursts for desktop
-      setTimeout(() => {
-        confetti({ particleCount: 50, angle: 60, spread: 55, origin: { x: 0 }, colors });
-      }, 250);
-      setTimeout(() => {
-        confetti({ particleCount: 50, angle: 120, spread: 55, origin: { x: 1 }, colors });
-      }, 400);
-    }
+      toast.success("Your offer has been saved successfully.", {
+        duration: 3000,
+      });
 
-    unregisterBlocker(BLOCKER_ID);
-
-    toast.success("Your offer has been created! Start hooking up to 3 offers you want in return.", {
-      duration: 5000,
-    });
-
-    setLoading(false);
-    
-    // Close and navigate after confetti
-    setTimeout(() => {
+      setLoading(false);
+      
+      // Close without confetti for edit
       resetAll();
       onClose();
       onSuccess?.();
-    }, isMobile ? 1500 : 2000);
+    } else {
+      // CREATE new offer
+      addOffer({
+        offerId: generateGuid(),
+        productId: selectedProduct.productId,
+        ownerUserId: auth.user.userId,
+        title: offerTitle.trim(),
+        description: offerDescription.trim(),
+        hookedCount: 0,
+        outgoingHookCount: 0,
+        readyForCommit: false,
+        pickupAddress,
+        images: offerImages,
+        offerInfo: offerInfo.length > 0 ? offerInfo : undefined,
+        // Workflow fields - initialized for new offers
+        readyState: false,
+        lockLevel: 0,
+        notificationState: 0,
+        isActive: true,
+      });
+
+      // Fire confetti (only for create)
+      const colors = ["#FBBF24", "#F59E0B", "#EF4444", "#10B981", "#3B82F6", "#8B5CF6"];
+      const particleCount = isMobile ? 100 : 200;
+      
+      confetti({
+        particleCount,
+        spread: isMobile ? 60 : 120,
+        origin: { y: 0.6 },
+        colors,
+        disableForReducedMotion: true,
+      });
+
+      if (!isMobile) {
+        // Additional bursts for desktop
+        setTimeout(() => {
+          confetti({ particleCount: 50, angle: 60, spread: 55, origin: { x: 0 }, colors });
+        }, 250);
+        setTimeout(() => {
+          confetti({ particleCount: 50, angle: 120, spread: 55, origin: { x: 1 }, colors });
+        }, 400);
+      }
+
+      unregisterBlocker(BLOCKER_ID);
+
+      toast.success("Your offer has been created! Start hooking up to 3 offers you want in return.", {
+        duration: 5000,
+      });
+
+      setLoading(false);
+      
+      // Close and navigate after confetti
+      setTimeout(() => {
+        resetAll();
+        onClose();
+        onSuccess?.();
+      }, isMobile ? 1500 : 2000);
+    }
   }, [
     canCreate, auth.user, selectedProduct, pickupCountry, pickupCity, pickupState, pickupZip,
     pickupAddressLine1, pickupAddressLine2, offerTitle, offerDescription, offerImages, offerInfo,
-    addOffer, unregisterBlocker, resetAll, onClose, onSuccess, isMobile
+    addOffer, updateOffer, unregisterBlocker, resetAll, onClose, onSuccess, isMobile, isEditMode, editOffer
   ]);
 
   // Step navigation
   const goToStep = useCallback((step: Step) => {
+    // In edit mode, Step 1 is locked - can't go back to it
+    if (isEditMode && step === 1) return;
     if (step <= currentStep) {
       setCurrentStep(step);
     }
-  }, [currentStep]);
+  }, [currentStep, isEditMode]);
 
   const nextStep = useCallback(() => {
     if (currentStep < 4) {
@@ -1274,10 +1363,12 @@ export function AddOfferFlow({
   }, [currentStep]);
 
   const prevStep = useCallback(() => {
-    if (currentStep > 1) {
+    // In edit mode, can't go back to Step 1
+    const minStep = isEditMode ? 2 : 1;
+    if (currentStep > minStep) {
       setCurrentStep((currentStep - 1) as Step);
     }
-  }, [currentStep]);
+  }, [currentStep, isEditMode]);
 
   // Handle category/subcategory selection
   const handleSelectCategory = useCallback((id: string, name: string) => {
@@ -1810,8 +1901,8 @@ export function AddOfferFlow({
                   disabled={!canCreate || loading}
                   className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground font-medium transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
                 >
-                  {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                  <span>{loading ? "Creating..." : "Create Offer"}</span>
+{loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+<span>{loading ? (isEditMode ? "Saving..." : "Creating...") : (isEditMode ? "Save Offer" : "Create Offer")}</span>
                 </button>
               </div>
             </div>
@@ -1931,7 +2022,7 @@ export function AddOfferFlow({
         <div className="flex h-14 items-center justify-between px-6">
           <div className="flex items-center gap-4">
             <span className="text-xl font-bold text-primary">BarterX</span>
-            <span className="text-sm text-muted-foreground">/ Add New Offer</span>
+            <span className="text-sm text-muted-foreground">/ {isEditMode ? "Edit Offer" : "Add New Offer"}</span>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -1998,6 +2089,7 @@ export function AddOfferFlow({
             onStepClick={goToStep}
             isCollapsed={sidebarCollapsed}
             onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+            isEditMode={isEditMode}
           />
         </div>
 
@@ -2155,17 +2247,27 @@ export function AddOfferFlow({
               </div>
             )}
 
-            {/* =================================================================
+                {/* =================================================================
                 STEP 2: Add Images
-            ================================================================= */}
-            {currentStep === 2 && (
-              <div className="space-y-6">
-                <h2 className="text-lg font-semibold text-foreground">Add Images</h2>
-
-                {/* Product card preview */}
-                {selectedProduct && (
-                  <ProductCardPreview product={selectedProduct} offerCount={productOfferCount} />
-                )}
+                ================================================================= */}
+                {currentStep === 2 && (
+                  <div className="space-y-6">
+                    <h2 className="text-lg font-semibold text-foreground">{isEditMode ? "Edit Images" : "Add Images"}</h2>
+                    
+                    {/* Edit mode info note */}
+                    {isEditMode && (
+                      <div className="flex items-start gap-3 p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                        <Info className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                        <p className="text-sm text-blue-500">
+                          You are editing an existing offer. The product cannot be changed. You can update images, details, and pickup address.
+                        </p>
+                      </div>
+                    )}
+                    
+                    {/* Product card preview */}
+                    {selectedProduct && (
+                      <ProductCardPreview product={selectedProduct} offerCount={productOfferCount} />
+                    )}
 
                 {/* Image grid */}
                 <div className="space-y-4">
@@ -2475,10 +2577,10 @@ export function AddOfferFlow({
                     {loading ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin" />
-                        Creating...
+                        {isEditMode ? "Saving..." : "Creating..."}
                       </>
                     ) : (
-                      "Create Offer"
+                      isEditMode ? "Save Offer" : "Create Offer"
                     )}
                   </button>
                 </div>

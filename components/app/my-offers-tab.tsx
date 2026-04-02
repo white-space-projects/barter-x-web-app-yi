@@ -3,11 +3,11 @@
 import { useState, useMemo } from "react";
 import { Package, ChevronDown, ChevronUp, MapPin, MessageSquare, Pencil, MoreHorizontal, X, Link2Off, Eye } from "lucide-react";
 import { useBarterStore } from "@/lib/store";
-import type { HookStatus, LockLevel } from "@/lib/types";
+import type { HookStatus, LockLevel, Offer, Product } from "@/lib/types";
 import { LOCK_LEVEL_LABELS, LOCK_LEVEL_COLORS, LOCK_LEVEL_BG_COLORS, LOCK_LEVEL_HELPER_TEXT } from "@/lib/types";
 import { PickupReadinessModal } from "./pickup-readiness-modal";
-import { EditOfferModal } from "./edit-offer-modal";
-import { ViewOfferModal } from "./view-offer-modal";
+import { AddOfferFlow } from "./add-offer-flow";
+import { ViewOfferDetails } from "./view-offer-details";
 import { toast } from "sonner";
 
 /**
@@ -522,17 +522,36 @@ export function MyOffersTab() {
           onClose={() => setPickupOffer(null)}
         />
       )}
-      {editOffer && (
-        <EditOfferModal
-          offerId={editOffer}
-          onClose={() => setEditOffer(null)}
-        />
-      )}
+      
+      {/* Edit Offer - uses AddOfferFlow with editOffer prop */}
+      {editOffer && (() => {
+        const offerToEdit = getOfferById(editOffer);
+        return offerToEdit ? (
+          <AddOfferFlow
+            open={true}
+            onClose={() => setEditOffer(null)}
+            onSuccess={() => setEditOffer(null)}
+            editOffer={offerToEdit}
+          />
+        ) : null;
+      })()}
+      
+      {/* View Offer Details - full screen overlay */}
       {viewOffer && (
-        <ViewOfferModal
-          offerId={viewOffer}
-          onClose={() => setViewOffer(null)}
-        />
+        <div className="fixed inset-0 z-50 bg-background">
+          <div className="h-full overflow-y-auto">
+            <div className="max-w-4xl mx-auto p-4 lg:p-6">
+              <ViewOfferDetails
+                offerId={viewOffer}
+                onClose={() => setViewOffer(null)}
+                onEdit={(offer) => {
+                  setViewOffer(null);
+                  setEditOffer(offer.offerId);
+                }}
+              />
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

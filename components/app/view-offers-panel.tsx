@@ -16,10 +16,9 @@ import { AlertCircle, Package, ArrowRightLeft, Pencil, Plus } from "lucide-react
 import { useBarterStore } from "@/lib/store";
 import type { Product, HookStatus } from "@/lib/types";
 import { HookOfferModal } from "./hook-offer-modal";
-import { OfferDetailsModal } from "./offer-details-modal";
 import { AddOfferFlow } from "./add-offer-flow";
 import { PickupReadinessModal } from "./pickup-readiness-modal";
-import { EditOfferModal } from "./edit-offer-modal";
+import { ViewOfferDetails } from "./view-offer-details";
 import { toast } from "sonner";
 import { getProductTypeName } from "@/lib/product-types";
 
@@ -269,16 +268,36 @@ export function ViewOffersPanel({ product, onAddOffer }: Props) {
 
       {hookTargetOfferId && <HookOfferModal targetOfferId={hookTargetOfferId} onClose={() => setHookTargetOfferId(null)} />}
       {pickupOfferId && <PickupReadinessModal offerId={pickupOfferId} onClose={() => setPickupOfferId(null)} />}
-      {editOfferId && <EditOfferModal offerId={editOfferId} onClose={() => setEditOfferId(null)} />}
+      {editOfferId && (() => {
+        const offerToEdit = getOfferById(editOfferId);
+        return offerToEdit ? (
+          <AddOfferFlow
+            open={true}
+            onClose={() => setEditOfferId(null)}
+            onSuccess={() => setEditOfferId(null)}
+            editOffer={offerToEdit}
+          />
+        ) : null;
+      })()}
       {viewDetailsOfferId && (
-        <OfferDetailsModal
-          offerId={viewDetailsOfferId}
-          onClose={() => setViewDetailsOfferId(null)}
-          onNavigateToProduct={(productId) => {
-            setViewDetailsOfferId(null);
-            setNavigateToProductId(productId);
-          }}
-        />
+        <div className="fixed inset-0 z-50 bg-background">
+          <div className="h-full overflow-y-auto">
+            <div className="max-w-4xl mx-auto p-4 lg:p-6">
+              <ViewOfferDetails
+                offerId={viewDetailsOfferId}
+                onClose={() => setViewDetailsOfferId(null)}
+                onEdit={(offer) => {
+                  setViewDetailsOfferId(null);
+                  setEditOfferId(offer.offerId);
+                }}
+                onAddOfferToProduct={(productToAdd) => {
+                  setViewDetailsOfferId(null);
+                  setNavigateToProductId(productToAdd.productId);
+                }}
+              />
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Add Offer Flow for navigate to product */}
