@@ -84,6 +84,8 @@ type Props = {
   embedded?: boolean;
   currentStep?: Step;
   onStepChange?: (step: Step) => void;
+  // Callback to expose the cancel attempt handler to parent (for sidebar cancel button)
+  onRegisterCancelHandler?: (handler: () => void) => void;
 };
 
 type AccordionType = "barter-type" | "category" | "subcategory" | "brand" | "model" | null;
@@ -402,7 +404,7 @@ function BrandModelSelector({
 }
 
 // =============================================================================
-// PRODUCT CARD PREVIEW (matches existing product card design)
+// PRODUCT CARD PREVIEW (matches existing product card design from products-tab)
 // =============================================================================
 function ProductCardPreview({
   product,
@@ -413,24 +415,24 @@ function ProductCardPreview({
 }) {
   return (
     <div className="rounded-xl border border-border bg-card overflow-hidden w-full card-shadow-blue">
-      <div className="p-3">
+      <div className="p-4 min-h-[88px]">
         <div className="flex gap-3">
-          {/* Product image - 48x48 */}
-          <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-secondary overflow-hidden">
+          {/* Product image - 64x64 to match products-tab */}
+          <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-lg bg-secondary overflow-hidden">
             {product.imageUrl ? (
               <img src={product.imageUrl} alt={product.title} className="h-full w-full object-cover" crossOrigin="anonymous" />
             ) : (
-              <Package className="h-5 w-5 text-muted-foreground/40" />
+              <Package className="h-6 w-6 text-muted-foreground/40" />
             )}
           </div>
 
           {/* Product info */}
-          <div className="flex-1 min-w-0 flex flex-col justify-center gap-0.5">
-            <p className="text-sm font-medium text-foreground truncate">{product.title}</p>
-            <p className="text-xs text-muted-foreground flex items-center gap-1">
-              {product.subcategory} <span className="inline-block w-1 h-1 rounded-full bg-muted-foreground/50" /> {product.brand}
+          <div className="flex-1 min-w-0 flex flex-col justify-center">
+            <p className="text-sm font-medium text-foreground line-clamp-2">{product.title}</p>
+            <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+              {product.subcategory} <span className="inline-block w-1 h-1 rounded-full bg-primary" /> {product.brand}
             </p>
-            <p className="text-xs text-cyan-400 font-medium">
+            <p className="text-xs text-cyan-400 font-medium mt-0.5">
               {offerCount === 0 ? "No offers yet" : `${offerCount} ${offerCount === 1 ? "offer" : "offers"} available`}
             </p>
           </div>
@@ -902,6 +904,7 @@ export function AddOfferFlow({
   embedded = false,
   currentStep: controlledStep,
   onStepChange,
+  onRegisterCancelHandler,
 }: Props) {
   const { auth, products, addProduct, addOffer, getBrands, getOffersByProduct } = useBarterStore();
   const { registerBlocker, unregisterBlocker } = useNavigationGuard();
@@ -1125,6 +1128,13 @@ export function AddOfferFlow({
     resetAll();
     onClose();
   }, [unregisterBlocker, resetAll, onClose]);
+
+  // Register cancel handler with parent for external trigger (e.g., sidebar cancel button)
+  useEffect(() => {
+    if (onRegisterCancelHandler) {
+      onRegisterCancelHandler(handleCloseAttempt);
+    }
+  }, [onRegisterCancelHandler, handleCloseAttempt]);
 
   // Handle same as profile checkbox
   const handleSameAsProfile = useCallback((checked: boolean) => {
@@ -1635,7 +1645,7 @@ export function AddOfferFlow({
               
               {/* Title */}
               <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Title</label>
+                <label className="text-sm font-medium text-foreground">Title <span className="text-red-500">*</span></label>
                 <input
                   type="text"
                   value={offerTitle}
@@ -1647,7 +1657,7 @@ export function AddOfferFlow({
 
               {/* Description */}
               <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Description</label>
+                <label className="text-sm font-medium text-foreground">Description <span className="text-red-500">*</span></label>
                 <textarea
                   value={offerDescription}
                   onChange={(e) => setOfferDescription(e.target.value)}
@@ -1712,23 +1722,22 @@ export function AddOfferFlow({
               <div className="rounded-xl border border-border bg-card p-4 md:p-5">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="col-span-2 sm:col-span-1">
-                    <label className="text-xs font-medium text-muted-foreground">Country</label>
+                    <label className="text-xs font-medium text-muted-foreground">Country <span className="text-red-500">*</span></label>
                     <select
                       value={pickupCountry}
                       onChange={(e) => { setPickupCountry(e.target.value); setPickupCity(""); }}
-                      disabled={sameAsProfile}
-                      className="mt-1 w-full rounded-lg border border-input bg-secondary px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
+                      className="mt-1 w-full rounded-lg border border-input bg-secondary px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
                     >
                       <option value="">Select country</option>
                       {getCountryNames().map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
                   </div>
                   <div className="col-span-2 sm:col-span-1">
-                    <label className="text-xs font-medium text-muted-foreground">City</label>
+                    <label className="text-xs font-medium text-muted-foreground">City <span className="text-red-500">*</span></label>
                     <select
                       value={pickupCity}
                       onChange={(e) => setPickupCity(e.target.value)}
-                      disabled={sameAsProfile || !pickupCountry}
+                      disabled={!pickupCountry}
                       className="mt-1 w-full rounded-lg border border-input bg-secondary px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
                     >
                       <option value="">Select city</option>
@@ -1736,36 +1745,33 @@ export function AddOfferFlow({
                     </select>
                   </div>
                   <div className="col-span-2 sm:col-span-1">
-                    <label className="text-xs font-medium text-muted-foreground">State/Province</label>
+                    <label className="text-xs font-medium text-muted-foreground">State/Province <span className="text-red-500">*</span></label>
                     <input
                       type="text"
                       value={pickupState}
                       onChange={(e) => setPickupState(e.target.value)}
-                      disabled={sameAsProfile}
-                      placeholder="Optional"
-                      className="mt-1 w-full rounded-lg border border-input bg-secondary px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
+                      placeholder="Enter state or province"
+                      className="mt-1 w-full rounded-lg border border-input bg-secondary px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
                     />
                   </div>
                   <div className="col-span-2 sm:col-span-1">
-                    <label className="text-xs font-medium text-muted-foreground">ZIP/Postal Code</label>
+                    <label className="text-xs font-medium text-muted-foreground">ZIP/Postal Code <span className="text-red-500">*</span></label>
                     <input
                       type="text"
                       value={pickupZip}
                       onChange={(e) => setPickupZip(e.target.value)}
-                      disabled={sameAsProfile}
-                      placeholder="Optional"
-                      className="mt-1 w-full rounded-lg border border-input bg-secondary px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
+                      placeholder="Enter ZIP or postal code"
+                      className="mt-1 w-full rounded-lg border border-input bg-secondary px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
                     />
                   </div>
                   <div className="col-span-2">
-                    <label className="text-xs font-medium text-muted-foreground">Address Line 1</label>
+                    <label className="text-xs font-medium text-muted-foreground">Address Line 1 <span className="text-red-500">*</span></label>
                     <input
                       type="text"
                       value={pickupAddressLine1}
                       onChange={(e) => setPickupAddressLine1(e.target.value)}
-                      disabled={sameAsProfile}
                       placeholder="Street address"
-                      className="mt-1 w-full rounded-lg border border-input bg-secondary px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
+                      className="mt-1 w-full rounded-lg border border-input bg-secondary px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
                     />
                   </div>
                   <div className="col-span-2">
@@ -1774,9 +1780,8 @@ export function AddOfferFlow({
                       type="text"
                       value={pickupAddressLine2}
                       onChange={(e) => setPickupAddressLine2(e.target.value)}
-                      disabled={sameAsProfile}
                       placeholder="Apartment, suite, etc. (optional)"
-                      className="mt-1 w-full rounded-lg border border-input bg-secondary px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
+                      className="mt-1 w-full rounded-lg border border-input bg-secondary px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
                     />
                   </div>
                 </div>
@@ -1892,9 +1897,17 @@ export function AddOfferFlow({
         {/* QR Modal for desktop image capture */}
         {showQrModal && (
           <OfferCaptureQrModal
-            open={showQrModal}
+            draftData={{
+              title: offerTitle,
+              description: offerDescription,
+              productId: selectedProduct?.productId,
+              productTitle: selectedProduct?.title,
+            }}
+            currentImageCount={offerImages.length}
+            maxImages={7}
             onClose={() => setShowQrModal(false)}
-            onCapture={handleImageCapture}
+            onImagesUpdated={setOfferImages}
+            existingImages={offerImages}
           />
         )}
       </>
@@ -2544,13 +2557,13 @@ export function AddOfferFlow({
             title: offerTitle,
             description: offerDescription,
             productId: selectedProduct?.productId,
-            productTitle: selectedProduct?.title,
-          }}
-          currentImageCount={offerImages.length}
-          maxImages={6}
-          onClose={() => setShowQrModal(false)}
-          onImagesUpdated={setOfferImages}
-          existingImages={offerImages}
+                productTitle: selectedProduct?.title,
+              }}
+              currentImageCount={offerImages.length}
+              maxImages={7}
+              onClose={() => setShowQrModal(false)}
+              onImagesUpdated={setOfferImages}
+              existingImages={offerImages}
         />
       )}
 

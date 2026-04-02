@@ -26,6 +26,7 @@ type AddOfferModeProps = {
   currentStep: AddOfferStep;
   onStepClick: (step: AddOfferStep) => void;
   onClose: () => void;
+  onCancelAttempt: () => void; // Triggers discard confirmation dialog
 };
 
 type NavItem = {
@@ -157,7 +158,7 @@ export function SidebarNav({
         {/* Close/Cancel Button */}
         <div className="p-3">
           <button
-            onClick={addOfferMode.onClose}
+            onClick={addOfferMode.onCancelAttempt}
             className={`flex items-center justify-center gap-2 rounded-lg border border-border bg-secondary text-foreground font-medium transition-colors hover:bg-secondary/80 ${
               collapsed ? "w-10 h-10 p-0" : "w-full py-2.5 px-3"
             }`}

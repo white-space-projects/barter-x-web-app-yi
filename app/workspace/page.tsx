@@ -62,6 +62,7 @@ function WorkspaceContent() {
   const [activeUtilityTab, setActiveUtilityTab] = useState<UtilityTab | null>(null);
   const [addOfferOpen, setAddOfferOpen] = useState(false);
   const [addOfferStep, setAddOfferStep] = useState<1 | 2 | 3 | 4>(1);
+  const [addOfferCancelHandler, setAddOfferCancelHandler] = useState<(() => void) | null>(null);
   const [pickupModalOfferId, setPickupModalOfferId] = useState<string | null>(null);
   
   // Ref for scrollable content area - used to reset scroll on tab change
@@ -249,6 +250,7 @@ function WorkspaceContent() {
               currentStep: addOfferStep,
               onStepClick: (step) => setAddOfferStep(step),
               onClose: () => setAddOfferOpen(false),
+              onCancelAttempt: () => addOfferCancelHandler?.(),
             } : null}
           />
           {/* Blur overlay for new users */}
@@ -305,6 +307,7 @@ function WorkspaceContent() {
                     setAddOfferOpen(false);
                     setActiveUtilityTab("my-offers");
                   }}
+                  onRegisterCancelHandler={(handler) => setAddOfferCancelHandler(() => handler)}
                 />
               )}
 
