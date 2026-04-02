@@ -7,7 +7,7 @@
  * 
  * This is a 4-step wizard to create an offer:
  * Step 1: Choose/create product (barter type, category, subcategory, brand, model)
- * Step 2: Add images (up to 6 images)
+ * Step 2: Add images (up to 7 images, optional)
  * Step 3: Offer details (title, description, optional info fields)
  * Step 4: Pickup address
  * 
@@ -28,7 +28,7 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { 
   X, ArrowLeft, Search, Plus, ChevronDown, ChevronRight, Check, 
-  Package, Car, Home, ShoppingBag, Loader2, Trash2,
+  Package, Car, Home, ShoppingBag, Loader2, Trash2, GripVertical,
   Camera, QrCode, MapPin, ChevronLeft,
   // Category icons
   Cpu, Sofa, Shirt, Baby, Dumbbell, Wrench, BookOpen, Monitor, Palette,
@@ -408,26 +408,26 @@ function ProductCardPreview({
   offerCount: number;
 }) {
   return (
-    <div className="rounded-xl border border-border bg-card overflow-hidden w-full h-[88px] card-shadow-primary">
-      <div className="p-4 h-full">
-        <div className="flex gap-3 h-full">
-          {/* Product image - 64x64 */}
-          <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-lg bg-secondary overflow-hidden">
+    <div className="rounded-xl border border-border bg-card overflow-hidden w-full card-shadow-blue">
+      <div className="p-3">
+        <div className="flex gap-3">
+          {/* Product image - 48x48 */}
+          <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-secondary overflow-hidden">
             {product.imageUrl ? (
               <img src={product.imageUrl} alt={product.title} className="h-full w-full object-cover" crossOrigin="anonymous" />
             ) : (
-              <Package className="h-6 w-6 text-muted-foreground/40" />
+              <Package className="h-5 w-5 text-muted-foreground/40" />
             )}
           </div>
 
           {/* Product info */}
-          <div className="flex-1 min-w-0 flex flex-col justify-center">
+          <div className="flex-1 min-w-0 flex flex-col justify-center gap-0.5">
             <p className="text-sm font-medium text-foreground truncate">{product.title}</p>
             <p className="text-xs text-muted-foreground flex items-center gap-1">
-              {product.subcategory} <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary" /> {product.brand}
+              {product.subcategory} <span className="inline-block w-1 h-1 rounded-full bg-muted-foreground/50" /> {product.brand}
             </p>
-            <p className="text-xs text-primary font-medium">
-              {offerCount === 0 ? "No offers yet" : `Currently ${offerCount} ${offerCount === 1 ? "offer" : "offers"} within this product`}
+            <p className="text-xs text-cyan-400 font-medium">
+              {offerCount === 0 ? "No offers yet" : `${offerCount} ${offerCount === 1 ? "offer" : "offers"} available`}
             </p>
           </div>
         </div>
@@ -437,121 +437,183 @@ function ProductCardPreview({
 }
 
 // =============================================================================
-// IMAGE GRID (2-column x 3-row balanced grid)
+// IMAGE GRID (Main + 6 thumbnails = 7 max, with drag-drop reordering)
 // =============================================================================
 function ImageGrid({
   images,
   selectedIndex,
   onSelectImage,
   onDeleteImage,
+  onReorderImages,
   onAddImage,
   onOpenEnlarged,
-  maxImages = 6,
+  maxImages = 7,
 }: {
   images: OfferImage[];
   selectedIndex: number;
   onSelectImage: (index: number) => void;
   onDeleteImage: (index: number) => void;
+  onReorderImages: (images: OfferImage[]) => void;
   onAddImage: () => void;
   onOpenEnlarged?: () => void;
   maxImages?: number;
   isMobile: boolean;
 }) {
-  const selectedImage = images[selectedIndex];
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  
+  const mainImage = images[0]; // First image is always main
+
+  const handleDragStart = (index: number) => {
+    setDraggedIndex(index);
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    if (draggedIndex !== null && draggedIndex !== index) {
+      setDragOverIndex(index);
+    }
+  };
+
+  const handleDragEnd = () => {
+    if (draggedIndex !== null && dragOverIndex !== null && draggedIndex !== dragOverIndex) {
+      const newImages = [...images];
+      const [draggedImage] = newImages.splice(draggedIndex, 1);
+      newImages.splice(dragOverIndex, 0, draggedImage);
+      onReorderImages(newImages);
+      // Update selection to follow the moved image
+      onSelectImage(dragOverIndex);
+    }
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
+  const handleDragLeave = () => {
+    setDragOverIndex(null);
+  };
+
+  // Render a draggable thumbnail
+  const renderThumbnail = (index: number) => {
+    const image = images[index];
+    const isSelected = index === selectedIndex;
+    const isDragging = draggedIndex === index;
+    const isDragOver = dragOverIndex === index;
+
+    if (image) {
+      return (
+        <div 
+          key={image.imageId}
+          draggable
+          onDragStart={() => handleDragStart(index)}
+          onDragOver={(e) => handleDragOver(e, index)}
+          onDragEnd={handleDragEnd}
+          onDragLeave={handleDragLeave}
+          className={`relative aspect-square rounded-lg overflow-hidden cursor-grab active:cursor-grabbing transition-all ${
+            isDragging ? "opacity-50 scale-95" : ""
+          } ${isDragOver ? "ring-2 ring-primary ring-offset-2 ring-offset-background" : ""} ${
+            isSelected ? "ring-2 ring-primary ring-offset-1 ring-offset-background" : "ring-1 ring-border hover:ring-primary/50"
+          }`}
+          onClick={() => onSelectImage(index)}
+        >
+          <img 
+            src={image.url} 
+            alt={`Image ${index + 1}`} 
+            className="w-full h-full object-cover pointer-events-none" 
+            crossOrigin="anonymous"
+          />
+          {/* Delete button */}
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onDeleteImage(index); }}
+            className="absolute top-1 right-1 p-1.5 rounded-full bg-destructive/90 text-white hover:bg-destructive transition-colors"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+          {/* Drag indicator */}
+          <div className="absolute bottom-1 left-1 p-1 rounded bg-black/50">
+            <GripVertical className="h-3 w-3 text-white/70" />
+          </div>
+        </div>
+      );
+    }
+
+    // Empty slot (next available)
+    if (index === images.length && images.length < maxImages) {
+      return (
+        <button
+          key={`empty-${index}`}
+          type="button"
+          onClick={onAddImage}
+          onDragOver={(e) => handleDragOver(e, index)}
+          onDragLeave={handleDragLeave}
+          className={`aspect-square rounded-lg border-2 border-dashed flex items-center justify-center transition-colors ${
+            dragOverIndex === index ? "border-primary bg-primary/10" : "border-primary/30 hover:border-primary hover:bg-primary/5"
+          }`}
+        >
+          <Plus className="h-6 w-6 text-primary" />
+        </button>
+      );
+    }
+
+    // Future empty slot
+    return (
+      <div
+        key={`future-${index}`}
+        className="aspect-square rounded-lg border border-border bg-secondary/30 flex items-center justify-center"
+      >
+        <span className="text-sm text-muted-foreground">{index + 1}</span>
+      </div>
+    );
+  };
 
   return (
     <div className="grid grid-cols-2 gap-3">
       {/* Main/Portrait image - spans 3 rows, dominant left column */}
-      <div className="row-span-3">
+      <div 
+        className="row-span-3"
+        onDragOver={(e) => handleDragOver(e, 0)}
+        onDragLeave={handleDragLeave}
+      >
         <div 
-          className="relative w-full h-full min-h-[280px] md:min-h-[320px] rounded-xl overflow-hidden bg-secondary border-2 border-primary cursor-pointer"
-          onClick={() => selectedImage && onOpenEnlarged?.()}
+          className={`relative w-full h-full min-h-[280px] md:min-h-[320px] rounded-xl overflow-hidden bg-secondary border-2 transition-all ${
+            dragOverIndex === 0 ? "border-primary ring-2 ring-primary/50" : "border-primary"
+          } ${mainImage ? "cursor-pointer" : ""}`}
+          onClick={() => mainImage && onOpenEnlarged?.()}
+          draggable={!!mainImage}
+          onDragStart={() => mainImage && handleDragStart(0)}
+          onDragEnd={handleDragEnd}
         >
-          {selectedImage ? (
-            <img 
-              src={selectedImage.url} 
-              alt="Main preview" 
-              className="w-full h-full object-cover" 
-              crossOrigin="anonymous"
-            />
+          {mainImage ? (
+            <>
+              <img 
+                src={mainImage.url} 
+                alt="Main preview" 
+                className="w-full h-full object-cover pointer-events-none" 
+                crossOrigin="anonymous"
+              />
+              <div className="absolute bottom-2 left-2 px-2 py-1 rounded-md bg-black/60 text-white text-xs flex items-center gap-1">
+                <GripVertical className="h-3 w-3" />
+                Drag to reorder
+              </div>
+            </>
           ) : (
             <div className="w-full h-full flex flex-col items-center justify-center gap-3">
               <Camera className="h-12 w-12 text-muted-foreground/40" />
               <span className="text-sm text-muted-foreground">Main Image</span>
             </div>
           )}
-          {selectedImage && (
-            <div className="absolute bottom-2 left-2 px-2 py-1 rounded-md bg-black/60 text-white text-xs">
-              Tap to edit
-            </div>
-          )}
         </div>
       </div>
 
-      {/* Right column - 3 rows with 2 thumbnails each */}
+      {/* Right column - 3 rows with 2 thumbnails each (indices 1-6) */}
       {[0, 1, 2].map((row) => {
         const slot1Index = row * 2 + 1;
         const slot2Index = row * 2 + 2;
         
         return (
           <div key={row} className="grid grid-cols-2 gap-2">
-            {[slot1Index, slot2Index].map((index) => {
-              if (index >= maxImages) return null;
-              
-              const image = images[index];
-              const isSelected = index === selectedIndex;
-              
-              if (image) {
-                return (
-                  <div 
-                    key={image.imageId} 
-                    className={`relative aspect-square rounded-lg overflow-hidden cursor-pointer transition-all ${
-                      isSelected ? "ring-2 ring-primary ring-offset-1 ring-offset-background" : "ring-1 ring-border hover:ring-primary/50"
-                    }`}
-                    onClick={() => onSelectImage(index)}
-                  >
-                    <img 
-                      src={image.url} 
-                      alt={`Image ${index + 1}`} 
-                      className="w-full h-full object-cover" 
-                      crossOrigin="anonymous"
-                    />
-                    {/* Delete button on thumbnail only */}
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); onDeleteImage(index); }}
-                      className="absolute top-1 right-1 p-1.5 rounded-full bg-destructive/90 text-white hover:bg-destructive transition-colors"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                );
-              }
-              
-              // Empty slot (next available)
-              if (index === images.length && images.length < maxImages) {
-                return (
-                  <button
-                    key={`empty-${index}`}
-                    type="button"
-                    onClick={onAddImage}
-                    className="aspect-square rounded-lg border-2 border-dashed border-primary/30 flex items-center justify-center hover:border-primary hover:bg-primary/5 transition-colors"
-                  >
-                    <Plus className="h-6 w-6 text-primary" />
-                  </button>
-                );
-              }
-
-              // Future empty slot
-              return (
-                <div
-                  key={`future-${index}`}
-                  className="aspect-square rounded-lg border border-border bg-secondary/30 flex items-center justify-center"
-                >
-                  <span className="text-sm text-muted-foreground">{index + 1}</span>
-                </div>
-              );
-            })}
+            {slot1Index < maxImages && renderThumbnail(slot1Index)}
+            {slot2Index < maxImages && renderThumbnail(slot2Index)}
           </div>
         );
       })}
@@ -946,7 +1008,7 @@ export function AddOfferFlow({ open, onClose, onSuccess, initialProductType, ini
   }, [selectedBarterType, selectedCategory, selectedSubcategory, selectedBrand, selectedModel, selectedProduct]);
 
   // Step 2 complete check
-  const step2Complete = offerImages.length > 0;
+  const step2Complete = true; // Images are optional
 
   // Step 3 complete check
   const step3Complete = offerTitle.trim() !== "" && offerDescription.trim() !== "";
@@ -1506,9 +1568,9 @@ export function AddOfferFlow({ open, onClose, onSuccess, initialProductType, ini
                     type="button"
                     onClick={nextStep}
                     disabled={!step1Complete}
-                    className="w-full py-3 rounded-xl bg-primary text-primary-foreground font-medium transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1"
+                    className="w-full py-3 rounded-xl bg-primary text-primary-foreground font-medium transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
                   >
-                    Capture Images
+                    <span>Capture Images</span>
                     <ChevronRight className="h-4 w-4" />
                   </button>
                 </div>
@@ -1530,7 +1592,7 @@ export function AddOfferFlow({ open, onClose, onSuccess, initialProductType, ini
                 {/* Image grid */}
                 <div className="space-y-4">
                   <p className="text-sm text-muted-foreground">
-                    Add up to 6 images. First image will be the main display image.
+                    Add up to 7 images. First image will be the main display image.
                   </p>
 
                   <ImageGrid
@@ -1538,6 +1600,7 @@ export function AddOfferFlow({ open, onClose, onSuccess, initialProductType, ini
                     selectedIndex={selectedImageIndex}
                     onSelectImage={setSelectedImageIndex}
                     onDeleteImage={handleImageDelete}
+                    onReorderImages={setOfferImages}
                     onAddImage={() => {
                       if (isMobile) {
                         // Trigger file input for mobile
@@ -1547,12 +1610,12 @@ export function AddOfferFlow({ open, onClose, onSuccess, initialProductType, ini
                       }
                     }}
                     onOpenEnlarged={() => setShowEnlargedImage(true)}
-                    maxImages={6}
+                    maxImages={7}
                     isMobile={isMobile}
                   />
 
                   {/* Capture options */}
-                  {offerImages.length < 6 && (
+                  {offerImages.length < 7 && (
                     <div className="space-y-3">
                       {isMobile ? (
                         <>
@@ -1596,18 +1659,18 @@ export function AddOfferFlow({ open, onClose, onSuccess, initialProductType, ini
                   <button
                     type="button"
                     onClick={prevStep}
-                    className="flex-1 py-3 rounded-xl border border-input bg-background text-foreground font-medium hover:bg-secondary transition-colors"
+                    className="flex-1 py-3 rounded-xl border border-input bg-background text-foreground font-medium hover:bg-secondary transition-colors flex items-center justify-center gap-1.5"
                   >
                     <ChevronLeft className="h-4 w-4" />
-                    Step 1
+                    <span>Step 1</span>
                   </button>
                   <button
                     type="button"
                     onClick={nextStep}
                     disabled={!step2Complete}
-                    className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground font-medium transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground font-medium transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
                   >
-                    Continue to Details
+                    <span>Continue to Details</span>
                     <ChevronRight className="h-4 w-4" />
                   </button>
                 </div>
@@ -1675,18 +1738,18 @@ export function AddOfferFlow({ open, onClose, onSuccess, initialProductType, ini
                   <button
                     type="button"
                     onClick={prevStep}
-                    className="flex-1 py-3 rounded-xl border border-input bg-background text-foreground font-medium hover:bg-secondary transition-colors"
+                    className="flex-1 py-3 rounded-xl border border-input bg-background text-foreground font-medium hover:bg-secondary transition-colors flex items-center justify-center gap-1.5"
                   >
                     <ChevronLeft className="h-4 w-4" />
-                    Step 2
+                    <span>Step 2</span>
                   </button>
                   <button
                     type="button"
                     onClick={nextStep}
                     disabled={!step3Complete}
-                    className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground font-medium transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground font-medium transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
                   >
-                    Add Address
+                    <span>Add Address</span>
                     <ChevronRight className="h-4 w-4" />
                   </button>
                 </div>
@@ -1820,16 +1883,16 @@ export function AddOfferFlow({ open, onClose, onSuccess, initialProductType, ini
                   <button
                     type="button"
                     onClick={prevStep}
-                    className="flex-1 py-3 rounded-xl border border-input bg-background text-foreground font-medium hover:bg-secondary transition-colors"
+                    className="flex-1 py-3 rounded-xl border border-input bg-background text-foreground font-medium hover:bg-secondary transition-colors flex items-center justify-center gap-1.5"
                   >
                     <ChevronLeft className="h-4 w-4" />
-                    Step 3
+                    <span>Step 3</span>
                   </button>
                   <button
                     type="button"
                     onClick={handleCreateOffer}
                     disabled={!canCreate || loading}
-                    className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground font-medium transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground font-medium transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
                   >
                     {loading ? (
                       <>
