@@ -130,7 +130,13 @@ export function ViewOffersPanel({ product, onAddOffer }: Props) {
               <AlertCircle className="mb-2 h-8 w-8 opacity-40" />
               <p className="text-sm">No offers yet for this product.</p>
               <button 
-                onClick={() => setShowInlineAdd(true)}
+                onClick={() => {
+                  if (onAddOffer) {
+                    onAddOffer();
+                  } else {
+                    setShowInlineAdd(true);
+                  }
+                }}
                 className="mt-3 flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
               >
                 <Plus className="h-4 w-4" />
