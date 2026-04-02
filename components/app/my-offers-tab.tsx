@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Package, ChevronDown, ChevronUp, MapPin, MessageSquare, Pencil, MoreHorizontal, X, Link2Off, Info, Trash2 } from "lucide-react";
+import { Package, ChevronDown, ChevronUp, MapPin, MessageSquare, Pencil, MoreVertical, X, Link2Off, Eye } from "lucide-react";
 import { useBarterStore } from "@/lib/store";
 import type { HookStatus, LockLevel } from "@/lib/types";
 import { LOCK_LEVEL_LABELS, LOCK_LEVEL_COLORS, LOCK_LEVEL_BG_COLORS, LOCK_LEVEL_HELPER_TEXT } from "@/lib/types";
 import { PickupReadinessModal } from "./pickup-readiness-modal";
 import { EditOfferModal } from "./edit-offer-modal";
+import { ViewOfferModal } from "./view-offer-modal";
 import { toast } from "sonner";
 
 /**
@@ -51,7 +52,8 @@ export function MyOffersTab() {
   const [expandedOffer, setExpandedOffer] = useState<string | null>(null);
   const [pickupOffer, setPickupOffer] = useState<string | null>(null);
   const [editOffer, setEditOffer] = useState<string | null>(null);
-  const [showStatusHelp, setShowStatusHelp] = useState<string | null>(null);
+  const [viewOffer, setViewOffer] = useState<string | null>(null);
+  const [mobileMenuOffer, setMobileMenuOffer] = useState<string | null>(null);
 
   // Helper: Get product for an offer
   function getProductForOffer(offer: { productId: string }) {
@@ -199,111 +201,102 @@ export function MyOffersTab() {
             const showReadyLabel = offer.readyState && offer.lockLevel >= 1;
             const canUnconfirmReady = canToggleReadinessOff(offer);
             const showPickupDate = offer.readyState && offer.pickupReadyDate;
-            const canDelete = canModifyOffer(offer);
-            const isStatusHelpVisible = showStatusHelp === offer.offerId;
 
             return (
               <div
                 key={offer.offerId}
-                className="rounded-xl border border-border bg-card overflow-hidden w-full card-shadow-primary"
+                className="rounded-xl border border-border bg-card overflow-hidden w-full card-shadow-primary relative"
               >
                 <div className="p-4 min-h-[88px]">
                   <div className="flex gap-3">
-                    {/* 64x64 Image - show offer's first image if available, else product image */}
-                    <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-lg bg-secondary overflow-hidden">
-                      {offer.images && offer.images.length > 0 ? (
-                        <img
-                          src={offer.images[0].url}
-                          alt={offer.title}
-                          className="h-full w-full object-cover"
-                          crossOrigin="anonymous"
-                        />
-                      ) : product?.imageUrl ? (
-                        <img
-                          src={product.imageUrl}
-                          alt={offer.title}
-                          className="h-full w-full object-cover"
-                          crossOrigin="anonymous"
-                        />
-                      ) : (
-                        <Package className="h-6 w-6 text-muted-foreground/40" />
-                      )}
-                    </div>
-
-                    {/* Content */}
-                    <div className="flex-1 min-w-0 flex flex-col justify-center">
-                      <p className="text-sm font-medium text-foreground truncate">
-                        {offer.title}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {product?.subcategory} . {product?.brand}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Hooks {offer.outgoingHookCount}/3
-                      </p>
-                    </div>
-
-                    {/* Right side: actions + status */}
-                    <div className="flex flex-col items-end justify-start flex-shrink-0 gap-1">
-                      {/* Pickup date (clickable to edit) - shown at top when confirmed */}
-                      {showPickupDate && (
-                        <button
-                          onClick={() => setPickupOffer(offer.offerId)}
-                          className="text-xs text-primary hover:underline"
-                        >
-                          Pickup: <span className="underline">{offer.pickupReadyDate}</span>
-                        </button>
-                      )}
-
-                      {/* Edit and expand buttons */}
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => setEditOffer(offer.offerId)}
-                          className="p-1 text-muted-foreground hover:text-foreground transition-colors"
-                          title="Edit offer"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => setExpandedOffer(isExpanded ? null : offer.offerId)}
-                          className="p-1 text-muted-foreground hover:text-foreground transition-colors"
-                        >
-                          <MoreHorizontal className="h-5 w-5" />
-                        </button>
+                    {/* Clickable card area - opens View Offer */}
+                    <div 
+                      className="flex gap-3 flex-1 min-w-0 cursor-pointer"
+                      onClick={() => setViewOffer(offer.offerId)}
+                    >
+                      {/* 64x64 Image - show offer's first image if available, else product image */}
+                      <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-lg bg-secondary overflow-hidden">
+                        {offer.images && offer.images.length > 0 ? (
+                          <img
+                            src={offer.images[0].url}
+                            alt={offer.title}
+                            className="h-full w-full object-cover"
+                            crossOrigin="anonymous"
+                          />
+                        ) : product?.imageUrl ? (
+                          <img
+                            src={product.imageUrl}
+                            alt={offer.title}
+                            className="h-full w-full object-cover"
+                            crossOrigin="anonymous"
+                          />
+                        ) : (
+                          <Package className="h-6 w-6 text-muted-foreground/40" />
+                        )}
                       </div>
 
-                      {/* Status badge based on lockLevel - clickable for helper text */}
-                      {activeSubTab === "open" && (
-                        <button
-                          onClick={() => setShowStatusHelp(isStatusHelpVisible ? null : offer.offerId)}
-                          className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${LOCK_LEVEL_BG_COLORS[offer.lockLevel]} ${LOCK_LEVEL_COLORS[offer.lockLevel]}`}
-                        >
-                          {LOCK_LEVEL_LABELS[offer.lockLevel]}
-                          <Info className="h-3 w-3" />
-                        </button>
-                      )}
-                      {activeSubTab === "closed" && (
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${LOCK_LEVEL_BG_COLORS[3]} ${LOCK_LEVEL_COLORS[3]}`}>
-                          {LOCK_LEVEL_LABELS[3]}
-                        </span>
-                      )}
+                      {/* Content */}
+                      <div className="flex-1 min-w-0 flex flex-col justify-center">
+                        <p className="text-sm font-medium text-foreground truncate">
+                          {offer.title}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {product?.subcategory} . {product?.brand}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Hooks {offer.outgoingHookCount}/3
+                        </p>
+                        {/* Pickup date shown inline when confirmed */}
+                        {showPickupDate && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setPickupOffer(offer.offerId); }}
+                            className="text-xs text-primary hover:underline text-left mt-0.5"
+                          >
+                            Pickup: <span className="underline">{offer.pickupReadyDate}</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Right side: 3-dots menu (mobile only, vertically centered) */}
+                    <div className="flex-shrink-0 flex items-center lg:hidden">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setMobileMenuOffer(offer.offerId); }}
+                        className="p-1.5 text-muted-foreground hover:text-foreground transition-colors"
+                        aria-label="More options"
+                      >
+                        <MoreVertical className="h-5 w-5" />
+                      </button>
                     </div>
                   </div>
 
-                  {/* Status helper text tooltip */}
-                  {isStatusHelpVisible && (
-                    <div className="mt-2 p-2 rounded-lg bg-secondary/50 border border-border/50">
-                      <p className="text-xs text-muted-foreground">
-                        {LOCK_LEVEL_HELPER_TEXT[offer.lockLevel]}
-                      </p>
-                    </div>
-                  )}
+                  {/* Status badge with down arrow - accordion trigger (bottom right of card header) */}
+                  <div className="flex justify-end mt-2">
+                    {activeSubTab === "open" && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setExpandedOffer(isExpanded ? null : offer.offerId); }}
+                        className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium transition-colors ${LOCK_LEVEL_BG_COLORS[offer.lockLevel]} ${LOCK_LEVEL_COLORS[offer.lockLevel]} hover:opacity-80`}
+                      >
+                        {LOCK_LEVEL_LABELS[offer.lockLevel]}
+                        {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                      </button>
+                    )}
+                    {activeSubTab === "closed" && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setExpandedOffer(isExpanded ? null : offer.offerId); }}
+                        className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium transition-colors ${LOCK_LEVEL_BG_COLORS[3]} ${LOCK_LEVEL_COLORS[3]} hover:opacity-80`}
+                      >
+                        {LOCK_LEVEL_LABELS[3]}
+                        {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                      </button>
+                    )}
+                  </div>
 
                   {/* Confirm Pickup / Ready for Pickup section */}
                   {showConfirmPickup && (
                     <div className="mt-3 pt-3 border-t border-border/50 flex justify-end">
                       <button
-                        onClick={() => setPickupOffer(offer.offerId)}
+                        onClick={(e) => { e.stopPropagation(); setPickupOffer(offer.offerId); }}
                         className="px-3 py-1.5 text-xs font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
                       >
                         Confirm Pickup Readiness
@@ -317,25 +310,12 @@ export function MyOffersTab() {
                       <span className="text-xs text-green-500 font-medium">Ready for Pick-up</span>
                       {canUnconfirmReady && (
                         <button
-                          onClick={() => handleUnconfirmReadiness(offer.offerId)}
+                          onClick={(e) => { e.stopPropagation(); handleUnconfirmReadiness(offer.offerId); }}
                           className="text-xs text-muted-foreground hover:text-foreground underline"
                         >
                           Cancel readiness
                         </button>
                       )}
-                    </div>
-                  )}
-
-                  {/* Delete button - only when available (lockLevel 0) */}
-                  {canDelete && activeSubTab === "open" && (
-                    <div className="mt-2 flex justify-end">
-                      <button
-                        onClick={() => handleDeactivateOffer(offer.offerId, offer)}
-                        className="flex items-center gap-1 text-xs text-destructive hover:underline"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                        Delete Offer
-                      </button>
                     </div>
                   )}
                 </div>
@@ -483,6 +463,49 @@ export function MyOffersTab() {
         </div>
       )}
 
+      {/* Mobile Action Sheet Overlay */}
+      {mobileMenuOffer && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-black/60"
+            onClick={() => setMobileMenuOffer(null)}
+          />
+          {/* Action Sheet */}
+          <div className="absolute bottom-0 left-0 right-0 bg-card border-t border-border rounded-t-2xl p-4 animate-in slide-in-from-bottom duration-200">
+            <div className="w-12 h-1 bg-muted-foreground/30 rounded-full mx-auto mb-4" />
+            <div className="space-y-1">
+              <button
+                onClick={() => {
+                  setViewOffer(mobileMenuOffer);
+                  setMobileMenuOffer(null);
+                }}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-secondary transition-colors text-left"
+              >
+                <Eye className="h-5 w-5 text-muted-foreground" />
+                <span className="text-sm font-medium text-foreground">View offer details</span>
+              </button>
+              <button
+                onClick={() => {
+                  setEditOffer(mobileMenuOffer);
+                  setMobileMenuOffer(null);
+                }}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-secondary transition-colors text-left"
+              >
+                <Pencil className="h-5 w-5 text-muted-foreground" />
+                <span className="text-sm font-medium text-foreground">Edit offer</span>
+              </button>
+            </div>
+            <button
+              onClick={() => setMobileMenuOffer(null)}
+              className="w-full mt-4 py-3 rounded-lg bg-secondary text-sm font-medium text-foreground hover:bg-secondary/80 transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Modals */}
       {pickupOffer && (
         <PickupReadinessModal
@@ -494,6 +517,12 @@ export function MyOffersTab() {
         <EditOfferModal
           offerId={editOffer}
           onClose={() => setEditOffer(null)}
+        />
+      )}
+      {viewOffer && (
+        <ViewOfferModal
+          offerId={viewOffer}
+          onClose={() => setViewOffer(null)}
         />
       )}
     </div>
