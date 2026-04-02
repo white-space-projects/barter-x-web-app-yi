@@ -346,50 +346,64 @@ export function MyOffersTab() {
                           const targetProduct = targetOffer
                             ? products.find((p) => p.productId === targetOffer.productId)
                             : null;
+                          
+                          // Get the target offer's lock level for status badge display
+                          const targetLockLevel = targetOffer?.lockLevel ?? 0;
 
                           return (
                             <div
                               key={hook.hookId}
-                              className="rounded-lg border border-border bg-card p-3"
+                              className="rounded-xl border border-border bg-card overflow-hidden card-shadow-primary"
                             >
-                              <div className="flex gap-3">
-                                {/* Target offer image */}
-                                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-secondary overflow-hidden">
-                                  {targetProduct?.imageUrl ? (
-                                    <img
-                                      src={targetProduct.imageUrl}
-                                      alt={targetOffer?.title}
-                                      className="h-full w-full object-cover"
-                                      crossOrigin="anonymous"
-                                    />
-                                  ) : (
-                                    <Package className="h-5 w-5 text-muted-foreground/40" />
-                                  )}
-                                </div>
+                              <div className="p-4 min-h-[88px]">
+                                <div className="flex gap-3">
+                                  {/* 64x64 Image - show target offer's first image if available, else product image */}
+                                  <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-lg bg-secondary overflow-hidden">
+                                    {targetOffer?.images && targetOffer.images.length > 0 ? (
+                                      <img
+                                        src={targetOffer.images[0].url}
+                                        alt={targetOffer?.title}
+                                        className="h-full w-full object-cover"
+                                        crossOrigin="anonymous"
+                                      />
+                                    ) : targetProduct?.imageUrl ? (
+                                      <img
+                                        src={targetProduct.imageUrl}
+                                        alt={targetOffer?.title}
+                                        className="h-full w-full object-cover"
+                                        crossOrigin="anonymous"
+                                      />
+                                    ) : (
+                                      <Package className="h-6 w-6 text-muted-foreground/40" />
+                                    )}
+                                  </div>
 
-                                {/* Target offer info */}
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-medium truncate">
-                                    {targetOffer?.title || "Unknown Offer"}
-                                  </p>
-                                  <p className="text-xs text-muted-foreground">
-                                    {targetProduct?.subcategory} . {targetProduct?.brand}
-                                  </p>
-                                  {hook.targetUserDistance && (
-                                    <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                                      <MapPin className="h-3 w-3" />
-                                      {hook.targetUserDistance} km away
+                                  {/* Target offer info */}
+                                  <div className="flex-1 min-w-0 flex flex-col justify-center">
+                                    <p className="text-sm font-medium text-foreground truncate">
+                                      {targetOffer?.title || "Unknown Offer"}
                                     </p>
-                                  )}
+                                    <p className="text-xs text-muted-foreground">
+                                      {targetProduct?.subcategory} . {targetProduct?.brand}
+                                    </p>
+                                    {hook.targetUserDistance && (
+                                      <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                                        <MapPin className="h-3 w-3" />
+                                        {hook.targetUserDistance} km away
+                                      </p>
+                                    )}
+                                  </div>
                                 </div>
 
-                                {/* Hook status and actions */}
-                                <div className="flex flex-col items-end gap-1">
-                                  <p className={`text-xs font-medium ${HOOK_STATUS_COLORS[hook.status]}`}>
-                                    {HOOK_STATUS_LABELS[hook.status]}
-                                  </p>
+                                {/* Status badge (bottom right) - using target offer's lock level */}
+                                <div className="flex justify-end mt-2">
+                                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${LOCK_LEVEL_BG_COLORS[targetLockLevel]} ${LOCK_LEVEL_COLORS[targetLockLevel]}`}>
+                                    {LOCK_LEVEL_LABELS[targetLockLevel]}
+                                  </span>
+                                </div>
 
-                                  {/* Actions based on lock level */}
+                                {/* Actions row */}
+                                <div className="flex items-center justify-end gap-3 mt-2 pt-2 border-t border-border/50">
                                   {canRemoveHook(hook) && (
                                     <button
                                       onClick={() => handleUnhook(hook.hookId, hook)}
@@ -410,24 +424,23 @@ export function MyOffersTab() {
                                       className="flex items-center gap-1 text-xs text-primary hover:underline"
                                     >
                                       <MessageSquare className="h-3 w-3" />
-                                      Chat via Chat tab
+                                      Chat
                                     </button>
                                   )}
                                 </div>
-                              </div>
 
-                              {/* Show pickup address if hook is processing/committed */}
-                              {hook.status === "processing" && targetOffer?.pickupAddress && (
-                                <div className="mt-2 pt-2 border-t border-border/50">
-                                  <p className="text-xs text-muted-foreground flex items-start gap-1">
-                                    <MapPin className="h-3 w-3 mt-0.5 flex-shrink-0" />
-                                    <span>
-                                      <strong>Pickup Address:</strong><br />
-                                      {targetOffer.pickupAddress.street}, {targetOffer.pickupAddress.city}, {targetOffer.pickupAddress.state}, {targetOffer.pickupAddress.postalCode}, {targetOffer.pickupAddress.country}
-                                    </span>
-                                  </p>
-                                </div>
-                              )}
+                                {/* Show pickup address if hook is processing/committed */}
+                                {hook.status === "processing" && targetOffer?.pickupAddress && (
+                                  <div className="mt-2 pt-2 border-t border-border/50">
+                                    <p className="text-xs text-muted-foreground flex items-start gap-1">
+                                      <MapPin className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                                      <span>
+                                        <strong>Pickup:</strong> {targetOffer.pickupAddress.street}, {targetOffer.pickupAddress.city}
+                                      </span>
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           );
                         })}
