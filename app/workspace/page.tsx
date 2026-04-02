@@ -34,7 +34,7 @@ import { BottomNav } from "@/components/app/bottom-nav";
 import { NavigationConfirmDialog } from "@/components/app/navigation-confirm-dialog";
 import { NavigationGuardProvider, useNavigationGuard } from "@/lib/navigation-guard";
 import { Loader2, ShieldCheck } from "lucide-react";
-import type { ProductType } from "@/lib/types";
+import type { ProductType, Product } from "@/lib/types";
 
 // Tab type definition - profile is now a utility tab shown in tab content
 type UtilityTab = "my-offers" | "chat" | "admin" | "simulate" | "profile";
@@ -62,7 +62,8 @@ function WorkspaceContent() {
   const [activeUtilityTab, setActiveUtilityTab] = useState<UtilityTab | null>(null);
   const [addOfferOpen, setAddOfferOpen] = useState(false);
   const [addOfferStep, setAddOfferStep] = useState<1 | 2 | 3 | 4>(1);
-  const [addOfferCancelHandler, setAddOfferCancelHandler] = useState<(() => void) | null>(null);
+  const [addOfferInitialProduct, setAddOfferInitialProduct] = useState<Product | null>(null);
+  const addOfferCancelHandlerRef = useRef<(() => void) | null>(null);
   const [pickupModalOfferId, setPickupModalOfferId] = useState<string | null>(null);
   
   // Ref for scrollable content area - used to reset scroll on tab change
@@ -243,14 +244,14 @@ function WorkspaceContent() {
             activeUtilityTab={activeUtilityTab}
             onSelectProductType={showNavigation ? handleSelectProductType : () => {}}
             onSelectUtilityTab={showNavigation ? handleSelectUtilityTab : () => {}}
-            onAddOffer={showNavigation ? () => { setAddOfferOpen(true); setAddOfferStep(1); } : () => {}}
+            onAddOffer={showNavigation ? () => { setAddOfferInitialProduct(null); setAddOfferOpen(true); setAddOfferStep(1); } : () => {}}
             isAdmin={isAdmin}
             unreadCount={totalUnread}
             addOfferMode={addOfferOpen ? {
               currentStep: addOfferStep,
               onStepClick: (step) => setAddOfferStep(step),
-              onClose: () => setAddOfferOpen(false),
-              onCancelAttempt: () => addOfferCancelHandler?.(),
+              onClose: () => { setAddOfferOpen(false); setAddOfferInitialProduct(null); },
+              onCancelAttempt: () => addOfferCancelHandlerRef.current?.(),
             } : null}
           />
           {/* Blur overlay for new users */}
@@ -302,12 +303,17 @@ function WorkspaceContent() {
                   embedded={true}
                   currentStep={addOfferStep}
                   onStepChange={setAddOfferStep}
-                  onClose={() => setAddOfferOpen(false)}
+                  onClose={() => {
+                    setAddOfferOpen(false);
+                    setAddOfferInitialProduct(null);
+                  }}
                   onSuccess={() => {
                     setAddOfferOpen(false);
+                    setAddOfferInitialProduct(null);
                     setActiveUtilityTab("my-offers");
                   }}
-                  onRegisterCancelHandler={(handler) => setAddOfferCancelHandler(() => handler)}
+                  onRegisterCancelHandler={(handler) => { addOfferCancelHandlerRef.current = handler; }}
+                  initialProduct={addOfferInitialProduct || undefined}
                 />
               )}
 
@@ -331,7 +337,12 @@ function WorkspaceContent() {
               {!addOfferOpen && !activeUtilityTab && (
                 <ProductsTab 
                   key={activeProductType} 
-                  productType={activeProductType} 
+                  productType={activeProductType}
+                  onAddOfferWithProduct={(product) => {
+                    setAddOfferInitialProduct(product);
+                    setAddOfferStep(2); // Start from step 2 since product is pre-selected
+                    setAddOfferOpen(true);
+                  }}
                 />
               )}
             </div>
@@ -347,7 +358,7 @@ function WorkspaceContent() {
             activeUtilityTab={activeUtilityTab}
             onSelectProductType={handleSelectProductType}
             onSelectUtilityTab={handleSelectUtilityTab}
-            onAddOffer={() => { setAddOfferOpen(true); setAddOfferStep(1); }}
+            onAddOffer={() => { setAddOfferInitialProduct(null); setAddOfferOpen(true); setAddOfferStep(1); }}
             isAdmin={isAdmin}
             unreadCount={totalUnread}
           />

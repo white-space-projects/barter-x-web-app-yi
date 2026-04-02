@@ -33,6 +33,7 @@ import { getProductTypeCategories, getSubcategories as getTypeSubcategories, get
 
 type Props = {
   productType?: ProductType;
+  onAddOfferWithProduct?: (product: Product) => void;
 };
 
 // Icon mapping for categories
@@ -85,7 +86,7 @@ const SUBCATEGORY_ICONS: Record<string, React.ComponentType<{ className?: string
   Cpu,
 };
 
-export function ProductsTab({ productType = "goods" }: Props) {
+export function ProductsTab({ productType = "goods", onAddOfferWithProduct }: Props) {
   const {
     auth,
     productFilters,
@@ -339,14 +340,23 @@ export function ProductsTab({ productType = "goods" }: Props) {
         {/* ViewOffersPanel content */}
         <ViewOffersPanel 
           product={selectedProduct} 
-          onAddOffer={() => setInlineAddProduct(selectedProduct)}
+          onAddOffer={() => {
+            if (onAddOfferWithProduct) {
+              onAddOfferWithProduct(selectedProduct);
+            } else {
+              setInlineAddProduct(selectedProduct);
+            }
+          }}
         />
         
-        <AddOfferFlow
-          open={!!inlineAddProduct}
-          onClose={() => setInlineAddProduct(null)}
-          initialProduct={inlineAddProduct || undefined}
-        />
+        {/* Fallback AddOfferFlow if workspace doesn't provide callback */}
+        {!onAddOfferWithProduct && (
+          <AddOfferFlow
+            open={!!inlineAddProduct}
+            onClose={() => setInlineAddProduct(null)}
+            initialProduct={inlineAddProduct || undefined}
+          />
+        )}
       </div>
     );
   }

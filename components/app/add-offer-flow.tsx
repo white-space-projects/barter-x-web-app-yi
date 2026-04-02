@@ -910,6 +910,9 @@ export function AddOfferFlow({
   const { registerBlocker, unregisterBlocker } = useNavigationGuard();
   const BLOCKER_ID = "offer-creation-flow";
   
+  // Ref to hold the latest cancel handler for external access
+  const cancelHandlerRef = useRef<() => void>(() => {});
+  
   // Mobile detection
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
@@ -1129,12 +1132,16 @@ export function AddOfferFlow({
     onClose();
   }, [unregisterBlocker, resetAll, onClose]);
 
+  // Keep the ref updated with the latest handler
+  cancelHandlerRef.current = handleCloseAttempt;
+  
   // Register cancel handler with parent for external trigger (e.g., sidebar cancel button)
+  // We register a stable wrapper function that calls the ref, avoiding re-registration loops
   useEffect(() => {
-    if (onRegisterCancelHandler) {
-      onRegisterCancelHandler(handleCloseAttempt);
+    if (embedded && onRegisterCancelHandler) {
+      onRegisterCancelHandler(() => cancelHandlerRef.current());
     }
-  }, [onRegisterCancelHandler, handleCloseAttempt]);
+  }, [embedded, onRegisterCancelHandler]);
 
   // Handle same as profile checkbox
   const handleSameAsProfile = useCallback((checked: boolean) => {
