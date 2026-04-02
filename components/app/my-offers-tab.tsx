@@ -54,6 +54,8 @@ export function MyOffersTab() {
   const [editOffer, setEditOffer] = useState<string | null>(null);
   const [viewOffer, setViewOffer] = useState<string | null>(null);
   const [mobileMenuOffer, setMobileMenuOffer] = useState<string | null>(null);
+  // For adding an offer to a linked product from ViewOfferDetails
+  const [addOfferToProduct, setAddOfferToProduct] = useState<Product | null>(null);
 
   // Helper: Get product for an offer
   function getProductForOffer(offer: { productId: string }) {
@@ -149,6 +151,59 @@ export function MyOffersTab() {
     
     getOrCreateConversation(hookId, myOfferId, targetOfferId, targetOffer.ownerUserId);
     toast.info("Chat opened. Check the Chat tab.");
+  }
+
+  // If viewing offer details, show ViewOfferDetails inline
+  if (viewOffer) {
+    return (
+      <div className="w-full">
+        <ViewOfferDetails
+          offerId={viewOffer}
+          onClose={() => setViewOffer(null)}
+          onEdit={(offer) => {
+            setViewOffer(null);
+            setEditOffer(offer.offerId);
+          }}
+          onAddOfferToProduct={(product) => {
+            setViewOffer(null);
+            setAddOfferToProduct(product);
+          }}
+        />
+      </div>
+    );
+  }
+
+  // If adding offer to a linked product, show embedded AddOfferFlow
+  if (addOfferToProduct) {
+    return (
+      <div className="w-full">
+        <AddOfferFlow
+          open={true}
+          onClose={() => setAddOfferToProduct(null)}
+          onSuccess={() => setAddOfferToProduct(null)}
+          initialProduct={addOfferToProduct}
+          embedded={true}
+        />
+      </div>
+    );
+  }
+
+  // If editing an offer, show embedded AddOfferFlow with editOffer prop
+  if (editOffer) {
+    const offerToEdit = getOfferById(editOffer);
+    if (offerToEdit) {
+      return (
+        <div className="w-full">
+          <AddOfferFlow
+            open={true}
+            onClose={() => setEditOffer(null)}
+            onSuccess={() => setEditOffer(null)}
+            editOffer={offerToEdit}
+            embedded={true}
+          />
+        </div>
+      );
+    }
   }
 
   return (
@@ -523,36 +578,7 @@ export function MyOffersTab() {
         />
       )}
       
-      {/* Edit Offer - uses AddOfferFlow with editOffer prop */}
-      {editOffer && (() => {
-        const offerToEdit = getOfferById(editOffer);
-        return offerToEdit ? (
-          <AddOfferFlow
-            open={true}
-            onClose={() => setEditOffer(null)}
-            onSuccess={() => setEditOffer(null)}
-            editOffer={offerToEdit}
-          />
-        ) : null;
-      })()}
-      
-      {/* View Offer Details - full screen overlay */}
-      {viewOffer && (
-        <div className="fixed inset-0 z-50 bg-background">
-          <div className="h-full overflow-y-auto">
-            <div className="max-w-4xl mx-auto p-4 lg:p-6">
-              <ViewOfferDetails
-                offerId={viewOffer}
-                onClose={() => setViewOffer(null)}
-                onEdit={(offer) => {
-                  setViewOffer(null);
-                  setEditOffer(offer.offerId);
-                }}
-              />
-            </div>
-          </div>
-        </div>
-      )}
+
     </div>
   );
 }

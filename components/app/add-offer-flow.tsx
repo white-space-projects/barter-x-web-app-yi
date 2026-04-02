@@ -1477,11 +1477,42 @@ export function AddOfferFlow({
   // Parent controls step via props and sidebar is handled by workspace
   // ==========================================================================
   if (embedded) {
+    // Minimum step for edit mode (can't go back to step 1)
+    const minStep = isEditMode ? 2 : 1;
+    
     return (
       <>
+        {/* Desktop: Header with back/close button */}
+        <div className="hidden lg:flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={currentStep > minStep ? prevStep : onClose}
+              className="p-2 -ml-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+              aria-label={currentStep > minStep ? "Go back" : "Close"}
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+            <div>
+              <h1 className="text-lg font-semibold text-foreground">{isEditMode ? "Edit Offer" : "Add New Offer"}</h1>
+              <p className="text-sm text-muted-foreground">
+                Step {currentStep}: {currentStep === 1 ? "Choose Product" : currentStep === 2 ? "Add Images" : currentStep === 3 ? "Offer Details" : "Pickup Address"}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleCloseAttempt}
+            className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+            aria-label="Close"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
         {/* Mobile: Show progress indicator */}
         <div className="lg:hidden mb-4">
-          <MobileProgressIndicator currentStep={currentStep} onBack={currentStep > 1 ? prevStep : undefined} />
+          <MobileProgressIndicator currentStep={currentStep} onBack={currentStep > minStep ? prevStep : onClose} />
         </div>
 
         {/* Step content - same as overlay mode but without wrapper */}

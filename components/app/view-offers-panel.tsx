@@ -55,12 +55,10 @@ export function ViewOffersPanel({ product, onAddOffer }: Props) {
   const [hookTargetOfferId, setHookTargetOfferId] = useState<string | null>(null);
   const [expandedOfferId, setExpandedOfferId] = useState<string | null>(null);
   const [viewDetailsOfferId, setViewDetailsOfferId] = useState<string | null>(null);
-  const [navigateToProductId, setNavigateToProductId] = useState<string | null>(null);
   const [pickupOfferId, setPickupOfferId] = useState<string | null>(null);
   const [editOfferId, setEditOfferId] = useState<string | null>(null);
   const [showInlineAdd, setShowInlineAdd] = useState(false);
-  
-  const navigateToProduct = navigateToProductId ? products.find((p) => p.productId === navigateToProductId) : null;
+  const [addOfferToProduct, setAddOfferToProduct] = useState<Product | null>(null);
   const myOffers = useMemo(() => getMyOffers(), [getMyOffers]);
   const hasOffers = myOffers.length > 0;
   
@@ -111,6 +109,59 @@ export function ViewOffersPanel({ product, onAddOffer }: Props) {
       actionLabel: "View Offer",
     });
     toast.success("Direct exchange request sent! The offer owner will be notified.");
+  }
+
+  // If viewing offer details, show ViewOfferDetails inline
+  if (viewDetailsOfferId) {
+    return (
+      <div className="w-full">
+        <ViewOfferDetails
+          offerId={viewDetailsOfferId}
+          onClose={() => setViewDetailsOfferId(null)}
+          onEdit={(offer) => {
+            setViewDetailsOfferId(null);
+            setEditOfferId(offer.offerId);
+          }}
+          onAddOfferToProduct={(productToAdd) => {
+            setViewDetailsOfferId(null);
+            setAddOfferToProduct(productToAdd);
+          }}
+        />
+      </div>
+    );
+  }
+
+  // If editing an offer, show embedded AddOfferFlow
+  if (editOfferId) {
+    const offerToEdit = getOfferById(editOfferId);
+    if (offerToEdit) {
+      return (
+        <div className="w-full">
+          <AddOfferFlow
+            open={true}
+            onClose={() => setEditOfferId(null)}
+            onSuccess={() => setEditOfferId(null)}
+            editOffer={offerToEdit}
+            embedded={true}
+          />
+        </div>
+      );
+    }
+  }
+
+  // If adding offer to a linked product, show embedded AddOfferFlow
+  if (addOfferToProduct) {
+    return (
+      <div className="w-full">
+        <AddOfferFlow
+          open={true}
+          onClose={() => setAddOfferToProduct(null)}
+          onSuccess={() => setAddOfferToProduct(null)}
+          initialProduct={addOfferToProduct}
+          embedded={true}
+        />
+      </div>
+    );
   }
 
   return (
@@ -268,44 +319,6 @@ export function ViewOffersPanel({ product, onAddOffer }: Props) {
 
       {hookTargetOfferId && <HookOfferModal targetOfferId={hookTargetOfferId} onClose={() => setHookTargetOfferId(null)} />}
       {pickupOfferId && <PickupReadinessModal offerId={pickupOfferId} onClose={() => setPickupOfferId(null)} />}
-      {editOfferId && (() => {
-        const offerToEdit = getOfferById(editOfferId);
-        return offerToEdit ? (
-          <AddOfferFlow
-            open={true}
-            onClose={() => setEditOfferId(null)}
-            onSuccess={() => setEditOfferId(null)}
-            editOffer={offerToEdit}
-          />
-        ) : null;
-      })()}
-      {viewDetailsOfferId && (
-        <div className="fixed inset-0 z-50 bg-background">
-          <div className="h-full overflow-y-auto">
-            <div className="max-w-4xl mx-auto p-4 lg:p-6">
-              <ViewOfferDetails
-                offerId={viewDetailsOfferId}
-                onClose={() => setViewDetailsOfferId(null)}
-                onEdit={(offer) => {
-                  setViewDetailsOfferId(null);
-                  setEditOfferId(offer.offerId);
-                }}
-                onAddOfferToProduct={(productToAdd) => {
-                  setViewDetailsOfferId(null);
-                  setNavigateToProductId(productToAdd.productId);
-                }}
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Add Offer Flow for navigate to product */}
-      <AddOfferFlow
-        open={!!navigateToProduct}
-        onClose={() => setNavigateToProductId(null)}
-        initialProduct={navigateToProduct || undefined}
-      />
     </>
   );
 }
