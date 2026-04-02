@@ -188,7 +188,7 @@ export function MyOffersTab() {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 items-start">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3 items-start">
           {displayedOffers.map((offer) => {
             const product = getProductForOffer(offer);
             const hooks = getHooksByFromOffer(offer.offerId);
@@ -205,7 +205,7 @@ export function MyOffersTab() {
             return (
               <div
                 key={offer.offerId}
-                className="rounded-xl border border-border bg-card overflow-hidden w-full min-w-[320px] card-shadow-primary relative"
+                className="rounded-xl border border-border bg-card overflow-hidden w-full card-shadow-primary relative"
               >
                 {/* Card header - compact 88px with 12px top/bottom, 16px left/right padding */}
                 <div className="py-3 px-4">
