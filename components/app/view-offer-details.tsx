@@ -17,7 +17,7 @@ import {
   Pencil, Trash2, Plus, Link2Off, AlertTriangle, Loader2, Info
 } from "lucide-react";
 import { useBarterStore } from "@/lib/store";
-import type { Offer, Product, OfferImage, LockLevel } from "@/lib/types";
+import type { Offer, Product, OfferImage, LockLevel, Hook } from "@/lib/types";
 import { LOCK_LEVEL_LABELS, LOCK_LEVEL_COLORS, LOCK_LEVEL_BG_COLORS } from "@/lib/types";
 import { toast } from "sonner";
 import { getProductInfo } from "@/lib/offer-info-fields";
@@ -209,17 +209,47 @@ function ImageCarousel({
   );
 }
 
+// Hook status display labels
+const HOOK_STATUS_LABELS: Record<string, string> = {
+  searching: "Searching",
+  cycle_found: "Cycle Found",
+  reserved: "Reserved",
+  processing: "Processing",
+  exchanged: "Exchanged",
+  expired: "Expired",
+};
+
+const HOOK_STATUS_COLORS: Record<string, string> = {
+  searching: "text-blue-500",
+  cycle_found: "text-purple-500",
+  reserved: "text-yellow-500",
+  processing: "text-orange-500",
+  exchanged: "text-green-500",
+  expired: "text-muted-foreground",
+};
+
+const HOOK_STATUS_BG_COLORS: Record<string, string> = {
+  searching: "bg-blue-500/10",
+  cycle_found: "bg-purple-500/10",
+  reserved: "bg-yellow-500/10",
+  processing: "bg-orange-500/10",
+  exchanged: "bg-green-500/10",
+  expired: "bg-muted/50",
+};
+
 // =============================================================================
 // HOOKED OFFER CARD (for my own offer view)
 // =============================================================================
 function HookedOfferCard({
   offer,
   product,
+  hook,
   onUnhook,
   canUnhook,
 }: {
   offer: Offer;
   product: Product | undefined;
+  hook: Hook;
   onUnhook: () => void;
   canUnhook: boolean;
 }) {
@@ -258,24 +288,36 @@ function HookedOfferCard({
             </p>
           </div>
 
-          {/* Status badge */}
+          {/* Offer status badge */}
           <span className={`flex-shrink-0 px-2 py-0.5 rounded-full text-xs font-medium ${LOCK_LEVEL_BG_COLORS[offer.lockLevel]} ${LOCK_LEVEL_COLORS[offer.lockLevel]}`}>
             {LOCK_LEVEL_LABELS[offer.lockLevel]}
           </span>
         </div>
 
-        {/* Unhook action */}
-        {canUnhook && (
-          <div className="flex justify-end mt-2 pt-2 border-t border-border/50">
-            <button
-              onClick={onUnhook}
-              className="flex items-center gap-1 text-xs text-destructive hover:underline"
-            >
-              <Link2Off className="h-3 w-3" />
-              Unhook
-            </button>
+        {/* Hook status and unhook action */}
+        <div className="flex items-center justify-between mt-2 pt-2 border-t border-border/50">
+          {/* Hook status */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs text-muted-foreground">Hook:</span>
+            <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${HOOK_STATUS_BG_COLORS[hook.status]} ${HOOK_STATUS_COLORS[hook.status]}`}>
+              {HOOK_STATUS_LABELS[hook.status] || hook.status}
+            </span>
           </div>
-        )}
+
+          {/* Unhook button - always visible but disabled when not allowed */}
+          <button
+            onClick={onUnhook}
+            disabled={!canUnhook}
+            className={`flex items-center gap-1 text-xs transition-colors ${
+              canUnhook 
+                ? "text-destructive hover:underline" 
+                : "text-muted-foreground/50 cursor-not-allowed"
+            }`}
+          >
+            <Link2Off className="h-3 w-3" />
+            Unhook
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -609,6 +651,7 @@ export function ViewOfferDetails({ offerId, onClose, onEdit, onAddOfferToProduct
                     key={hook.hookId}
                     offer={hookedOffer!}
                     product={hookedProduct}
+                    hook={hook}
                     onUnhook={() => handleUnhook(hook.hookId)}
                     canUnhook={hook.lockLevel === 0 && hook.isActive}
                   />
