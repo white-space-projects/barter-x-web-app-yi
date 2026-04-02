@@ -106,10 +106,13 @@ export function ProductsTab({ productType = "goods", onAddOfferWithProduct }: Pr
     // Reset any open product detail view when switching product types
     setSelectedProduct(null);
     setInlineAddProduct(null);
+    setPanelViewMode("list");
   }, [productType, setActiveProductTypeForFilters]);
 
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [inlineAddProduct, setInlineAddProduct] = useState<Product | null>(null);
+  // Track ViewOffersPanel view mode to conditionally hide product header
+  const [panelViewMode, setPanelViewMode] = useState<"list" | "details" | "edit" | "add">("list");
   const [showFilters, setShowFilters] = useState(false);
   const [mobileActionProduct, setMobileActionProduct] = useState<Product | null>(null);
   const [expandedSection, setExpandedSection] = useState<"category" | "subcategory" | null>(null);
@@ -309,39 +312,41 @@ export function ProductsTab({ productType = "goods", onAddOfferWithProduct }: Pr
   if (selectedProduct) {
     return (
       <div className="w-full">
-        {/* Header with back button */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3 min-w-0">
-            <button
-              onClick={() => setSelectedProduct(null)}
-              className="flex h-8 w-8 items-center justify-center rounded-md text-primary hover:text-primary/80 hover:bg-primary/10 transition-colors"
-              aria-label="Go back"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </button>
-            <div className="min-w-0">
-              <h2 className="text-sm font-semibold text-foreground truncate">
-                Offers for {selectedProduct.title}
-              </h2>
-              <p className="text-xs text-muted-foreground truncate">
-                {selectedProduct.subcategory} / {selectedProduct.brand}
-              </p>
+        {/* Header with back button - only show when in list mode */}
+        {panelViewMode === "list" && (
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3 min-w-0">
+              <button
+                onClick={() => setSelectedProduct(null)}
+                className="flex h-8 w-8 items-center justify-center rounded-md text-primary hover:text-primary/80 hover:bg-primary/10 transition-colors"
+                aria-label="Go back"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </button>
+              <div className="min-w-0">
+                <h2 className="text-sm font-semibold text-foreground truncate">
+                  Offers for {selectedProduct.title}
+                </h2>
+                <p className="text-xs text-muted-foreground truncate">
+                  {selectedProduct.subcategory} / {selectedProduct.brand}
+                </p>
+              </div>
             </div>
+            <button 
+              onClick={() => {
+                if (onAddOfferWithProduct) {
+                  onAddOfferWithProduct(selectedProduct);
+                } else {
+                  setInlineAddProduct(selectedProduct);
+                }
+              }} 
+              className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Add Offer
+            </button>
           </div>
-          <button 
-            onClick={() => {
-              if (onAddOfferWithProduct) {
-                onAddOfferWithProduct(selectedProduct);
-              } else {
-                setInlineAddProduct(selectedProduct);
-              }
-            }} 
-            className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            Add Offer
-          </button>
-        </div>
+        )}
         
         {/* ViewOffersPanel content */}
         <ViewOffersPanel 
@@ -353,6 +358,7 @@ export function ProductsTab({ productType = "goods", onAddOfferWithProduct }: Pr
               setInlineAddProduct(selectedProduct);
             }
           }}
+          onViewModeChange={setPanelViewMode}
         />
         
         {/* Fallback AddOfferFlow if workspace doesn't provide callback */}

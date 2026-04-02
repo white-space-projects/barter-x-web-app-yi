@@ -11,7 +11,7 @@
  * Shows different actions based on ownership (owner vs other users).
  */
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { AlertCircle, Package, ArrowRightLeft, Pencil, Plus } from "lucide-react";
 import { useBarterStore } from "@/lib/store";
 import type { Product, HookStatus } from "@/lib/types";
@@ -41,14 +41,18 @@ const HOOK_STATUS_LABELS: Record<HookStatus, string> = {
   expired: "Expired",
 };
 
+type ViewMode = "list" | "details" | "edit" | "add";
+
 type Props = {
   product: Product;
   onAddOffer?: () => void;
+  /** Callback when view mode changes - parent can hide its header when not in 'list' mode */
+  onViewModeChange?: (mode: ViewMode) => void;
 };
 
 // VIEW OFFERS PANEL - Displays all offers within a product (inline content, not overlay)
 // Shows different actions based on ownership (owner vs other users)
-export function ViewOffersPanel({ product, onAddOffer }: Props) {
+export function ViewOffersPanel({ product, onAddOffer, onViewModeChange }: Props) {
   const { getOffersByProduct, auth, products, hooks, getOfferById, getProductById, addNotification, getHooksByFromOffer, getMyOffers } = useBarterStore();
   const offers = getOffersByProduct(product.productId);
   
@@ -61,6 +65,19 @@ export function ViewOffersPanel({ product, onAddOffer }: Props) {
   const [addOfferToProduct, setAddOfferToProduct] = useState<Product | null>(null);
   const myOffers = useMemo(() => getMyOffers(), [getMyOffers]);
   const hasOffers = myOffers.length > 0;
+
+  // Notify parent of view mode changes
+  useEffect(() => {
+    if (viewDetailsOfferId) {
+      onViewModeChange?.("details");
+    } else if (editOfferId) {
+      onViewModeChange?.("edit");
+    } else if (addOfferToProduct || showInlineAdd) {
+      onViewModeChange?.("add");
+    } else {
+      onViewModeChange?.("list");
+    }
+  }, [viewDetailsOfferId, editOfferId, addOfferToProduct, showInlineAdd, onViewModeChange]);
   
   // Check if user has offers with matching product type
   const hasMatchingTypeOffers = useMemo(() => {

@@ -431,17 +431,11 @@ export function ViewOfferDetails({ offerId, onClose, onEdit, onAddOfferToProduct
         </div>
 
         {/* Main content - responsive layout */}
+        {/* Desktop: Image left, info right | Mobile: Info above image, description below */}
         <div className="flex flex-col lg:flex-row gap-6">
-          {/* Left: Image carousel */}
-          <div className="lg:w-[320px] flex-shrink-0">
-            <ImageCarousel
-              images={offer.images || []}
-              onImageClick={(index) => setFullscreenImageIndex(index)}
-            />
-          </div>
-
-          {/* Right: Offer info */}
-          <div className="flex-1 min-w-0">
+          
+          {/* Mobile only: Title, product info, brand ABOVE image */}
+          <div className="lg:hidden">
             {/* Title and status */}
             <div className="flex items-start justify-between gap-3 mb-3">
               <h1 className="text-xl font-semibold text-foreground">{offer.title}</h1>
@@ -452,9 +446,36 @@ export function ViewOfferDetails({ offerId, onClose, onEdit, onAddOfferToProduct
 
             {/* Product info */}
             <div className="mb-4">
-              <p className="text-sm text-muted-foreground">Product</p>
               <p className="text-sm font-medium text-foreground">{product.title}</p>
               <p className="text-xs text-muted-foreground">{product.subcategory} . {product.brand}</p>
+            </div>
+          </div>
+
+          {/* Image carousel */}
+          <div className="lg:w-[320px] flex-shrink-0">
+            <ImageCarousel
+              images={offer.images || []}
+              onImageClick={(index) => setFullscreenImageIndex(index)}
+            />
+          </div>
+
+          {/* Right: Offer info (Desktop shows title here, Mobile shows description below image) */}
+          <div className="flex-1 min-w-0">
+            {/* Desktop only: Title, product info, brand NEXT TO image */}
+            <div className="hidden lg:block">
+              {/* Title and status */}
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <h1 className="text-xl font-semibold text-foreground">{offer.title}</h1>
+                <span className={`px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap ${LOCK_LEVEL_BG_COLORS[offer.lockLevel]} ${LOCK_LEVEL_COLORS[offer.lockLevel]}`}>
+                  {LOCK_LEVEL_LABELS[offer.lockLevel]}
+                </span>
+              </div>
+
+              {/* Product info */}
+              <div className="mb-4">
+                <p className="text-sm font-medium text-foreground">{product.title}</p>
+                <p className="text-xs text-muted-foreground">{product.subcategory} . {product.brand}</p>
+              </div>
             </div>
 
             {/* Description */}
@@ -480,45 +501,13 @@ export function ViewOfferDetails({ offerId, onClose, onEdit, onAddOfferToProduct
               </div>
             )}
 
-            {/* Product Specifications Accordion */}
-            {productSpecs && productSpecs.length > 0 && (
-              <div className="mb-5">
-                <button
-                  onClick={() => setSpecsExpanded(!specsExpanded)}
-                  className="w-full flex items-center justify-between p-3 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors"
-                >
-                  <div className="flex items-center gap-2">
-                    <Info className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium text-foreground">Product Specifications</span>
-                  </div>
-                  {specsExpanded ? (
-                    <ChevronUp className="h-4 w-4 text-muted-foreground" />
-                  ) : (
-                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                  )}
-                </button>
-                {specsExpanded && (
-                  <div className="mt-2 p-3 rounded-lg border border-border bg-card">
-                    <div className="space-y-2">
-                      {productSpecs.map((spec, idx) => (
-                        <div key={idx} className="flex justify-between items-center py-1.5 border-b border-border/50 last:border-0">
-                          <span className="text-xs text-muted-foreground">{spec.fieldName}</span>
-                          <span className="text-sm text-foreground">{spec.value}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Pickup Address */}
+            {/* Pickup Location (city/country with info text for non-owners) */}
             {address && (
               <div className="mb-5">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Pickup Address</p>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Pickup Location</p>
                 <div className="flex items-start gap-2 text-sm text-foreground p-3 rounded-lg bg-secondary/50">
                   <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                  <div>
+                  <div className="flex-1">
                     {isMyOffer ? (
                       // Full address for my own offer
                       <p>
@@ -532,8 +521,14 @@ export function ViewOfferDetails({ offerId, onClose, onEdit, onAddOfferToProduct
                         ].filter(Boolean).join(", ")}
                       </p>
                     ) : (
-                      // Only city and country for other users
-                      <p>{[address.city, address.country].filter(Boolean).join(", ")}</p>
+                      // Only city and country for other users with info text
+                      <>
+                        <p className="font-medium">{[address.city, address.country].filter(Boolean).join(", ")}</p>
+                        <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                          <Info className="h-3 w-3" />
+                          Full address will be visible if this offer is hooked and reserved
+                        </p>
+                      </>
                     )}
                   </div>
                 </div>
@@ -562,6 +557,38 @@ export function ViewOfferDetails({ offerId, onClose, onEdit, onAddOfferToProduct
             )}
           </div>
         </div>
+
+        {/* Product Specifications Accordion - above linked products/hooked offers */}
+        {productSpecs && productSpecs.length > 0 && (
+          <div className="mt-6">
+            <button
+              onClick={() => setSpecsExpanded(!specsExpanded)}
+              className="w-full flex items-center justify-between p-3 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <Info className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium text-foreground">Product Specifications</span>
+              </div>
+              {specsExpanded ? (
+                <ChevronUp className="h-4 w-4 text-muted-foreground" />
+              ) : (
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              )}
+            </button>
+            {specsExpanded && (
+              <div className="mt-2 p-3 rounded-lg border border-border bg-card">
+                <div className="space-y-2">
+                  {productSpecs.map((spec, idx) => (
+                    <div key={idx} className="flex justify-between items-center py-1.5 border-b border-border/50 last:border-0">
+                      <span className="text-xs text-muted-foreground">{spec.fieldName}</span>
+                      <span className="text-sm text-foreground">{spec.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Ownership-based sections */}
         {isMyOffer ? (
