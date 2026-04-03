@@ -183,6 +183,13 @@ export function OfferCard({
   // Get user's offers for direct exchange check
   const myOffers = getMyOffers();
   const hasOffers = myOffers.length > 0;
+  
+  // Check if current user has already hooked this offer
+  const isAlreadyHooked = (() => {
+    if (isOwnOffer) return false;
+    const myOfferIds = myOffers.map((o) => o.offerId);
+    return hooks.some((h) => h.toOfferId === offer.offerId && myOfferIds.includes(h.fromOfferId));
+  })();
 
   // ---------------------------------------------------------------------------
   // STATUS HELPERS
@@ -455,7 +462,7 @@ export function OfferCard({
                 </div>
               ) : (
                 <>
-                  {canDirectExchange && (
+                  {canDirectExchange && !isAlreadyHooked && (
                     <button
                       onClick={handleDirectExchange}
                       className="flex items-center gap-1 rounded-md border border-primary bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/20"
@@ -465,10 +472,15 @@ export function OfferCard({
                     </button>
                   )}
                   <button
-                    onClick={() => onHook?.(offer.offerId)}
-                    className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+                    onClick={() => !isAlreadyHooked && onHook?.(offer.offerId)}
+                    disabled={isAlreadyHooked}
+                    className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                      isAlreadyHooked
+                        ? "bg-muted text-muted-foreground cursor-not-allowed"
+                        : "bg-primary text-primary-foreground hover:bg-primary/90"
+                    }`}
                   >
-                    Hook this offer
+                    {isAlreadyHooked ? "Hooked" : "Hook this offer"}
                   </button>
                 </>
               )}

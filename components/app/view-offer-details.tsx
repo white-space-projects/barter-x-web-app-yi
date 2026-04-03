@@ -451,6 +451,17 @@ export function ViewOfferDetails({ offerId, onClose, onEdit, onAddOfferToProduct
   // Determine if this is my offer
   const isMyOffer = auth.user?.userId === offer?.ownerUserId;
   
+  // Get my offers for checking if already hooked
+  const { getMyOffers, hooks } = useBarterStore();
+  const myOffers = getMyOffers();
+  
+  // Check if current user has already hooked this offer
+  const isAlreadyHooked = useMemo(() => {
+    if (!offer || isMyOffer) return false;
+    const myOfferIds = myOffers.map((o) => o.offerId);
+    return hooks.some((h) => h.toOfferId === offer.offerId && myOfferIds.includes(h.fromOfferId));
+  }, [offer, isMyOffer, myOffers, hooks]);
+  
   // Get hooks for my offer
   const myHooks = useMemo(() => {
     if (!isMyOffer || !offer) return [];
@@ -548,11 +559,16 @@ export function ViewOfferDetails({ offerId, onClose, onEdit, onAddOfferToProduct
             {/* Hook this offer button - only for other users' offers */}
             {!isMyOffer && (
               <button
-                onClick={() => setShowHookModal(true)}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground font-medium text-sm hover:bg-primary/90 transition-colors mb-4"
+                onClick={() => !isAlreadyHooked && setShowHookModal(true)}
+                disabled={isAlreadyHooked}
+                className={`inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg font-medium text-sm transition-colors mb-4 ${
+                  isAlreadyHooked
+                    ? "bg-muted text-muted-foreground cursor-not-allowed"
+                    : "bg-primary text-primary-foreground hover:bg-primary/90"
+                }`}
               >
                 <ArrowRightLeft className="h-4 w-4" />
-                Hook this offer
+                {isAlreadyHooked ? "Hooked" : "Hook this offer"}
               </button>
             )}
           </div>
@@ -586,11 +602,16 @@ export function ViewOfferDetails({ offerId, onClose, onEdit, onAddOfferToProduct
               {/* Hook this offer button - only for other users' offers */}
               {!isMyOffer && (
                 <button
-                  onClick={() => setShowHookModal(true)}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground font-medium text-sm hover:bg-primary/90 transition-colors mb-4"
+                  onClick={() => !isAlreadyHooked && setShowHookModal(true)}
+                  disabled={isAlreadyHooked}
+                  className={`inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg font-medium text-sm transition-colors mb-4 ${
+                    isAlreadyHooked
+                      ? "bg-muted text-muted-foreground cursor-not-allowed"
+                      : "bg-primary text-primary-foreground hover:bg-primary/90"
+                  }`}
                 >
                   <ArrowRightLeft className="h-4 w-4" />
-                  Hook this offer
+                  {isAlreadyHooked ? "Hooked" : "Hook this offer"}
                 </button>
               )}
             </div>
