@@ -246,80 +246,127 @@ function HookedOfferCard({
   hook,
   onUnhook,
   canUnhook,
+  isUnhooking,
 }: {
   offer: Offer;
   product: Product | undefined;
   hook: Hook;
   onUnhook: () => void;
   canUnhook: boolean;
+  isUnhooking?: boolean;
 }) {
+  const [showUnhookDialog, setShowUnhookDialog] = useState(false);
+
+  const handleUnhookClick = () => {
+    if (canUnhook) {
+      setShowUnhookDialog(true);
+    }
+  };
+
+  const handleConfirmUnhook = () => {
+    setShowUnhookDialog(false);
+    onUnhook();
+  };
+
   return (
-    <div className="rounded-lg border border-border bg-card overflow-hidden card-shadow-primary">
-      <div className="p-3">
-        <div className="flex gap-2.5 items-center">
-          {/* 48x48 Image */}
-          <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-secondary overflow-hidden">
-            {offer.images && offer.images.length > 0 ? (
-              <img
-                src={offer.images[0].url}
-                alt={offer.title}
-                className="h-full w-full object-cover"
-                crossOrigin="anonymous"
-              />
-            ) : product?.imageUrl ? (
-              <img
-                src={product.imageUrl}
-                alt={offer.title}
-                className="h-full w-full object-cover"
-                crossOrigin="anonymous"
-              />
-            ) : (
-              <Package className="h-5 w-5 text-muted-foreground/40" />
-            )}
-          </div>
+    <>
+      <div className="rounded-lg border border-border bg-card overflow-hidden card-shadow-primary">
+        <div className="p-3">
+          <div className="flex gap-2.5 items-center">
+            {/* 48x48 Image */}
+            <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-secondary overflow-hidden">
+              {offer.images && offer.images.length > 0 ? (
+                <img
+                  src={offer.images[0].url}
+                  alt={offer.title}
+                  className="h-full w-full object-cover"
+                  crossOrigin="anonymous"
+                />
+              ) : product?.imageUrl ? (
+                <img
+                  src={product.imageUrl}
+                  alt={offer.title}
+                  className="h-full w-full object-cover"
+                  crossOrigin="anonymous"
+                />
+              ) : (
+                <Package className="h-5 w-5 text-muted-foreground/40" />
+              )}
+            </div>
 
-          {/* Offer info */}
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-foreground truncate">
-              {offer.title}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {product?.subcategory} . {product?.brand}
-            </p>
-          </div>
+            {/* Offer info */}
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-foreground truncate">
+                {offer.title}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {product?.subcategory} . {product?.brand}
+              </p>
+            </div>
 
-          {/* Offer status badge */}
-          <span className={`flex-shrink-0 px-2 py-0.5 rounded-full text-xs font-medium ${LOCK_LEVEL_BG_COLORS[offer.lockLevel]} ${LOCK_LEVEL_COLORS[offer.lockLevel]}`}>
-            {LOCK_LEVEL_LABELS[offer.lockLevel]}
-          </span>
-        </div>
-
-        {/* Hook status and unhook action */}
-        <div className="flex items-center justify-between mt-2 pt-2 border-t border-border/50">
-          {/* Hook status */}
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs text-muted-foreground">Hook:</span>
-            <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${HOOK_STATUS_BG_COLORS[hook.status]} ${HOOK_STATUS_COLORS[hook.status]}`}>
-              {HOOK_STATUS_LABELS[hook.status] || hook.status}
+            {/* Offer status badge */}
+            <span className={`flex-shrink-0 px-2 py-0.5 rounded-full text-xs font-medium ${LOCK_LEVEL_BG_COLORS[offer.lockLevel]} ${LOCK_LEVEL_COLORS[offer.lockLevel]}`}>
+              {LOCK_LEVEL_LABELS[offer.lockLevel]}
             </span>
           </div>
 
-          {/* Unhook button - always visible but disabled when not allowed */}
-          <button
-            onClick={onUnhook}
-            disabled={!canUnhook}
-            className={`flex items-center gap-1 text-xs transition-colors ${
-              canUnhook 
-                ? "text-destructive hover:underline" 
-                : "text-muted-foreground/50 cursor-not-allowed"
-            }`}
-          >
-            <Link2Off className="h-3 w-3" />
-            Unhook
-          </button>
+          {/* Hook status and unhook action */}
+          <div className="flex items-center justify-between mt-2 pt-2 border-t border-border/50">
+            {/* Hook status */}
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-muted-foreground">Hook:</span>
+              <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${HOOK_STATUS_BG_COLORS[hook.status]} ${HOOK_STATUS_COLORS[hook.status]}`}>
+                {HOOK_STATUS_LABELS[hook.status] || hook.status}
+              </span>
+            </div>
+
+            {/* Unhook button - always visible but disabled when not allowed */}
+            <button
+              onClick={handleUnhookClick}
+              disabled={!canUnhook || isUnhooking}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+                canUnhook && !isUnhooking
+                  ? "bg-destructive/10 text-destructive hover:bg-destructive/20 border border-destructive/30" 
+                  : "bg-muted/50 text-muted-foreground/50 cursor-not-allowed border border-transparent"
+              }`}
+            >
+              {isUnhooking ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <Link2Off className="h-3 w-3" />
+              )}
+              Unhook
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+
+      {/* Unhook Confirmation Dialog */}
+      <AlertDialog open={showUnhookDialog} onOpenChange={setShowUnhookDialog}>
+        <AlertDialogContent className="max-w-[340px] rounded-xl">
+          <AlertDialogHeader>
+            <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10">
+              <AlertTriangle className="h-6 w-6 text-destructive" />
+            </div>
+            <AlertDialogTitle className="text-center">Unhook this offer?</AlertDialogTitle>
+            <AlertDialogDescription className="text-center">
+              Unhooking will remove your offer from any eligible exchange cycles involving this offer. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col gap-2 sm:flex-col">
+            <AlertDialogAction
+              onClick={handleConfirmUnhook}
+              className="w-full bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Yes, Unhook
+            </AlertDialogAction>
+            <AlertDialogCancel className="w-full mt-0">
+              Cancel
+            </AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
 
@@ -397,6 +444,7 @@ export function ViewOfferDetails({ offerId, onClose, onEdit, onAddOfferToProduct
   const [specsExpanded, setSpecsExpanded] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [unhookingId, setUnhookingId] = useState<string | null>(null);
   
   // Determine if this is my offer
   const isMyOffer = auth.user?.userId === offer?.ownerUserId;
@@ -428,8 +476,10 @@ export function ViewOfferDetails({ offerId, onClose, onEdit, onAddOfferToProduct
 
   // Handler functions
   const handleUnhook = useCallback(async (hookId: string) => {
-    await new Promise((r) => setTimeout(r, 300));
+    setUnhookingId(hookId);
+    await new Promise((r) => setTimeout(r, 400));
     removeHook(hookId);
+    setUnhookingId(null);
     toast.success("Offer unhooked successfully");
   }, [removeHook]);
 
@@ -654,6 +704,7 @@ export function ViewOfferDetails({ offerId, onClose, onEdit, onAddOfferToProduct
                     hook={hook}
                     onUnhook={() => handleUnhook(hook.hookId)}
                     canUnhook={hook.lockLevel === 0 && hook.isActive}
+                    isUnhooking={unhookingId === hook.hookId}
                   />
                 ))}
               </div>
