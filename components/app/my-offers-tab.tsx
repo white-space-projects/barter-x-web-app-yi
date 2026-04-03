@@ -8,6 +8,7 @@ import { LOCK_LEVEL_LABELS, LOCK_LEVEL_COLORS, LOCK_LEVEL_BG_COLORS, LOCK_LEVEL_
 import { PickupReadinessModal } from "./pickup-readiness-modal";
 import { AddOfferFlow } from "./add-offer-flow";
 import { ViewOfferDetails } from "./view-offer-details";
+import { SimulateControl } from "./simulate-control";
 import { toast } from "sonner";
 
 /**
@@ -482,6 +483,12 @@ export function MyOffersTab() {
                                         Chat
                                       </button>
                                     )}
+                                    {/* TEMPORARY: Simulate control for testing workflow */}
+                                    <SimulateControl
+                                      currentLockLevel={targetLockLevel}
+                                      hookId={hook.hookId}
+                                      targetOfferId={hook.toOfferId}
+                                    />
                                     {/* Unhook button - always visible but disabled when locked */}
                                     <button
                                       onClick={() => canRemoveHook(hook) && handleUnhook(hook.hookId, hook)}
