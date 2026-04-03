@@ -40,6 +40,16 @@ const HOOK_STATUS_LABELS: Record<HookStatus, string> = {
   expired: "Expired",
 };
 
+// Hook status background colors
+const HOOK_STATUS_BG_COLORS: Record<HookStatus, string> = {
+  searching: "bg-blue-500/10",
+  cycle_found: "bg-purple-500/10",
+  reserved: "bg-yellow-500/10",
+  processing: "bg-orange-500/10",
+  exchanged: "bg-green-500/10",
+  expired: "bg-muted/50",
+};
+
 export function MyOffersTab() {
   const { getMyOffers, getHooksByFromOffer, getOfferById, removeHook, updateHook, updateOffer, products, addNotification, getOrCreateConversation } =
     useBarterStore();
@@ -451,23 +461,18 @@ export function MyOffersTab() {
                                   </span>
                                 </div>
 
-                                {/* Actions row - only show if there are actions */}
-                                {(canRemoveHook(hook) || (!canRemoveHook(hook) && hook.lockLevel > 0) || hook.status === "reserved" || hook.status === "processing") && (
-                                  <div className="flex items-center justify-end gap-3 mt-2 pt-2 border-t border-border/50">
-                                    {canRemoveHook(hook) && (
-                                      <button
-                                        onClick={() => handleUnhook(hook.hookId, hook)}
-                                        className="flex items-center gap-1 text-xs text-destructive hover:underline"
-                                      >
-                                        <Link2Off className="h-3 w-3" />
-                                        Unhook
-                                      </button>
-                                    )}
-                                    {!canRemoveHook(hook) && hook.lockLevel > 0 && (
-                                      <span className="text-xs text-muted-foreground italic">
-                                        Locked
-                                      </span>
-                                    )}
+                                {/* Hook status and actions row */}
+                                <div className="flex items-center justify-between mt-2 pt-2 border-t border-border/50">
+                                  {/* Hook status badge */}
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-xs text-muted-foreground">Hook:</span>
+                                    <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${HOOK_STATUS_BG_COLORS[hook.status]} ${HOOK_STATUS_COLORS[hook.status]}`}>
+                                      {HOOK_STATUS_LABELS[hook.status]}
+                                    </span>
+                                  </div>
+                                  
+                                  {/* Action buttons */}
+                                  <div className="flex items-center gap-2">
                                     {(hook.status === "reserved" || hook.status === "processing") && (
                                       <button
                                         onClick={() => handleOpenChat(hook.hookId, offer.offerId, hook.toOfferId)}
@@ -477,8 +482,21 @@ export function MyOffersTab() {
                                         Chat
                                       </button>
                                     )}
+                                    {/* Unhook button - always visible but disabled when locked */}
+                                    <button
+                                      onClick={() => canRemoveHook(hook) && handleUnhook(hook.hookId, hook)}
+                                      disabled={!canRemoveHook(hook)}
+                                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+                                        canRemoveHook(hook)
+                                          ? "bg-destructive/10 text-destructive hover:bg-destructive/20 border border-destructive/30" 
+                                          : "bg-muted/50 text-muted-foreground/50 cursor-not-allowed border border-transparent"
+                                      }`}
+                                    >
+                                      <Link2Off className="h-3 w-3" />
+                                      Unhook
+                                    </button>
                                   </div>
-                                )}
+                                </div>
 
                                 {/* Show pickup address if hook is processing/committed */}
                                 {hook.status === "processing" && targetOffer?.pickupAddress && (

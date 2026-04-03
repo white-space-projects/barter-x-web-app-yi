@@ -51,6 +51,8 @@ export function HookOfferModal({ targetOfferId, onClose }: Props) {
       fromOfferId: selectedOfferId,
       toOfferId: targetOfferId,
       status: "searching" as const,
+      lockLevel: 0 as const,
+      isActive: true,
     };
 
     addHook(hook);
