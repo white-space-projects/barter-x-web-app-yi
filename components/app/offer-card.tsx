@@ -49,7 +49,7 @@
  * />
  */
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   Package,
   Pencil,
@@ -185,11 +185,11 @@ export function OfferCard({
   const hasOffers = myOffers.length > 0;
   
   // Check if current user has already hooked this offer
-  const isAlreadyHooked = (() => {
+  const isAlreadyHooked = useMemo(() => {
     if (isOwnOffer) return false;
     const myOfferIds = myOffers.map((o) => o.offerId);
     return hooks.some((h) => h.toOfferId === offer.offerId && myOfferIds.includes(h.fromOfferId));
-  })();
+  }, [isOwnOffer, myOffers, hooks, offer.offerId]);
 
   // ---------------------------------------------------------------------------
   // STATUS HELPERS
