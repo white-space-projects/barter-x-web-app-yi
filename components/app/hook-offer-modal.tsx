@@ -6,7 +6,7 @@ import { useBarterStore } from "@/lib/store";
 import { generateGuid } from "@/lib/guid";
 import { toast } from "sonner";
 import { getProductTypeName } from "@/lib/product-types";
-import type { HookStatus } from "@/lib/types";
+import type { HookStatus, LockLevel } from "@/lib/types";
 import { LOCK_LEVEL_LABELS, LOCK_LEVEL_COLORS, LOCK_LEVEL_BG_COLORS } from "@/lib/types";
 import {
   AlertDialog,
@@ -19,14 +19,14 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-// Hook status colors
+// Hook status colors - matching my-offers-tab.tsx
 const HOOK_STATUS_COLORS: Record<HookStatus, string> = {
-  searching: "text-blue-500",
-  cycle_found: "text-purple-500",
-  reserved: "text-yellow-500",
-  processing: "text-orange-500",
-  exchanged: "text-green-500",
-  expired: "text-muted-foreground",
+  searching: "text-muted-foreground",
+  cycle_found: "text-primary",
+  reserved: "text-primary",
+  processing: "text-[#3b82f6]",
+  exchanged: "text-muted-foreground",
+  expired: "text-destructive",
 };
 
 const HOOK_STATUS_BG_COLORS: Record<HookStatus, string> = {
@@ -82,6 +82,11 @@ export function HookOfferModal({ targetOfferId, onClose }: Props) {
   const alreadyHookedOfferIds = hooks
     .filter((h) => h.toOfferId === targetOfferId)
     .map((h) => h.fromOfferId);
+
+  // Helper: Check if a hook can be removed
+  function canRemoveHook(hook: { lockLevel: LockLevel; isActive: boolean }): boolean {
+    return hook.lockLevel === 0 && hook.isActive;
+  }
 
   // Handle unhook
   const handleUnhook = useCallback(async (hookId: string) => {
@@ -182,198 +187,223 @@ export function HookOfferModal({ targetOfferId, onClose }: Props) {
           </div>
         )}
 
-        {/* Offer cards list */}
+        {/* Offer cards list - matching my-offers-tab design */}
         <div className="flex flex-col gap-3 max-h-80 overflow-y-auto">
           {myOffers.map((offer) => {
             const outHooks = getHooksByFromOffer(offer.offerId);
-            const atMax = outHooks.length >= 3;
             const alreadyHooked = alreadyHookedOfferIds.includes(offer.offerId);
             const isSelected = selectedOfferId === offer.offerId;
             const isExpanded = expandedOfferId === offer.offerId;
             const offerProduct = getProductById(offer.productId);
             
             // Card is selectable if not already hooked to this target
-            // Even if at max hooks, user can unhook first
             const canSelect = !alreadyHooked;
 
             return (
               <div
                 key={offer.offerId}
-                className={`rounded-lg border overflow-hidden transition-colors ${
+                className={`rounded-xl border overflow-hidden transition-colors ${
                   isSelected
-                    ? "border-primary bg-primary/5 card-shadow-primary"
+                    ? "border-primary ring-2 ring-primary/20"
                     : alreadyHooked
                       ? "border-border bg-secondary/30 opacity-60"
-                      : "border-border bg-card hover:border-primary/30"
-                }`}
+                      : "border-border bg-card"
+                } card-shadow-primary`}
               >
-                {/* Main card content - clickable to select */}
-                <div
-                  onClick={() => canSelect && setSelectedOfferId(offer.offerId)}
-                  className={`p-3 ${canSelect ? "cursor-pointer" : "cursor-not-allowed"}`}
-                >
-                  <div className="flex gap-3 items-start">
-                    {/* Image */}
-                    <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-lg bg-secondary overflow-hidden">
-                      {offer.images && offer.images.length > 0 ? (
-                        <img
-                          src={offer.images[0].url}
-                          alt={offer.title}
-                          className="h-full w-full object-cover"
-                          crossOrigin="anonymous"
-                        />
-                      ) : offerProduct?.imageUrl ? (
-                        <img
-                          src={offerProduct.imageUrl}
-                          alt={offer.title}
-                          className="h-full w-full object-cover"
-                          crossOrigin="anonymous"
-                        />
-                      ) : (
-                        <Package className="h-6 w-6 text-muted-foreground/40" />
-                      )}
-                    </div>
+                {/* Card header - matching my-offers-tab design */}
+                <div className="py-3 px-4">
+                  <div className="flex gap-3">
+                    {/* Clickable card area */}
+                    <div 
+                      className={`flex gap-3 flex-1 min-w-0 ${canSelect ? "cursor-pointer" : "cursor-not-allowed"}`}
+                      onClick={() => canSelect && setSelectedOfferId(offer.offerId)}
+                    >
+                      {/* 64x64 Image */}
+                      <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-lg bg-secondary overflow-hidden">
+                        {offer.images && offer.images.length > 0 ? (
+                          <img
+                            src={offer.images[0].url}
+                            alt={offer.title}
+                            className="h-full w-full object-cover"
+                            crossOrigin="anonymous"
+                          />
+                        ) : offerProduct?.imageUrl ? (
+                          <img
+                            src={offerProduct.imageUrl}
+                            alt={offer.title}
+                            className="h-full w-full object-cover"
+                            crossOrigin="anonymous"
+                          />
+                        ) : (
+                          <Package className="h-6 w-6 text-muted-foreground/40" />
+                        )}
+                      </div>
 
-                    {/* Offer info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-2">
+                      {/* Content */}
+                      <div className="flex-1 min-w-0 flex flex-col justify-center">
                         <p className="text-sm font-medium text-foreground truncate">
                           {offer.title}
                         </p>
-                        {/* Status badge */}
-                        <span className={`flex-shrink-0 px-2 py-0.5 rounded-full text-xs font-medium ${LOCK_LEVEL_BG_COLORS[offer.lockLevel]} ${LOCK_LEVEL_COLORS[offer.lockLevel]}`}>
-                          {LOCK_LEVEL_LABELS[offer.lockLevel]}
-                        </span>
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {offerProduct?.subcategory} . {offerProduct?.brand}
-                      </p>
-                      
-                      {/* Hook count and status */}
-                      <div className="flex items-center justify-between mt-2">
-                        <span className={`text-xs ${atMax ? "text-destructive" : "text-muted-foreground"}`}>
-                          {outHooks.length}/3 hooks used
-                        </span>
+                        <p className="text-xs text-muted-foreground">
+                          {offerProduct?.subcategory} . {offerProduct?.brand}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Hooks {outHooks.length}/3
+                        </p>
                         {alreadyHooked && (
-                          <span className="text-xs text-muted-foreground bg-secondary px-2 py-0.5 rounded">
-                            Already hooked
-                          </span>
-                        )}
-                        {isSelected && !alreadyHooked && (
-                          <span className="text-xs text-primary font-medium">
-                            Selected
-                          </span>
+                          <p className="text-xs text-muted-foreground italic mt-0.5">
+                            Already hooked to this offer
+                          </p>
                         )}
                       </div>
+                    </div>
+
+                    {/* Right side: radio button and status badge */}
+                    <div className="flex-shrink-0 flex flex-col items-end justify-between h-16">
+                      {/* Radio button indicator */}
+                      <div 
+                        onClick={() => canSelect && setSelectedOfferId(offer.offerId)}
+                        className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
+                          canSelect ? "cursor-pointer" : "cursor-not-allowed"
+                        } ${
+                          isSelected
+                            ? "border-primary bg-primary"
+                            : alreadyHooked
+                              ? "border-muted-foreground/30"
+                              : "border-muted-foreground/50 hover:border-primary/50"
+                        }`}
+                      >
+                        {isSelected && (
+                          <div className="w-2 h-2 rounded-full bg-primary-foreground" />
+                        )}
+                      </div>
+                      
+                      {/* Status badge with down arrow - accordion trigger */}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setExpandedOfferId(isExpanded ? null : offer.offerId); }}
+                        className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium transition-colors ${LOCK_LEVEL_BG_COLORS[offer.lockLevel]} ${LOCK_LEVEL_COLORS[offer.lockLevel]} hover:opacity-80`}
+                      >
+                        {LOCK_LEVEL_LABELS[offer.lockLevel]}
+                        {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                      </button>
                     </div>
                   </div>
                 </div>
 
-                {/* Accordion toggle for hooks */}
-                {outHooks.length > 0 && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setExpandedOfferId(isExpanded ? null : offer.offerId);
-                    }}
-                    className="w-full flex items-center justify-between px-3 py-2 border-t border-border/50 text-xs text-muted-foreground hover:text-foreground transition-colors bg-secondary/20"
-                  >
-                    <span>View hooked offers ({outHooks.length})</span>
-                    {isExpanded ? (
-                      <ChevronUp className="h-3.5 w-3.5" />
+                {/* Expanded section: outgoing hooks - matching my-offers-tab design */}
+                {isExpanded && (
+                  <div className="border-t border-border bg-secondary/30 px-4 py-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        Your Outgoing Hooks ({outHooks.length}/3)
+                      </p>
+                      <button
+                        onClick={() => setExpandedOfferId(null)}
+                        className="p-1 text-muted-foreground hover:text-foreground"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+
+                    {outHooks.length === 0 ? (
+                      <p className="text-xs text-muted-foreground py-2">
+                        No hooks yet. This offer has all 3 hook slots available.
+                      </p>
                     ) : (
-                      <ChevronDown className="h-3.5 w-3.5" />
+                      <div className="space-y-2">
+                        {outHooks.map((hook) => {
+                          const targetOfferData = getOfferById(hook.toOfferId);
+                          const targetProductData = targetOfferData
+                            ? products.find((p) => p.productId === targetOfferData.productId)
+                            : null;
+                          
+                          // Get the target offer's lock level for status badge display
+                          const targetLockLevel = targetOfferData?.lockLevel ?? 0;
+
+                          return (
+                            <div
+                              key={hook.hookId}
+                              className="rounded-lg border border-border bg-card overflow-hidden card-shadow-primary"
+                            >
+                              {/* Compact hooked offer card - smaller padding and image */}
+                              <div className="p-3">
+                                <div className="flex gap-2.5 items-center">
+                                  {/* 48x48 Image - smaller than main cards */}
+                                  <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-secondary overflow-hidden">
+                                    {targetOfferData?.images && targetOfferData.images.length > 0 ? (
+                                      <img
+                                        src={targetOfferData.images[0].url}
+                                        alt={targetOfferData?.title}
+                                        className="h-full w-full object-cover"
+                                        crossOrigin="anonymous"
+                                      />
+                                    ) : targetProductData?.imageUrl ? (
+                                      <img
+                                        src={targetProductData.imageUrl}
+                                        alt={targetOfferData?.title}
+                                        className="h-full w-full object-cover"
+                                        crossOrigin="anonymous"
+                                      />
+                                    ) : (
+                                      <Package className="h-5 w-5 text-muted-foreground/40" />
+                                    )}
+                                  </div>
+
+                                  {/* Target offer info */}
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-foreground truncate">
+                                      {targetOfferData?.title || "Unknown Offer"}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                      {targetProductData?.subcategory} . {targetProductData?.brand}
+                                    </p>
+                                  </div>
+
+                                  {/* Status badge - inline right side */}
+                                  <span className={`flex-shrink-0 px-2 py-0.5 rounded-full text-xs font-medium ${LOCK_LEVEL_BG_COLORS[targetLockLevel]} ${LOCK_LEVEL_COLORS[targetLockLevel]}`}>
+                                    {LOCK_LEVEL_LABELS[targetLockLevel]}
+                                  </span>
+                                </div>
+
+                                {/* Hook status and actions row */}
+                                <div className="flex items-center justify-between mt-2 pt-2 border-t border-border/50">
+                                  {/* Hook status badge */}
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-xs text-muted-foreground">Hook:</span>
+                                    <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${HOOK_STATUS_BG_COLORS[hook.status]} ${HOOK_STATUS_COLORS[hook.status]}`}>
+                                      {HOOK_STATUS_LABELS[hook.status]}
+                                    </span>
+                                  </div>
+                                  
+                                  {/* Unhook button - always visible but disabled when locked */}
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (canRemoveHook(hook)) {
+                                        setShowUnhookDialog({ hookId: hook.hookId, offerTitle: targetOfferData?.title || "Unknown" });
+                                      }
+                                    }}
+                                    disabled={!canRemoveHook(hook) || unhookingId === hook.hookId}
+                                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+                                      canRemoveHook(hook) && unhookingId !== hook.hookId
+                                        ? "bg-destructive/10 text-destructive hover:bg-destructive/20 border border-destructive/30" 
+                                        : "bg-muted/50 text-muted-foreground/50 cursor-not-allowed border border-transparent"
+                                    }`}
+                                  >
+                                    {unhookingId === hook.hookId ? (
+                                      <Loader2 className="h-3 w-3 animate-spin" />
+                                    ) : (
+                                      <Link2Off className="h-3 w-3" />
+                                    )}
+                                    Unhook
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     )}
-                  </button>
-                )}
-
-                {/* Expanded hooks section */}
-                {isExpanded && outHooks.length > 0 && (
-                  <div className="border-t border-border/50 bg-secondary/10 p-3 space-y-2">
-                    {outHooks.map((hook) => {
-                      const hookedOffer = getOfferById(hook.toOfferId);
-                      if (!hookedOffer) return null;
-                      const hookedProduct = products.find((p) => p.productId === hookedOffer.productId);
-                      const canUnhook = hook.lockLevel === 0 && hook.isActive;
-
-                      return (
-                        <div key={hook.hookId} className="rounded-lg border border-border bg-card overflow-hidden">
-                          <div className="p-2.5">
-                            <div className="flex gap-2 items-center">
-                              {/* Small image */}
-                              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-md bg-secondary overflow-hidden">
-                                {hookedOffer.images && hookedOffer.images.length > 0 ? (
-                                  <img
-                                    src={hookedOffer.images[0].url}
-                                    alt={hookedOffer.title}
-                                    className="h-full w-full object-cover"
-                                    crossOrigin="anonymous"
-                                  />
-                                ) : hookedProduct?.imageUrl ? (
-                                  <img
-                                    src={hookedProduct.imageUrl}
-                                    alt={hookedOffer.title}
-                                    className="h-full w-full object-cover"
-                                    crossOrigin="anonymous"
-                                  />
-                                ) : (
-                                  <Package className="h-4 w-4 text-muted-foreground/40" />
-                                )}
-                              </div>
-
-                              {/* Hooked offer info */}
-                              <div className="flex-1 min-w-0">
-                                <p className="text-xs font-medium text-foreground truncate">
-                                  {hookedOffer.title}
-                                </p>
-                                <p className="text-[10px] text-muted-foreground">
-                                  {hookedProduct?.subcategory}
-                                </p>
-                              </div>
-
-                              {/* Offer status badge */}
-                              <span className={`flex-shrink-0 px-1.5 py-0.5 rounded-full text-[10px] font-medium ${LOCK_LEVEL_BG_COLORS[hookedOffer.lockLevel]} ${LOCK_LEVEL_COLORS[hookedOffer.lockLevel]}`}>
-                                {LOCK_LEVEL_LABELS[hookedOffer.lockLevel]}
-                              </span>
-                            </div>
-
-                            {/* Hook status and unhook action */}
-                            <div className="flex items-center justify-between mt-2 pt-2 border-t border-border/50">
-                              {/* Hook status */}
-                              <div className="flex items-center gap-1.5">
-                                <span className="text-[10px] text-muted-foreground">Hook:</span>
-                                <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${HOOK_STATUS_BG_COLORS[hook.status]} ${HOOK_STATUS_COLORS[hook.status]}`}>
-                                  {HOOK_STATUS_LABELS[hook.status]}
-                                </span>
-                              </div>
-
-                              {/* Unhook button */}
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  if (canUnhook) {
-                                    setShowUnhookDialog({ hookId: hook.hookId, offerTitle: hookedOffer.title });
-                                  }
-                                }}
-                                disabled={!canUnhook || unhookingId === hook.hookId}
-                                className={`flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium transition-colors ${
-                                  canUnhook && unhookingId !== hook.hookId
-                                    ? "bg-destructive/10 text-destructive hover:bg-destructive/20 border border-destructive/30" 
-                                    : "bg-muted/50 text-muted-foreground/50 cursor-not-allowed border border-transparent"
-                                }`}
-                              >
-                                {unhookingId === hook.hookId ? (
-                                  <Loader2 className="h-2.5 w-2.5 animate-spin" />
-                                ) : (
-                                  <Link2Off className="h-2.5 w-2.5" />
-                                )}
-                                Unhook
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
                   </div>
                 )}
               </div>
