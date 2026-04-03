@@ -5,7 +5,8 @@
  * Remove before production deployment.
  */
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import type { LockLevel, HookStatus } from "@/lib/types";
 import { useBarterStore } from "@/lib/store";
 import { toast } from "sonner";
@@ -18,11 +19,22 @@ type SimulateControlProps = {
 
 export function SimulateControl({ currentLockLevel, hookId, targetOfferId }: SimulateControlProps) {
   const [showMenu, setShowMenu] = useState(false);
+  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const { updateOffer, updateHook } = useBarterStore();
 
+  // Calculate menu position when opened
+  useEffect(() => {
+    if (showMenu && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setMenuPosition({
+        top: rect.bottom + 4,
+        left: Math.max(8, rect.right - 140), // 140 is min-w of dropdown, ensure at least 8px from left edge
+      });
+    }
+  }, [showMenu]);
+
   const handleSimulate = (lockLevel: LockLevel) => {
-    console.log("[v0] handleSimulate:", { lockLevel, hookId, targetOfferId });
-    
     const statusMap: Record<LockLevel, HookStatus> = {
       0: "searching",
       1: "reserved",
@@ -54,13 +66,13 @@ export function SimulateControl({ currentLockLevel, hookId, targetOfferId }: Sim
   ];
 
   return (
-    <div className="relative" onClick={(e) => e.stopPropagation()}>
+    <div onClick={(e) => e.stopPropagation()}>
       <button
+        ref={buttonRef}
         type="button"
         onClick={(e) => {
           e.stopPropagation();
           e.preventDefault();
-          console.log("[v0] Simulate clicked");
           setShowMenu((prev) => !prev);
         }}
         className="px-2 py-1 rounded text-xs font-medium bg-amber-500/10 text-amber-600 border border-amber-500/30 border-dashed hover:bg-amber-500/20 transition-colors"
@@ -68,17 +80,22 @@ export function SimulateControl({ currentLockLevel, hookId, targetOfferId }: Sim
         Simulate
       </button>
       
-      {showMenu && (
+      {showMenu && typeof document !== "undefined" && createPortal(
         <>
+          {/* Backdrop to close menu */}
           <div 
-            className="fixed inset-0 z-10" 
+            className="fixed inset-0 z-[9998]" 
             onClick={(e) => {
               e.stopPropagation();
               setShowMenu(false);
             }}
           />
           
-          <div className="absolute right-0 top-full mt-1 z-20 bg-card border border-border rounded-lg shadow-lg py-1 min-w-[140px]">
+          {/* Dropdown menu - fixed position via portal to escape overflow containers */}
+          <div 
+            className="fixed z-[9999] bg-card border border-border rounded-lg shadow-xl py-1 min-w-[140px]"
+            style={{ top: menuPosition.top, left: menuPosition.left }}
+          >
             <div className="px-2 py-1 text-[10px] text-amber-600 font-medium uppercase tracking-wide border-b border-border mb-1">
               Test Status
             </div>
@@ -99,7 +116,8 @@ export function SimulateControl({ currentLockLevel, hookId, targetOfferId }: Sim
               </button>
             ))}
           </div>
-        </>
+        </>,
+        document.body
       )}
     </div>
   );
