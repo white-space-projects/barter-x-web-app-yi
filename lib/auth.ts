@@ -1,26 +1,41 @@
+/**
+ * =============================================================================
+ * AUTH LIBRARY - #Auth#Session#, #Auth#PAT#
+ * =============================================================================
+ * Core authentication utilities for session management.
+ * 
+ * TAGS:
+ * - #Auth#Session#Create# - Session cookie creation
+ * - #Auth#Session#Verify# - Session token verification
+ * - #Auth#Session#Clear# - Session cookie deletion
+ * - #Auth#PAT#Storage# - PAT/access_token handling
+ * - #Auth#SupabaseMapping# - Supabase field mappings
+ * - #Trace#Login#SessionId# - Session ID generation
+ * =============================================================================
+ */
 import { cookies } from "next/headers"
 import { SignJWT, jwtVerify } from "jose"
 
-// Backend API base URL
+// #API#Login#BackendURL# - Backend API base URL
 export const API_BASE_URL = "https://api-dev.project-b.app/api/v1"
 
-// Session configuration
+// #Auth#Session#Config# - Session configuration
 const SESSION_SECRET = new TextEncoder().encode(
   process.env.SESSION_SECRET || "your-secret-key-min-32-chars-long!!"
 )
 const SESSION_DURATION = 24 * 60 * 60 * 1000 // 24 hours
 
-// User session data structure
+// #Auth#SupabaseMapping#UserObject# - User session data structure
 export interface UserSession {
-  id: number
-  user_id: string
-  email: string
-  name: string
-  access_token: string,
-  region: String
+  id: number // #Auth#SupabaseMapping#UserId#
+  user_id: string // #Auth#SupabaseMapping#UserId#
+  email: string // #Auth#SupabaseMapping#UserEmail#
+  name: string // #Auth#SupabaseMapping#UserName#
+  access_token: string // #Auth#PAT#Storage#
+  region: String // #Auth#SupabaseMapping#UserRegion#
 }
 
-// Create a session token with user data
+// #Auth#Session#TokenCreate# - Create a session token with user data
 export async function createSessionToken(user: UserSession): Promise<string> {
   const token = await new SignJWT({ 
     id: user.id,
@@ -38,7 +53,7 @@ export async function createSessionToken(user: UserSession): Promise<string> {
   return token
 }
 
-// Verify a session token
+// #Auth#Session#Verify# - Verify a session token
 export async function verifySessionToken(token: string): Promise<UserSession | null> {
   try {
     const { payload } = await jwtVerify(token, SESSION_SECRET)
@@ -55,7 +70,7 @@ export async function verifySessionToken(token: string): Promise<UserSession | n
   }
 }
 
-// Set session cookie
+// #Auth#Session#Create# - Set session cookie
 export async function setSessionCookie(user: UserSession): Promise<void> {
   const token = await createSessionToken(user)
   const cookieStore = await cookies()
@@ -70,7 +85,7 @@ export async function setSessionCookie(user: UserSession): Promise<void> {
   })
 }
 
-// Get current session
+// #Auth#Session#Get# - Get current session
 export async function getSession(): Promise<UserSession | null> {
   const cookieStore = await cookies()
   const token = cookieStore.get("session")?.value
@@ -82,19 +97,19 @@ export async function getSession(): Promise<UserSession | null> {
   return verifySessionToken(token)
 }
 
-// Clear session cookie
+// #Auth#Session#Clear# - Clear session cookie
 export async function clearSession(): Promise<void> {
   const cookieStore = await cookies()
   cookieStore.delete("session")
 }
 
-// Email validation
+// #Login#Email#Validation# - Email validation
 export function isValidEmail(email: string): boolean {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   return emailRegex.test(email)
 }
 
-// Generate a unique device ID
+// #Trace#Login#DeviceId# - Generate a unique device ID
 export function generateDeviceId(): string {
   return crypto.randomUUID()
 }

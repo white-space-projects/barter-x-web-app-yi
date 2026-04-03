@@ -1,3 +1,38 @@
+/**
+ * =============================================================================
+ * LOGIN PAGE - Backend Handoff Reference
+ * =============================================================================
+ * 
+ * SEARCH TAGS BY CATEGORY:
+ * 
+ * GOOGLE AUTH: #Login#Google#ClickEvent#, #Login#Google#Success#, 
+ *   #Login#Google#TokenAcquisition#, #API#Login#Google#VerifyRequest#,
+ *   #API#Login#Google#RequestPayload#, #API#Login#Google#ResponsePayload#
+ * 
+ * APPLE AUTH: #Login#Apple#ClickEvent#, #Login#Apple#SignIn#,
+ *   #Login#Apple#DeviceDetection#, #Login#Apple#TokenAcquisition#,
+ *   #API#Login#Apple#VerifyRequest#, #API#Login#Apple#RequestPayload#
+ * 
+ * EMAIL OTP: #Login#Email#Form#, #Login#OTP#Send#, #Login#OTP#Verify#,
+ *   #API#Login#OTP#SendRequest#, #API#Login#OTP#VerifyRequest#,
+ *   #Login#OTPResend#
+ * 
+ * SESSION/AUTH: #Auth#PAT#Generation#, #Auth#Session#Create#,
+ *   #Auth#SupabaseMapping#UserObject#, #Auth#AdminCheck#
+ * 
+ * ANALYTICS: #Analytics#Login#Google#, #Analytics#Login#Apple#, 
+ *   #Analytics#Login#OTP#
+ * 
+ * LOGGING: #Logging#Login#Google#, #Logging#Login#Apple#, #Logging#Login#OTP#
+ * 
+ * ERRORS: #Error#Login#Google#, #Error#Login#Apple#, #Error#Login#OTP#,
+ *   #Error#Login#TroubleReporting#
+ * 
+ * LOCATION: #Login#Location#AutoDetect#, #Login#Location#Validation#
+ * 
+ * =============================================================================
+ */
+
 "use client";
 
 import React from "react";
@@ -14,49 +49,54 @@ import { SupportAPI, type LoginIssueReport } from "@/lib/api";
 
 type LoginStep = "credentials" | "otp";
 
+// #Auth#AdminEmails# - Admin email configuration
 const ADMIN_EMAIL = "admin@barter-x.com";
 const ADMIN_OTP = "123456";
 
 export default function LoginPage() {
   const { auth, authReady, login } = useBarterStore();
   const router = useRouter();
+  // #Auth#AdminEmails# - Admin emails from environment variable
   const adminEmails = JSON.parse(process.env.NEXT_PUBLIC_ADMIN_EMAILS || "[]");
+  
+  // #Login#LoadingStates# - All loading state variables
   const [step, setStep] = useState<LoginStep>("credentials");
-  const [email, setEmail] = useState("");
-  const [name, setName] = useState("");
-  const [otp, setOtp] = useState("");
+  const [email, setEmail] = useState(""); // #Login#Email#Input#
+  const [name, setName] = useState(""); // #Login#Email#NameInput#
+  const [otp, setOtp] = useState(""); // #Login#OTP#Input#
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [appleLoading, setAppleLoading] = useState(false);
-  const [countdown, setCountdown] = useState(0);
+  const [countdown, setCountdown] = useState(0); // #Login#OTP#CountdownTimer#
   const [errors, setErrors] = useState<Record<string, string>>({});
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   
-  // Login trouble reporting state
+  // #Error#Login#TroubleReporting# - Login trouble reporting state
   const [hasLoginError, setHasLoginError] = useState(false);
   const [lastError, setLastError] = useState<{ type: string; message: string } | null>(null);
   const [showTroubleForm, setShowTroubleForm] = useState(false);
   const [troubleMessage, setTroubleMessage] = useState("");
   const [reportingIssue, setReportingIssue] = useState(false);
   
-  // Location state (auto-detected from IP)
-  const [city, setCity] = useState("");
-  const [country, setCountry] = useState("");
+  // #Login#Location#AutoDetect# - Location state (auto-detected from IP)
+  const [city, setCity] = useState(""); // #Login#Location#CityInput#
+  const [country, setCountry] = useState(""); // #Login#Location#CountryInput#
   const [countryCode, setCountryCode] = useState("");
   const [locationLoading, setLocationLoading] = useState(true);
   const [locationDetected, setLocationDetected] = useState(false);
-  const [locationNotSupported, setLocationNotSupported] = useState(false);
+  const [locationNotSupported, setLocationNotSupported] = useState(false); // #Login#Location#NotSupported#
   
   // Available options for dropdowns
   const countries = getCountryNames();
   const cities = country ? getCitiesForCountry(country) : [];
   
-  // Apple device detection
+  // #Login#Apple#DeviceDetection# - Apple device detection for showing Apple Sign-In
   const [showAppleSignIn, setShowAppleSignIn] = useState(false);
 
-  // Redirect if already logged in (after auth is ready)
+  // #Redirect#Login#AlreadyAuthenticated# - Redirect if already logged in
   useEffect(() => {
     if (authReady && auth.isAuthenticated) {
+      // #Trace#Login#RedirectToWorkspace#
       router.replace("/workspace");
     }
   }, [authReady, auth.isAuthenticated, router]);
@@ -66,10 +106,11 @@ export default function LoginPage() {
     setShowAppleSignIn(isAppleDevice());
   }, []);
 
-  // Auto-detect location from IP
+  // #API#Login#LocationDetection# - Auto-detect location from IP
   useEffect(() => {
     async function detectLocation() {
       setLocationLoading(true);
+      // #Login#Location#AutoDetect# - Call IP geolocation API
       const location = await detectLocationFromIP();
       if (location) {
         // Check if detected country is in our supported list
@@ -128,23 +169,34 @@ export default function LoginPage() {
     return errs;
   }, [email, city, country]);
 
+  // #Login#OTP#Send# - Send OTP handler
   async function handleSendOtp(e: React.FormEvent) {
     e.preventDefault();
+    // #Login#Email#Validation# - Validate credentials before sending
     const errs = validateCredentials();
     setErrors(errs);
     if (Object.keys(errs).length > 0) return;
 
     setLoading(true);
+    // #Logging#Login#OTP#SendAttempt# - TODO: Log OTP send attempt
+    // #Analytics#Login#OTP#SendInitiated# - TODO: Track OTP send initiated
     
     try {
-      // MOCK OTP SEND - Bypassing real API
+      // #API#Login#OTP#SendRequest# - POST /api/send-otp
+      // #API#Login#OTP#RequestPayload# - Request: { email: string }
+      // MOCK OTP SEND - Bypassing real API (replace with actual API call)
       await new Promise((r) => setTimeout(r, 500)); // Simulate network delay
       
       setLoading(false);
       setStep("otp");
-      setCountdown(60);
+      setCountdown(60); // #Login#OTP#CountdownTimer# - Start countdown
+      // #Login#OTP#SendSuccess# - OTP sent successfully
+      // #Analytics#Login#OTP#SendSuccess# - TODO: Track OTP send success
       toast.success("OTP sent to your email. (Use any 6-digit code)");
     } catch (error) {
+      // #Error#Login#OTP#SendFailed# - OTP send failed
+      // #Logging#Login#OTP#SendError# - TODO: Log OTP send error
+      // #Analytics#Login#OTP#SendFailed# - TODO: Track OTP send failure
       setLoading(false);
       setHasLoginError(true);
       setLastError({ type: "otp_send", message: error instanceof Error ? error.message : "Failed to send OTP" });
@@ -152,8 +204,10 @@ export default function LoginPage() {
     }
   }
 
+  // #Login#OTP#Verify# - Verify OTP handler
   async function handleVerifyOtp(e: React.FormEvent) {
     e.preventDefault();
+    // #Login#OTP#Validation# - Validate OTP format
     const errs: Record<string, string> = {};
     if (!otp || otp.length !== 6 || !/^\d{6}$/.test(otp)) {
       errs.otp = "Enter a valid 6-digit OTP.";
@@ -162,32 +216,46 @@ export default function LoginPage() {
     if (Object.keys(errs).length > 0) return;
 
     setLoading(true);
+    // #Logging#Login#OTP#VerifyAttempt# - TODO: Log OTP verify attempt
+    // #Analytics#Login#OTP#VerifyInitiated# - TODO: Track OTP verify initiated
     
     try {
-      // MOCK OTP VERIFY - Accept any 6-digit OTP
+      // #API#Login#OTP#VerifyRequest# - POST /api/verify-otp
+      // #API#Login#OTP#RequestPayload# - Request: { email, otp, name, device_id, region }
+      // MOCK OTP VERIFY - Accept any 6-digit OTP (replace with actual API call)
       await new Promise((r) => setTimeout(r, 500)); // Simulate network delay
       
-      // Admin shortcut: admin@barter-x.com
+      // #Auth#AdminCheck# - Check if user is admin
       const isAdmin = adminEmails.includes(email.toLowerCase());
 
+      // #Auth#SupabaseMapping#UserObject# - User object structure
+      // #API#Login#OTP#ResponsePayload# - Response: { success, access_token, user }
       const user = {
-          userId: generateGuid(),
-          name: name.trim() || "Barter User",
-          email: email.toLowerCase(),
-          isAdmin,
-          city: city.trim() || "Berlin",
-          country: country.trim() || "Germany",
-          countryCode: countryCode || "DE",
+          userId: generateGuid(), // #Auth#SupabaseMapping#UserId#
+          name: name.trim() || "Barter User", // #Auth#SupabaseMapping#UserName#
+          email: email.toLowerCase(), // #Auth#SupabaseMapping#UserEmail#
+          isAdmin, // #Auth#SupabaseMapping#UserRole#
+          city: city.trim() || "Berlin", // #Auth#SupabaseMapping#UserCity#
+          country: country.trim() || "Germany", // #Auth#SupabaseMapping#UserCountry#
+          countryCode: countryCode || "DE", // #Auth#SupabaseMapping#UserCountryCode#
       };
+      // #Auth#PAT#Generation# - Generate access token
       const token = generateGuid();
 
+      // #Auth#Session#Create# - Create user session
       login(user, token);
       setLoading(false);
+      // #Logging#Login#OTP#VerifySuccess# - TODO: Log successful verification
+      // #Analytics#Login#OTP#VerifySuccess# - TODO: Track OTP verify success
       toast.success("Logged in successfully.");
       
-      // Navigate to workspace - profile will be shown inline if needed
+      // #Redirect#Login#Success# - Navigate to workspace
+      // #Trace#Login#RedirectToWorkspace#
       router.push("/workspace");
     } catch (error) {
+      // #Error#Login#OTP#VerifyFailed# - OTP verification failed
+      // #Logging#Login#OTP#VerifyError# - TODO: Log OTP verify error
+      // #Analytics#Login#OTP#VerifyFailed# - TODO: Track OTP verify failure
       setLoading(false);
       setHasLoginError(true);
       setLastError({ type: "otp_verify", message: error instanceof Error ? error.message : "OTP verification failed" });
@@ -195,40 +263,59 @@ export default function LoginPage() {
     }
   }
 
+    // #Login#Google#Success# - Google sign-in success handler
+    // #Login#Google#TokenAcquisition# - Receives credential from Google
     const handleGoogleSuccess = async (credentialResponse: any) => {
+        // #Login#Google#ClickEvent# - Google button clicked
         setGoogleLoading(true);
+        // #Logging#Login#Google#Attempt# - TODO: Log Google sign-in attempt
+        // #Analytics#Login#Google#Initiated# - TODO: Track Google sign-in initiated
         
         try {
-          // MOCK GOOGLE LOGIN - Bypassing real API
+          // #API#Login#Google#VerifyRequest# - POST /api/auth/google/verify
+          // #API#Login#Google#RequestPayload# - Request: { id_token, device_id, region }
+          // MOCK GOOGLE LOGIN - Bypassing real API (replace with actual API call)
           await new Promise((r) => setTimeout(r, 800)); // Simulate network delay
           
+          // #Auth#SupabaseMapping#GoogleUser# - Google user mapping
+          // #API#Login#Google#ResponsePayload# - Response: { success, access_token, user }
           const mockGoogleUser = {
-            userId: generateGuid(),
-            name: "Google User",
-            email: "google.user@gmail.com",
-            isAdmin: false,
-            city: city.trim() || "Berlin",
-            country: country.trim() || "Germany",
-            countryCode: countryCode || "DE",
+            userId: generateGuid(), // #Auth#SupabaseMapping#UserId#
+            name: "Google User", // #Auth#SupabaseMapping#UserName#
+            email: "google.user@gmail.com", // #Auth#SupabaseMapping#UserEmail#
+            isAdmin: false, // #Auth#SupabaseMapping#UserRole#
+            city: city.trim() || "Berlin", // #Auth#SupabaseMapping#UserCity#
+            country: country.trim() || "Germany", // #Auth#SupabaseMapping#UserCountry#
+            countryCode: countryCode || "DE", // #Auth#SupabaseMapping#UserCountryCode#
           };
+          // #Auth#PAT#Generation# - Generate access token
           const token = generateGuid();
 
+          // #Auth#Session#Create# - Create user session
           login(mockGoogleUser, token);
           setGoogleLoading(false);
+          // #Logging#Login#Google#Success# - TODO: Log successful Google sign-in
+          // #Analytics#Login#Google#Success# - TODO: Track Google sign-in success
           toast.success("Signed in with Google.");
           
-          // Navigate to workspace
+          // #Redirect#Login#GoogleSuccess# - Navigate to workspace
           router.push("/workspace");
         } catch (error) {
+          // #Error#Login#Google#Failed# - Google sign-in failed
+          // #Logging#Login#Google#Error# - TODO: Log Google sign-in error
+          // #Analytics#Login#Google#Failed# - TODO: Track Google sign-in failure
           setGoogleLoading(false);
           toast.error("Google sign-in failed. Please try again.");
         }
   }
 
 
+  // #Login#Apple#SignIn# - Apple sign-in handler
+  // #Login#Apple#ClickEvent# - Apple button clicked
   async function handleAppleSignIn() {
-    // Validate location before proceeding
+    // #Login#Apple#LocationValidation# - Validate location before proceeding
     if (!city.trim() || !country.trim()) {
+      // #Error#Login#Apple#LocationMissing# - Location validation failed
       setErrors({
         city: !city.trim() ? "City is required." : "",
         country: !country.trim() ? "Country is required." : "",
@@ -240,8 +327,14 @@ export default function LoginPage() {
     }
     
     setAppleLoading(true);
+    // #Logging#Login#Apple#Attempt# - TODO: Log Apple sign-in attempt
+    // #Analytics#Login#Apple#Initiated# - TODO: Track Apple sign-in initiated
     
     try {
+      // #Login#Apple#ProviderStart# - Initialize Apple Sign-In
+      // #Login#Apple#TokenAcquisition# - Get identity token from Apple
+      // #API#Login#Apple#VerifyRequest# - POST /api/auth/apple/verify
+      // #API#Login#Apple#RequestPayload# - Request: { identity_token, authorization_code, device_id, region, user_info }
       /**
        * APPLE AUTH API PLACEHOLDER
        * ==========================
@@ -251,24 +344,32 @@ export default function LoginPage() {
        */
       await new Promise((r) => setTimeout(r, 1200));
       
-      // Mock Apple sign-in
+      // #Auth#SupabaseMapping#AppleUser# - Apple user mapping
+      // #API#Login#Apple#ResponsePayload# - Response: { success, access_token, user }
       const mockAppleUser = {
-        userId: generateGuid(),
-        name: "Apple User",
-        email: "user@icloud.com",
-        isAdmin: false,
-        city: city.trim(),
-        country: country.trim(),
-        countryCode: countryCode || undefined,
+        userId: generateGuid(), // #Auth#SupabaseMapping#UserId#
+        name: "Apple User", // #Auth#SupabaseMapping#UserName#
+        email: "user@icloud.com", // #Auth#SupabaseMapping#UserEmail#
+        isAdmin: false, // #Auth#SupabaseMapping#UserRole#
+        city: city.trim(), // #Auth#SupabaseMapping#UserCity#
+        country: country.trim(), // #Auth#SupabaseMapping#UserCountry#
+        countryCode: countryCode || undefined, // #Auth#SupabaseMapping#UserCountryCode#
       };
+      // #Auth#PAT#Generation# - Generate access token
       const token = generateGuid();
       
+      // #Auth#Session#Create# - Create user session
       login(mockAppleUser, token);
       setAppleLoading(false);
+      // #Logging#Login#Apple#Success# - TODO: Log successful Apple sign-in
+      // #Analytics#Login#Apple#Success# - TODO: Track Apple sign-in success
       toast.success("Signed in with Apple.");
-      // New user needs to complete profile
+      // #Redirect#Login#AppleSuccess# - Navigate to workspace
       router.push("/workspace");
     } catch (error) {
+      // #Error#Login#Apple#Failed# - Apple sign-in failed
+      // #Logging#Login#Apple#Error# - TODO: Log Apple sign-in error
+      // #Analytics#Login#Apple#Failed# - TODO: Track Apple sign-in failure
       setAppleLoading(false);
       setHasLoginError(true);
       setLastError({ type: "apple_auth", message: error instanceof Error ? error.message : "Apple sign-in failed" });
@@ -276,12 +377,19 @@ export default function LoginPage() {
     }
   }
 
+  // #Login#OTPResend# - Resend OTP handler
   function handleResendOtp() {
+    // #Login#OTPResend#CooldownCheck# - Check if cooldown is active
     if (countdown > 0) return;
+    // #Login#OTPResend#CooldownReset# - Reset countdown timer
     setCountdown(60);
+    // #API#Login#OTP#ResendRequest# - TODO: Call API to resend OTP
+    // #Logging#Login#OTP#Resend# - TODO: Log OTP resend
+    // #Analytics#Login#OTP#Resend# - TODO: Track OTP resend
     toast.success("OTP resent.");
   }
 
+  // #Error#Login#IssueReport# - Report login issue handler
   async function handleReportLoginIssue() {
     if (!troubleMessage.trim()) {
       toast.error("Please describe the issue you're experiencing.");
@@ -289,8 +397,10 @@ export default function LoginPage() {
     }
 
     setReportingIssue(true);
+    // #Logging#Login#Support#IssueReported# - TODO: Log issue report attempt
 
     try {
+      // #API#Login#Support#RequestPayload# - Issue report payload
       const report: LoginIssueReport = {
         email: email || "unknown",
         errorType: (lastError?.type as LoginIssueReport["errorType"]) || "other",
@@ -304,6 +414,8 @@ export default function LoginPage() {
         },
       };
 
+      // #API#Login#Support#CreateTicket# - Create support ticket
+      // #API#Login#Support#JiraIntegration# - Jira integration
       /**
        * JIRA INTEGRATION PLACEHOLDER
        * ============================
@@ -317,19 +429,22 @@ export default function LoginPage() {
        */
       const result = await SupportAPI.reportLoginIssue(report);
 
+      // #Analytics#Login#Support#IssueSubmitted# - TODO: Track issue submitted
       toast.success("Issue reported. We'll look into it shortly.");
       setShowTroubleForm(false);
       setTroubleMessage("");
       setHasLoginError(false);
       setLastError(null);
     } catch (error) {
+      // #Error#Login#Support#ReportFailed# - Issue report failed
+      // #Logging#Login#Support#ReportError# - TODO: Log report error
       toast.error("Failed to report issue. Please try again.");
     } finally {
       setReportingIssue(false);
     }
   }
 
-  // Show loading while auth is hydrating or if already authenticated
+  // #Auth#Session#Hydrating# - Show loading while auth is hydrating
   if (!authReady || auth.isAuthenticated) {
     return (
       <div className="min-h-screen bg-background">
