@@ -1294,6 +1294,13 @@ export function AddOfferFlow({
       onSuccess?.();
     } else {
       // CREATE new offer
+      
+      // If this is a custom/new product (temp product), add it to the products store
+      // so it can be found for type matching when checking hook eligibility
+      if (selectedProduct.productId.startsWith('temp-')) {
+        addProduct(selectedProduct);
+      }
+      
       addOffer({
         offerId: generateGuid(),
         productId: selectedProduct.productId,
@@ -1353,7 +1360,7 @@ export function AddOfferFlow({
   }, [
     canCreate, auth.user, selectedProduct, pickupCountry, pickupCity, pickupState, pickupZip,
     pickupAddressLine1, pickupAddressLine2, offerTitle, offerDescription, offerImages, offerInfo,
-    addOffer, updateOffer, unregisterBlocker, resetAll, onClose, onSuccess, isMobile, isEditMode, editOffer
+    addOffer, addProduct, updateOffer, unregisterBlocker, resetAll, onClose, onSuccess, isMobile, isEditMode, editOffer
   ]);
 
   // Step navigation
