@@ -14,9 +14,10 @@
 import { useState, useMemo, useCallback } from "react";
 import { 
   X, Package, MapPin, ChevronLeft, ChevronRight, ChevronDown, ChevronUp,
-  Pencil, Trash2, Plus, Link2Off, AlertTriangle, Loader2, Info
+  Pencil, Trash2, Plus, Link2Off, AlertTriangle, Loader2, Info, ArrowRightLeft
 } from "lucide-react";
 import { useBarterStore } from "@/lib/store";
+import { HookOfferModal } from "./hook-offer-modal";
 import type { Offer, Product, OfferImage, LockLevel, Hook } from "@/lib/types";
 import { LOCK_LEVEL_LABELS, LOCK_LEVEL_COLORS, LOCK_LEVEL_BG_COLORS } from "@/lib/types";
 import { toast } from "sonner";
@@ -445,6 +446,7 @@ export function ViewOfferDetails({ offerId, onClose, onEdit, onAddOfferToProduct
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [unhookingId, setUnhookingId] = useState<string | null>(null);
+  const [showHookModal, setShowHookModal] = useState(false);
   
   // Determine if this is my offer
   const isMyOffer = auth.user?.userId === offer?.ownerUserId;
@@ -542,6 +544,17 @@ export function ViewOfferDetails({ offerId, onClose, onEdit, onAddOfferToProduct
               <p className="text-sm font-medium text-foreground">{product.title}</p>
               <p className="text-xs text-muted-foreground">{product.subcategory} . {product.brand}</p>
             </div>
+
+            {/* Hook this offer button - only for other users' offers */}
+            {!isMyOffer && (
+              <button
+                onClick={() => setShowHookModal(true)}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground font-medium text-sm hover:bg-primary/90 transition-colors mb-4"
+              >
+                <ArrowRightLeft className="h-4 w-4" />
+                Hook this offer
+              </button>
+            )}
           </div>
 
           {/* Image carousel */}
@@ -569,6 +582,17 @@ export function ViewOfferDetails({ offerId, onClose, onEdit, onAddOfferToProduct
                 <p className="text-sm font-medium text-foreground">{product.title}</p>
                 <p className="text-xs text-muted-foreground">{product.subcategory} . {product.brand}</p>
               </div>
+
+              {/* Hook this offer button - only for other users' offers */}
+              {!isMyOffer && (
+                <button
+                  onClick={() => setShowHookModal(true)}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground font-medium text-sm hover:bg-primary/90 transition-colors mb-4"
+                >
+                  <ArrowRightLeft className="h-4 w-4" />
+                  Hook this offer
+                </button>
+              )}
             </div>
 
             {/* Description */}
@@ -809,6 +833,14 @@ export function ViewOfferDetails({ offerId, onClose, onEdit, onAddOfferToProduct
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Hook offer modal */}
+      {showHookModal && offer && (
+        <HookOfferModal 
+          targetOfferId={offer.offerId} 
+          onClose={() => setShowHookModal(false)} 
+        />
+      )}
     </>
   );
 }
