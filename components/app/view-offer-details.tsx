@@ -522,7 +522,7 @@ export function ViewOfferDetails({ offerId, onClose, onEdit, onAddOfferToProduct
 
   return (
     <>
-      <div className="pb-6">
+      <div className="pb-6 xl:max-w-5xl xl:mx-auto">
         {/* Back button / Header */}
         <div className="flex items-center gap-3 mb-6">
           <button
@@ -582,7 +582,7 @@ export function ViewOfferDetails({ offerId, onClose, onEdit, onAddOfferToProduct
           </div>
 
           {/* Right: Offer info (Desktop shows title here, Mobile shows description below image) */}
-          <div className="flex-1 min-w-0 lg:max-w-xl">
+          <div className="flex-1 min-w-0">
             {/* Desktop only: Title, product info, brand NEXT TO image */}
             <div className="hidden lg:block">
               {/* Title and status */}
@@ -678,7 +678,7 @@ export function ViewOfferDetails({ offerId, onClose, onEdit, onAddOfferToProduct
               <div className="mb-5">
                 <button
                   disabled={offer.lockLevel < 1}
-                  className={`w-full lg:w-auto lg:px-6 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                  className={`w-full lg:w-auto lg:min-w-[280px] py-2.5 px-6 rounded-lg text-sm font-medium transition-colors ${
                     offer.lockLevel >= 1
                       ? "bg-green-500/10 text-green-500 hover:bg-green-500/20"
                       : "bg-secondary text-muted-foreground cursor-not-allowed"
@@ -698,7 +698,7 @@ export function ViewOfferDetails({ offerId, onClose, onEdit, onAddOfferToProduct
 
         {/* Product Specifications Accordion - above linked products/hooked offers */}
         {productSpecs && productSpecs.length > 0 && (
-          <div className="mt-6 lg:max-w-2xl">
+          <div className="mt-6">
             <button
               onClick={() => setSpecsExpanded(!specsExpanded)}
               className="w-full flex items-center justify-between p-3 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors"
@@ -731,7 +731,7 @@ export function ViewOfferDetails({ offerId, onClose, onEdit, onAddOfferToProduct
         {/* Ownership-based sections */}
         {isMyOffer ? (
           // MY OFFER: Show hooked offers
-          <div className="mt-6 lg:max-w-2xl">
+          <div className="mt-6">
             <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-3">
               Your Outgoing Hooks ({hookedOffers.length}/3)
             </h3>
@@ -756,10 +756,10 @@ export function ViewOfferDetails({ offerId, onClose, onEdit, onAddOfferToProduct
             )}
 
             {/* Edit and Delete actions */}
-            <div className="mt-6 flex flex-col sm:flex-row gap-3 lg:max-w-md">
+            <div className="mt-6 flex flex-col sm:flex-row gap-3 lg:justify-start">
               <button
                 onClick={() => onEdit?.(offer)}
-                className="flex-1 flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+                className="sm:flex-initial sm:min-w-[160px] flex items-center justify-center gap-2 py-2.5 px-6 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
               >
                 <Pencil className="h-4 w-4" />
                 Edit Offer
@@ -767,7 +767,7 @@ export function ViewOfferDetails({ offerId, onClose, onEdit, onAddOfferToProduct
               <button
                 onClick={() => setShowDeleteConfirm(true)}
                 disabled={!canDelete}
-                className={`flex-1 flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg border text-sm font-medium transition-colors ${
+                className={`sm:flex-initial sm:min-w-[160px] flex items-center justify-center gap-2 py-2.5 px-6 rounded-lg border text-sm font-medium transition-colors ${
                   canDelete
                     ? "border-destructive text-destructive hover:bg-destructive/10"
                     : "border-border text-muted-foreground cursor-not-allowed"
@@ -785,7 +785,7 @@ export function ViewOfferDetails({ offerId, onClose, onEdit, onAddOfferToProduct
           </div>
         ) : (
           // ANOTHER USER'S OFFER: Show linked products
-          <div className="mt-6 lg:max-w-2xl">
+          <div className="mt-6">
             <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-3">
               Linked Products
             </h3>
