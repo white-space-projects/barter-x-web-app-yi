@@ -32,6 +32,9 @@ export type ProductTypeDefinition = {
   icon: string;
   color: string; // Tailwind color class
   categories: CategoryDefinition[];
+  isActive?: boolean; // Default true - whether the type is active/visible
+  isOfferCreationEnabled?: boolean; // Default true - whether offers can be created
+  availabilityNote?: string; // Shown when offer creation is disabled
 };
 
 // ============================================================================
@@ -304,6 +307,181 @@ const HOME_SPACES_CATEGORIES: CategoryDefinition[] = [
 ];
 
 // ============================================================================
+// RENTALS CATEGORIES & SUBCATEGORIES
+// ============================================================================
+const RENTALS_CATEGORIES: CategoryDefinition[] = [
+  {
+    id: "apartments",
+    name: "Apartments",
+    icon: "Building2",
+    subcategories: [
+      { id: "studio", name: "Studio", icon: "Square" },
+      { id: "1-bedroom", name: "1 Bedroom", icon: "LayoutGrid" },
+      { id: "2-bedroom", name: "2 Bedroom", icon: "LayoutGrid" },
+      { id: "3-plus-bedroom", name: "3+ Bedroom", icon: "LayoutGrid" },
+    ],
+  },
+  {
+    id: "houses",
+    name: "Houses",
+    icon: "Home",
+    subcategories: [
+      { id: "single-family", name: "Single Family", icon: "Home" },
+      { id: "townhouse", name: "Townhouse", icon: "Building" },
+      { id: "duplex", name: "Duplex", icon: "Building2" },
+      { id: "villa", name: "Villa", icon: "Castle" },
+    ],
+  },
+  {
+    id: "rooms-co-living",
+    name: "Rooms / Co-living",
+    icon: "BedDouble",
+    subcategories: [
+      { id: "private-room", name: "Private Room", icon: "BedSingle" },
+      { id: "shared-room", name: "Shared Room", icon: "BedDouble" },
+      { id: "co-living-space", name: "Co-living Space", icon: "Users" },
+      { id: "pg-hostel", name: "PG/Hostel", icon: "Building" },
+    ],
+  },
+  {
+    id: "parking-spaces",
+    name: "Parking Spaces",
+    icon: "ParkingSquare",
+    subcategories: [
+      { id: "covered-parking", name: "Covered Parking", icon: "ParkingSquare" },
+      { id: "open-parking", name: "Open Parking", icon: "ParkingCircle" },
+      { id: "garage", name: "Garage", icon: "Warehouse" },
+    ],
+  },
+  {
+    id: "storage-spaces",
+    name: "Storage Spaces",
+    icon: "Warehouse",
+    subcategories: [
+      { id: "small-unit", name: "Small Unit", icon: "Box" },
+      { id: "medium-unit", name: "Medium Unit", icon: "Package" },
+      { id: "large-unit", name: "Large Unit", icon: "Warehouse" },
+      { id: "climate-controlled", name: "Climate Controlled", icon: "Thermometer" },
+    ],
+  },
+];
+
+// ============================================================================
+// MINI JOBS CATEGORIES & SUBCATEGORIES
+// ============================================================================
+const MINI_JOBS_CATEGORIES: CategoryDefinition[] = [
+  {
+    id: "retail-store-help",
+    name: "Retail & Store Help",
+    icon: "ShoppingBag",
+    subcategories: [
+      { id: "cashier", name: "Cashier", icon: "Calculator" },
+      { id: "stock-clerk", name: "Stock Clerk", icon: "Package" },
+      { id: "sales-assistant", name: "Sales Assistant", icon: "Users" },
+    ],
+  },
+  {
+    id: "food-cafe-work",
+    name: "Food & Cafe Work",
+    icon: "Coffee",
+    subcategories: [
+      { id: "server-waiter", name: "Server/Waiter", icon: "UtensilsCrossed" },
+      { id: "barista", name: "Barista", icon: "Coffee" },
+      { id: "kitchen-helper", name: "Kitchen Helper", icon: "CookingPot" },
+    ],
+  },
+  {
+    id: "delivery-runner-jobs",
+    name: "Delivery & Runner Jobs",
+    icon: "Bike",
+    subcategories: [
+      { id: "food-delivery", name: "Food Delivery", icon: "UtensilsCrossed" },
+      { id: "package-delivery", name: "Package Delivery", icon: "Package" },
+      { id: "errands-runner", name: "Errands/Runner", icon: "Footprints" },
+    ],
+  },
+  {
+    id: "cleaning-housekeeping",
+    name: "Cleaning & Housekeeping",
+    icon: "Sparkles",
+    subcategories: [
+      { id: "house-cleaning", name: "House Cleaning", icon: "Home" },
+      { id: "office-cleaning", name: "Office Cleaning", icon: "Building" },
+      { id: "laundry-service", name: "Laundry Service", icon: "Shirt" },
+    ],
+  },
+  {
+    id: "warehouse-packing",
+    name: "Warehouse & Packing",
+    icon: "Package",
+    subcategories: [
+      { id: "packer", name: "Packer", icon: "Package" },
+      { id: "loader-unloader", name: "Loader/Unloader", icon: "Truck" },
+      { id: "inventory-clerk", name: "Inventory Clerk", icon: "ClipboardList" },
+    ],
+  },
+  {
+    id: "admin-office-support",
+    name: "Admin & Office Support",
+    icon: "FileText",
+    subcategories: [
+      { id: "data-entry", name: "Data Entry", icon: "Keyboard" },
+      { id: "reception", name: "Reception", icon: "Phone" },
+      { id: "filing-organizing", name: "Filing/Organizing", icon: "FolderOpen" },
+    ],
+  },
+  {
+    id: "events-temporary-help",
+    name: "Events & Temporary Help",
+    icon: "Calendar",
+    subcategories: [
+      { id: "event-staff", name: "Event Staff", icon: "Users" },
+      { id: "catering-help", name: "Catering Help", icon: "UtensilsCrossed" },
+      { id: "setup-breakdown", name: "Setup/Breakdown", icon: "Hammer" },
+    ],
+  },
+];
+
+// ============================================================================
+// OWNERSHIP CATEGORIES & SUBCATEGORIES
+// ============================================================================
+const OWNERSHIP_CATEGORIES: CategoryDefinition[] = [
+  {
+    id: "real-estate",
+    name: "Real Estate",
+    icon: "Home",
+    subcategories: [
+      { id: "apartment", name: "Apartment", icon: "Building2" },
+      { id: "house", name: "House", icon: "Home" },
+      { id: "land-plot", name: "Land/Plot", icon: "Map" },
+      { id: "vacation-property", name: "Vacation Property", icon: "Palmtree" },
+    ],
+  },
+  {
+    id: "vehicles",
+    name: "Vehicles",
+    icon: "Car",
+    subcategories: [
+      { id: "car", name: "Car", icon: "Car" },
+      { id: "motorcycle", name: "Motorcycle", icon: "Bike" },
+      { id: "boat", name: "Boat", icon: "Ship" },
+      { id: "rv-camper", name: "RV/Camper", icon: "Caravan" },
+    ],
+  },
+  {
+    id: "commercial-property",
+    name: "Commercial Property",
+    icon: "Building",
+    subcategories: [
+      { id: "office-space", name: "Office Space", icon: "Building2" },
+      { id: "retail-space", name: "Retail Space", icon: "Store" },
+      { id: "warehouse", name: "Warehouse", icon: "Warehouse" },
+      { id: "industrial", name: "Industrial", icon: "Factory" },
+    ],
+  },
+];
+
+// ============================================================================
 // PRODUCT TYPE DEFINITIONS
 // ============================================================================
 export const PRODUCT_TYPES: ProductTypeDefinition[] = [
@@ -322,6 +500,7 @@ export const PRODUCT_TYPES: ProductTypeDefinition[] = [
     icon: "Car",
     color: "text-orange-500",
     categories: AUTOMOBILE_CATEGORIES,
+    isActive: false, // Deactivated
   },
   {
     id: "home-spaces",
@@ -330,6 +509,37 @@ export const PRODUCT_TYPES: ProductTypeDefinition[] = [
     icon: "Home",
     color: "text-green-500",
     categories: HOME_SPACES_CATEGORIES,
+    isActive: false, // Deactivated
+  },
+  {
+    id: "rentals",
+    name: "Rentals",
+    description: "Find and list rental properties and spaces",
+    icon: "Building2",
+    color: "text-emerald-500",
+    categories: RENTALS_CATEGORIES,
+    isOfferCreationEnabled: false,
+    availabilityNote: "Launching soon",
+  },
+  {
+    id: "mini-jobs",
+    name: "Mini Jobs",
+    description: "Short-term and temporary work opportunities",
+    icon: "Briefcase",
+    color: "text-purple-500",
+    categories: MINI_JOBS_CATEGORIES,
+    isOfferCreationEnabled: false,
+    availabilityNote: "Launching soon",
+  },
+  {
+    id: "ownership",
+    name: "Ownership",
+    description: "Exchange real estate, vehicles, and property ownership",
+    icon: "Key",
+    color: "text-amber-500",
+    categories: OWNERSHIP_CATEGORIES,
+    isOfferCreationEnabled: false,
+    availabilityNote: "Launching soon",
   },
 ];
 
@@ -339,6 +549,22 @@ export const PRODUCT_TYPES: ProductTypeDefinition[] = [
 
 export function getProductType(id: ProductType): ProductTypeDefinition | undefined {
   return PRODUCT_TYPES.find((pt) => pt.id === id);
+}
+
+// Get only active product types (isActive !== false)
+export function getActiveProductTypes(): ProductTypeDefinition[] {
+  return PRODUCT_TYPES.filter((pt) => pt.isActive !== false);
+}
+
+// Check if offer creation is enabled for a product type
+export function isOfferCreationEnabled(id: ProductType): boolean {
+  const pt = getProductType(id);
+  return pt?.isOfferCreationEnabled !== false;
+}
+
+// Get availability note for a product type
+export function getAvailabilityNote(id: ProductType): string | undefined {
+  return getProductType(id)?.availabilityNote;
 }
 
 export function getProductTypeCategories(productType: ProductType): CategoryDefinition[] {

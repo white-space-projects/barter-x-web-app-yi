@@ -277,6 +277,9 @@ function WorkspaceContent() {
                   {!addOfferOpen && !activeUtilityTab && activeProductType === "goods" && "General Goods Barter"}
                   {!addOfferOpen && !activeUtilityTab && activeProductType === "automobile" && "Automobile Barter"}
                   {!addOfferOpen && !activeUtilityTab && activeProductType === "home-spaces" && "Homes & Spaces Barter"}
+                  {!addOfferOpen && !activeUtilityTab && activeProductType === "rentals" && "Rentals"}
+                  {!addOfferOpen && !activeUtilityTab && activeProductType === "mini-jobs" && "Mini Jobs"}
+                  {!addOfferOpen && !activeUtilityTab && activeProductType === "ownership" && "Ownership"}
                 </span>
               </div>
               

@@ -15,6 +15,9 @@ import {
   User,
   Check,
   X,
+  Building2,
+  Briefcase,
+  Key,
 } from "lucide-react";
 import type { ProductType } from "@/lib/types";
 
@@ -37,10 +40,13 @@ type NavItem = {
   productType?: ProductType;
   color?: string;
   adminOnly?: boolean;
+  isInactive?: boolean; // Hide from nav
+  isOfferCreationEnabled?: boolean; // Can create offers
+  availabilityNote?: string; // "Launching soon" etc
 };
 
 const NAV_ITEMS: NavItem[] = [
-  // Barter Types
+  // Active Barter Types
   {
     id: "goods",
     label: "Goods",
@@ -49,6 +55,7 @@ const NAV_ITEMS: NavItem[] = [
     productType: "goods",
     color: "text-blue-500",
   },
+  // Deactivated Barter Types (hidden from nav)
   {
     id: "automobile",
     label: "Automobile",
@@ -56,6 +63,7 @@ const NAV_ITEMS: NavItem[] = [
     type: "product-type",
     productType: "automobile",
     color: "text-orange-500",
+    isInactive: true,
   },
   {
     id: "home-spaces",
@@ -64,6 +72,38 @@ const NAV_ITEMS: NavItem[] = [
     type: "product-type",
     productType: "home-spaces",
     color: "text-green-500",
+    isInactive: true,
+  },
+  // New Barter Types (Coming Soon)
+  {
+    id: "rentals",
+    label: "Rentals",
+    icon: Building2,
+    type: "product-type",
+    productType: "rentals",
+    color: "text-emerald-500",
+    isOfferCreationEnabled: false,
+    availabilityNote: "Launching soon",
+  },
+  {
+    id: "mini-jobs",
+    label: "Mini Jobs",
+    icon: Briefcase,
+    type: "product-type",
+    productType: "mini-jobs",
+    color: "text-purple-500",
+    isOfferCreationEnabled: false,
+    availabilityNote: "Launching soon",
+  },
+  {
+    id: "ownership",
+    label: "Ownership",
+    icon: Key,
+    type: "product-type",
+    productType: "ownership",
+    color: "text-amber-500",
+    isOfferCreationEnabled: false,
+    availabilityNote: "Launching soon",
   },
   // Utility tabs
   {
@@ -220,7 +260,7 @@ export function SidebarNav({
     );
   }
 
-  const productTypeItems = NAV_ITEMS.filter((item) => item.type === "product-type");
+  const productTypeItems = NAV_ITEMS.filter((item) => item.type === "product-type" && !item.isInactive);
   const utilityItems = NAV_ITEMS.filter(
     (item) => item.type === "utility" && (!item.adminOnly || isAdmin)
   );
@@ -287,6 +327,7 @@ export function SidebarNav({
             {productTypeItems.map((item) => {
               const Icon = item.icon;
               const active = isActive(item);
+              const isComingSoon = item.isOfferCreationEnabled === false;
               return (
                 <button
                   key={item.id}
@@ -298,11 +339,18 @@ export function SidebarNav({
                       ? `bg-secondary/80 ${item.color}`
                       : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
                   }`}
-                  title={collapsed ? item.label : undefined}
+                  title={collapsed ? `${item.label}${isComingSoon ? " - Coming Soon" : ""}` : undefined}
                 >
                   <Icon className={`h-5 w-5 flex-shrink-0 ${active ? item.color : ""}`} />
                   {!collapsed && (
-                    <span className="text-sm font-medium truncate">{item.label}</span>
+                    <div className="flex items-center justify-between flex-1 min-w-0">
+                      <span className="text-sm font-medium truncate">{item.label}</span>
+                      {isComingSoon && (
+                        <span className="ml-1.5 text-[9px] uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium whitespace-nowrap">
+                          Soon
+                        </span>
+                      )}
+                    </div>
                   )}
                 </button>
               );

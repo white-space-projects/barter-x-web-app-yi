@@ -199,6 +199,9 @@ export function BarterProvider({ children }: { children: ReactNode }) {
     "goods": { ...defaultExchangeTypeFilters },
     "automobile": { ...defaultExchangeTypeFilters },
     "home-spaces": { ...defaultExchangeTypeFilters },
+    "rentals": { ...defaultExchangeTypeFilters },
+    "mini-jobs": { ...defaultExchangeTypeFilters },
+    "ownership": { ...defaultExchangeTypeFilters },
   });
 
   // Current active product type (for getting the right filters)

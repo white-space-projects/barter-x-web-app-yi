@@ -37,7 +37,7 @@ import {
   Gem, ToyBrick, Bike, Tent, Trophy, Drill, Shovel, Hammer, Book, Dice5, Film, Star,
   Printer, Guitar, Paintbrush, Box, Building2, Building, ParkingSquare, Warehouse, Lock,
   Refrigerator, CarFront, CarTaxiFront, Crown, Zap, Gauge, Wind, Fuel, Bus, Truck, Container, Caravan,
-  Square, LayoutGrid, BedSingle, Users, ParkingCircle,
+  Square, LayoutGrid, BedSingle, Users, ParkingCircle, Briefcase, Key,
 } from "lucide-react";
 import { useBarterStore } from "@/lib/store";
 import { generateGuid } from "@/lib/guid";
@@ -108,6 +108,9 @@ const TYPE_ICONS: Record<ProductType, React.ComponentType<{ className?: string }
   goods: ShoppingBag,
   automobile: Car,
   "home-spaces": Home,
+  rentals: Building2,
+  "mini-jobs": Briefcase,
+  ownership: Key,
 };
 
 // Barter type colors
@@ -115,6 +118,9 @@ const TYPE_COLORS: Record<ProductType, { bg: string; text: string; border: strin
   goods: { bg: "bg-blue-500/10", text: "text-blue-500", border: "border-blue-500/30" },
   automobile: { bg: "bg-orange-500/10", text: "text-orange-500", border: "border-orange-500/30" },
   "home-spaces": { bg: "bg-green-500/10", text: "text-green-500", border: "border-green-500/30" },
+  rentals: { bg: "bg-emerald-500/10", text: "text-emerald-500", border: "border-emerald-500/30" },
+  "mini-jobs": { bg: "bg-purple-500/10", text: "text-purple-500", border: "border-purple-500/30" },
+  ownership: { bg: "bg-amber-500/10", text: "text-amber-500", border: "border-amber-500/30" },
 };
 
 // Barter type descriptions
@@ -122,6 +128,9 @@ const TYPE_DESCRIPTIONS: Record<ProductType, string> = {
   goods: "Electronics, furniture, clothing & more",
   automobile: "Cars, bikes, boats & vehicles",
   "home-spaces": "Properties, rentals & spaces",
+  rentals: "Apartments, houses, rooms & parking",
+  "mini-jobs": "Short-term work opportunities",
+  ownership: "Real estate & vehicle ownership",
 };
 
 // =============================================================================
@@ -1533,14 +1542,17 @@ export function AddOfferFlow({
                 icon={selectedBarterType ? (() => { const Icon = TYPE_ICONS[selectedBarterType]; return <Icon className={`h-5 w-5 ${TYPE_COLORS[selectedBarterType].text}`} />; })() : undefined}
               >
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  {PRODUCT_TYPES.map((type) => {
+                  {PRODUCT_TYPES.filter((type) => type.isActive !== false).map((type) => {
                     const Icon = TYPE_ICONS[type.id];
                     const isSelected = selectedBarterType === type.id;
+                    const isComingSoon = type.isOfferCreationEnabled === false;
                     return (
                       <button
                         key={type.id}
                         type="button"
+                        disabled={isComingSoon}
                         onClick={() => {
+                          if (isComingSoon) return;
                           setSelectedBarterType(type.id);
                           setSelectedCategory(null);
                           setSelectedSubcategory(null);
@@ -1549,18 +1561,25 @@ export function AddOfferFlow({
                           setSelectedProduct(null);
                           setOpenAccordion("category");
                         }}
-                        className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
-                          isSelected 
-                            ? `${TYPE_COLORS[type.id].border} ${TYPE_COLORS[type.id].bg}` 
-                            : "border-border hover:border-primary/30"
+                        className={`relative flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
+                          isComingSoon
+                            ? "opacity-60 cursor-not-allowed border-border"
+                            : isSelected 
+                              ? `${TYPE_COLORS[type.id].border} ${TYPE_COLORS[type.id].bg}` 
+                              : "border-border hover:border-primary/30"
                         }`}
                       >
-                        <Icon className={`h-8 w-8 ${isSelected ? TYPE_COLORS[type.id].text : "text-muted-foreground"}`} />
-                        <span className={`text-sm font-medium ${isSelected ? TYPE_COLORS[type.id].text : "text-foreground"}`}>
+                        {isComingSoon && (
+                          <span className="absolute top-2 right-2 text-[8px] uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-bold">
+                            Soon
+                          </span>
+                        )}
+                        <Icon className={`h-8 w-8 ${isComingSoon ? "text-muted-foreground" : isSelected ? TYPE_COLORS[type.id].text : "text-muted-foreground"}`} />
+                        <span className={`text-sm font-medium ${isComingSoon ? "text-muted-foreground" : isSelected ? TYPE_COLORS[type.id].text : "text-foreground"}`}>
                           {type.name.replace(" Barter", "")}
                         </span>
-                        <span className={`text-xs text-center ${isSelected ? TYPE_COLORS[type.id].text : "text-muted-foreground"}`}>
-                          {TYPE_DESCRIPTIONS[type.id]}
+                        <span className={`text-xs text-center ${isComingSoon ? "text-muted-foreground" : isSelected ? TYPE_COLORS[type.id].text : "text-muted-foreground"}`}>
+                          {TYPE_DESCRIPTIONS[type.id] || type.description}
                         </span>
                       </button>
                     );
@@ -2144,14 +2163,17 @@ export function AddOfferFlow({
                   icon={selectedBarterType ? (() => { const Icon = TYPE_ICONS[selectedBarterType]; return <Icon className={`h-5 w-5 ${TYPE_COLORS[selectedBarterType].text}`} />; })() : undefined}
                 >
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    {PRODUCT_TYPES.map((type) => {
+                    {PRODUCT_TYPES.filter((type) => type.isActive !== false).map((type) => {
                       const Icon = TYPE_ICONS[type.id];
                       const isSelected = selectedBarterType === type.id;
+                      const isComingSoon = type.isOfferCreationEnabled === false;
                       return (
                         <button
                           key={type.id}
                           type="button"
+                          disabled={isComingSoon}
                           onClick={() => {
+                            if (isComingSoon) return;
                             setSelectedBarterType(type.id);
                             setSelectedCategory(null);
                             setSelectedSubcategory(null);
@@ -2160,18 +2182,25 @@ export function AddOfferFlow({
                             setSelectedProduct(null);
                             setOpenAccordion("category");
                           }}
-                          className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
-                            isSelected 
-                              ? `${TYPE_COLORS[type.id].border} ${TYPE_COLORS[type.id].bg}` 
-                              : "border-border hover:border-primary/30"
+                          className={`relative flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
+                            isComingSoon
+                              ? "opacity-60 cursor-not-allowed border-border"
+                              : isSelected 
+                                ? `${TYPE_COLORS[type.id].border} ${TYPE_COLORS[type.id].bg}` 
+                                : "border-border hover:border-primary/30"
                           }`}
                         >
-                          <Icon className={`h-8 w-8 ${isSelected ? TYPE_COLORS[type.id].text : "text-muted-foreground"}`} />
-                          <span className={`text-sm font-medium ${isSelected ? TYPE_COLORS[type.id].text : "text-foreground"}`}>
+                          {isComingSoon && (
+                            <span className="absolute top-2 right-2 text-[8px] uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-bold">
+                              Soon
+                            </span>
+                          )}
+                          <Icon className={`h-8 w-8 ${isComingSoon ? "text-muted-foreground" : isSelected ? TYPE_COLORS[type.id].text : "text-muted-foreground"}`} />
+                          <span className={`text-sm font-medium ${isComingSoon ? "text-muted-foreground" : isSelected ? TYPE_COLORS[type.id].text : "text-foreground"}`}>
                             {type.name.replace(" Barter", "")}
                           </span>
-                          <span className={`text-xs text-center ${isSelected ? TYPE_COLORS[type.id].text : "text-muted-foreground"}`}>
-                            {TYPE_DESCRIPTIONS[type.id]}
+                          <span className={`text-xs text-center ${isComingSoon ? "text-muted-foreground" : isSelected ? TYPE_COLORS[type.id].text : "text-muted-foreground"}`}>
+                            {TYPE_DESCRIPTIONS[type.id] || type.description}
                           </span>
                         </button>
                       );

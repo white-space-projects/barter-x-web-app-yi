@@ -13,6 +13,9 @@ import {
   MoreHorizontal,
   X,
   User,
+  Building2,
+  Briefcase,
+  Key,
 } from "lucide-react";
 import type { ProductType } from "@/lib/types";
 
@@ -37,7 +40,7 @@ export function BottomNav({
 }: Props) {
   const [showMore, setShowMore] = useState(false);
 
-  // Primary nav items (always visible)
+  // Primary nav items (always visible) - only active types
   const primaryItems = [
     {
       id: "goods" as ProductType,
@@ -47,26 +50,38 @@ export function BottomNav({
       color: "text-blue-500",
       bgColor: "bg-blue-500/10",
     },
+    // Coming soon - show in nav but disabled
     {
-      id: "automobile" as ProductType,
-      label: "Auto",
-      icon: Car,
+      id: "rentals" as ProductType,
+      label: "Rentals",
+      icon: Building2,
       type: "product-type" as const,
-      color: "text-orange-500",
-      bgColor: "bg-orange-500/10",
+      color: "text-emerald-500",
+      bgColor: "bg-emerald-500/10",
+      isComingSoon: true,
     },
     {
-      id: "home-spaces" as ProductType,
-      label: "Homes",
-      icon: Home,
+      id: "mini-jobs" as ProductType,
+      label: "Jobs",
+      icon: Briefcase,
       type: "product-type" as const,
-      color: "text-green-500",
-      bgColor: "bg-green-500/10",
+      color: "text-purple-500",
+      bgColor: "bg-purple-500/10",
+      isComingSoon: true,
     },
   ];
 
   // Secondary items (in more menu) - includes profile as utility tab
   const secondaryItems = [
+    // Coming soon barter type
+    {
+      id: "ownership",
+      label: "Ownership",
+      icon: Key,
+      type: "product-type" as const,
+      color: "text-amber-500",
+      isComingSoon: true,
+    },
     {
       id: "my-offers",
       label: "My Offers",
@@ -151,20 +166,37 @@ export function BottomNav({
           <div className="p-2">
             {secondaryItems.map((item) => {
               const Icon = item.icon;
-              const active = isUtilityActive(item.id);
+              const active = item.type === "utility" ? isUtilityActive(item.id) : isProductTypeActive(item.id as ProductType);
+              const isComingSoon = "isComingSoon" in item && item.isComingSoon;
+              const itemColor = "color" in item ? item.color : undefined;
               return (
                 <button
                   key={item.id}
-                  onClick={() => handleUtilityClick(item.id)}
+                  onClick={() => {
+                    if (isComingSoon) return;
+                    if (item.type === "product-type") {
+                      handleProductTypeClick(item.id as ProductType);
+                    } else {
+                      handleUtilityClick(item.id);
+                    }
+                  }}
+                  disabled={isComingSoon}
                   className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left transition-colors ${
-                    active
-                      ? "bg-secondary text-foreground"
-                      : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
+                    isComingSoon
+                      ? "opacity-60 cursor-not-allowed"
+                      : active
+                        ? "bg-secondary text-foreground"
+                        : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
                   }`}
                 >
-                  <Icon className="h-5 w-5" />
+                  <Icon className={`h-5 w-5 ${active && itemColor ? itemColor : ""}`} />
                   <span className="text-sm font-medium flex-1">{item.label}</span>
-                  {item.badge && item.badge > 0 && (
+                  {isComingSoon && (
+                    <span className="text-[9px] uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+                      Coming Soon
+                    </span>
+                  )}
+                  {"badge" in item && item.badge && item.badge > 0 && (
                     <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-[10px] font-bold text-destructive-foreground">
                       {item.badge > 99 ? "99+" : item.badge}
                     </span>
@@ -184,24 +216,31 @@ export function BottomNav({
           {primaryItems.map((item) => {
             const Icon = item.icon;
             const active = isProductTypeActive(item.id);
+            const isComingSoon = "isComingSoon" in item && item.isComingSoon;
             return (
               <button
                 key={item.id}
-                onClick={() => handleProductTypeClick(item.id)}
-                className={`flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl transition-colors min-w-[60px] ${
-                  active ? item.bgColor : ""
+                onClick={() => !isComingSoon && handleProductTypeClick(item.id)}
+                disabled={isComingSoon}
+                className={`relative flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl transition-colors min-w-[60px] ${
+                  isComingSoon ? "opacity-60" : active ? item.bgColor : ""
                 }`}
               >
                 <Icon
-                  className={`h-5 w-5 ${active ? item.color : "text-muted-foreground"}`}
+                  className={`h-5 w-5 ${active && !isComingSoon ? item.color : "text-muted-foreground"}`}
                 />
                 <span
                   className={`text-[10px] font-medium ${
-                    active ? item.color : "text-muted-foreground"
+                    active && !isComingSoon ? item.color : "text-muted-foreground"
                   }`}
                 >
                   {item.label}
                 </span>
+                {isComingSoon && (
+                  <span className="absolute -top-0.5 -right-0.5 text-[7px] uppercase tracking-wide px-1 py-0.5 rounded-full bg-primary/20 text-primary font-bold">
+                    Soon
+                  </span>
+                )}
               </button>
             );
           })}

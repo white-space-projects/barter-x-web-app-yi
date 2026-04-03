@@ -29,7 +29,7 @@ import { AddOfferFlow } from "./add-offer-flow";
 import { ArrowLeft } from "lucide-react";
 import type { Product, ProductType } from "@/lib/types";
 import { useProducts } from "@/hooks/use-products";
-import { getProductTypeCategories, getSubcategories as getTypeSubcategories, getCategoryByName, type CategoryDefinition, type SubcategoryDefinition } from "@/lib/product-types";
+import { getProductTypeCategories, getSubcategories as getTypeSubcategories, getCategoryByName, isOfferCreationEnabled, getAvailabilityNote, getProductType, type CategoryDefinition, type SubcategoryDefinition } from "@/lib/product-types";
 
 type Props = {
   productType?: ProductType;
@@ -369,6 +369,35 @@ export function ProductsTab({ productType = "goods", onAddOfferWithProduct }: Pr
             initialProduct={inlineAddProduct || undefined}
           />
         )}
+      </div>
+    );
+  }
+
+  // Check if this barter type is coming soon
+  const productTypeInfo = getProductType(productType);
+  const isComingSoon = productTypeInfo?.isOfferCreationEnabled === false;
+  const availabilityNote = productTypeInfo?.availabilityNote || "Coming Soon";
+
+  // Coming Soon view for disabled barter types
+  if (isComingSoon) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+        <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-6">
+          <Package className="w-10 h-10 text-primary" />
+        </div>
+        <h2 className="text-2xl font-semibold text-foreground mb-2">
+          {productTypeInfo?.name || productType}
+        </h2>
+        <p className="text-muted-foreground mb-6 max-w-md">
+          {productTypeInfo?.description || "This feature is coming soon."}
+        </p>
+        <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary font-medium text-sm">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+          </span>
+          {availabilityNote}
+        </span>
       </div>
     );
   }

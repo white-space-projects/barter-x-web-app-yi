@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
-import { X, Loader2, Search, Plus, ChevronLeft, Package, ChevronDown, Repeat, Car, Home, Smartphone, Shirt, Sofa, Dumbbell, BookOpen, Gamepad2, Wrench, Baby, Dog, Bike, Truck, Container, Building2, BedDouble, ParkingSquare, Warehouse, Caravan, Cpu, Laptop, Tablet, Headphones, Camera, Watch, Table, Armchair, Archive, Lamp, Refrigerator, WashingMachine, Microwave, AirVent, CookingPot, Footprints, ShoppingBag, Gem, BedSingle, ToyBrick, CarFront, Tent, Trophy, Drill, Shovel, Hammer, Book, Dice5, Film, Star, Table2, Monitor, Printer, Guitar, Paintbrush, Box, CarTaxiFront, Crown, Zap, Gauge, Wind, Fuel, Bus, Users, Castle, Building, ParkingCircle, Lock, Square, LayoutGrid } from "lucide-react";
+import { X, Loader2, Search, Plus, ChevronLeft, Package, ChevronDown, Repeat, Car, Home, Smartphone, Shirt, Sofa, Dumbbell, BookOpen, Gamepad2, Wrench, Baby, Dog, Bike, Truck, Container, Building2, BedDouble, ParkingSquare, Warehouse, Caravan, Cpu, Laptop, Tablet, Headphones, Camera, Watch, Table, Armchair, Archive, Lamp, Refrigerator, WashingMachine, Microwave, AirVent, CookingPot, Footprints, ShoppingBag, Gem, BedSingle, ToyBrick, CarFront, Tent, Trophy, Drill, Shovel, Hammer, Book, Dice5, Film, Star, Table2, Monitor, Printer, Guitar, Paintbrush, Box, CarTaxiFront, Crown, Zap, Gauge, Wind, Fuel, Bus, Users, Castle, Building, ParkingCircle, Lock, Square, LayoutGrid, Briefcase, Key, Coffee, Sparkles, FileText, Calendar, Map, Ship, Store, Factory } from "lucide-react";
 import { useBarterStore } from "@/lib/store";
 import { generateGuid } from "@/lib/guid";
 import { toast } from "sonner";
@@ -57,13 +57,27 @@ const CATEGORY_ICONS: Record<string, React.ComponentType<{ className?: string }>
   trucks: Truck,
   trailers: Container,
   caravans: Caravan,
-  // Home & Spaces
+// Home & Spaces
   apartments: Building2,
   houses: Home,
   "rooms-coliving": BedDouble,
   "parking-spaces": ParkingSquare,
   "storage-spaces": Warehouse,
-};
+  // Rentals
+  "rooms-co-living": BedDouble,
+  // Mini Jobs
+  "retail-store-help": ShoppingBag,
+  "food-cafe-work": Coffee,
+  "delivery-runner-jobs": Bike,
+  "cleaning-housekeeping": Sparkles,
+  "warehouse-packing": Package,
+  "admin-office-support": FileText,
+  "events-temporary-help": Calendar,
+  // Ownership
+  "real-estate": Home,
+  vehicles: Car,
+  "commercial-property": Building,
+  };
 
 // Icon mapping for all subcategory icons (mapped by lucide icon name)
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -133,22 +147,39 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   Lock,
   Square,
   LayoutGrid,
-  Cpu,
-};
-
-// Barter type icons
-const TYPE_ICONS: Record<ProductType, React.ComponentType<{ className?: string }>> = {
-  "goods": ShoppingBag,
-  automobile: Car,
-  "home-spaces": Home,
-};
+Cpu,
+  LayoutGrid,
+  // New icons for Rentals, Mini Jobs, Ownership
+  Coffee,
+  Sparkles,
+  FileText,
+  Calendar,
+  Map,
+  Ship,
+  Store,
+  Factory,
+  Key,
+  Briefcase,
+  // Additional icons for subcategories
+  Calculator: Cpu, // Fallback for cashier
+  Keyboard: Cpu, // Fallback for data entry
+  Phone: Smartphone, // Fallback for reception
+  FolderOpen: Package, // Fallback for filing
+  UtensilsCrossed: CookingPot, // Fallback for food items
+  Thermometer: AirVent, // Fallback for climate controlled
+  ClipboardList: FileText, // Fallback for inventory clerk
+  Palmtree: Tent, // Fallback for vacation property
+  };
 
 // Barter type colors
-const TYPE_COLORS: Record<ProductType, { bg: string; text: string; border: string }> = {
+  const TYPE_COLORS: Record<ProductType, { bg: string; text: string; border: string }> = {
   "goods": { bg: "bg-blue-500/10", text: "text-blue-500", border: "border-blue-500/30" },
-  automobile: { bg: "bg-orange-500/10", text: "text-orange-500", border: "border-orange-500/30" },
+  "automobile": { bg: "bg-orange-500/10", text: "text-orange-500", border: "border-orange-500/30" },
   "home-spaces": { bg: "bg-green-500/10", text: "text-green-500", border: "border-green-500/30" },
-};
+  "rentals": { bg: "bg-emerald-500/10", text: "text-emerald-500", border: "border-emerald-500/30" },
+  "mini-jobs": { bg: "bg-purple-500/10", text: "text-purple-500", border: "border-purple-500/30" },
+  "ownership": { bg: "bg-amber-500/10", text: "text-amber-500", border: "border-amber-500/30" },
+  };
 
 export function AddOfferModal({ open, onClose, initialProductType }: Props) {
   const {
@@ -511,26 +542,39 @@ export function AddOfferModal({ open, onClose, initialProductType }: Props) {
               <p className="text-sm text-muted-foreground mb-4">
                 Choose the type of exchange for your offer. Items can only be exchanged within the same type.
               </p>
-              {PRODUCT_TYPES.map((type) => {
-                const IconComponent = TYPE_ICONS[type.id];
-                const colors = TYPE_COLORS[type.id];
-                return (
-                  <button
-                    key={type.id}
-                    onClick={() => handleSelectType(type.id)}
-                    className={`w-full flex items-center gap-4 p-4 rounded-xl border-2 transition-all hover:scale-[1.01] ${colors.border} ${colors.bg}`}
-                  >
-                    <div className={`flex h-12 w-12 items-center justify-center rounded-lg ${colors.bg}`}>
-                      <IconComponent className={`h-6 w-6 ${colors.text}`} />
-                    </div>
-                    <div className="text-left flex-1">
-                      <p className={`text-sm font-semibold ${colors.text}`}>{type.name}</p>
-                      <p className="text-xs text-muted-foreground">{type.description}</p>
-                    </div>
-                    <ChevronLeft className="h-4 w-4 rotate-180 text-muted-foreground" />
-                  </button>
-                );
-              })}
+{PRODUCT_TYPES.filter((type) => type.isActive !== false).map((type) => {
+  const IconComponent = TYPE_ICONS[type.id];
+  const colors = TYPE_COLORS[type.id];
+  const isComingSoon = type.isOfferCreationEnabled === false;
+  return (
+  <button
+  key={type.id}
+  onClick={() => !isComingSoon && handleSelectType(type.id)}
+  disabled={isComingSoon}
+  className={`w-full flex items-center gap-4 p-4 rounded-xl border-2 transition-all ${
+    isComingSoon 
+      ? `${colors.border} ${colors.bg} opacity-60 cursor-not-allowed` 
+      : `${colors.border} ${colors.bg} hover:scale-[1.01]`
+  }`}
+  >
+  <div className={`flex h-12 w-12 items-center justify-center rounded-lg ${colors.bg}`}>
+  <IconComponent className={`h-6 w-6 ${colors.text}`} />
+  </div>
+  <div className="text-left flex-1">
+  <div className="flex items-center gap-2">
+    <p className={`text-sm font-semibold ${colors.text}`}>{type.name}</p>
+    {isComingSoon && (
+      <span className="text-[9px] uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium whitespace-nowrap">
+        {type.availabilityNote || "Coming Soon"}
+      </span>
+    )}
+  </div>
+  <p className="text-xs text-muted-foreground">{type.description}</p>
+  </div>
+  {!isComingSoon && <ChevronLeft className="h-4 w-4 rotate-180 text-muted-foreground" />}
+  </button>
+  );
+  })}
             </div>
           )}
 

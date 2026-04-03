@@ -6,7 +6,10 @@
 
 // Barter Types - determines which offers can hook with each other
 // Offers can ONLY hook within the same barter type
-export type ProductType = "goods" | "automobile" | "home-spaces";
+// Active: "goods"
+// Coming Soon: "rentals", "mini-jobs", "ownership"
+// Deactivated: "automobile", "home-spaces"
+export type ProductType = "goods" | "automobile" | "home-spaces" | "rentals" | "mini-jobs" | "ownership";
 
 export type User = {
   userId: string;
@@ -226,6 +229,9 @@ export type AllExchangeTypeFilters = {
   "goods": ExchangeTypeFilters;
   "automobile": ExchangeTypeFilters;
   "home-spaces": ExchangeTypeFilters;
+  "rentals": ExchangeTypeFilters;
+  "mini-jobs": ExchangeTypeFilters;
+  "ownership": ExchangeTypeFilters;
 };
 
 export type CountryData = {
