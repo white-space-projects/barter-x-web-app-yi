@@ -112,6 +112,8 @@ export type Offer = {
   // Readiness confirmation
   readyState: boolean;           // User confirmed pickup readiness
   readyUpdatedAt?: string;       // ISO timestamp
+  escrowPaid?: boolean;          // Escrow has been paid (prevents re-triggering on edits)
+  escrowPaidAt?: string;         // ISO timestamp when escrow was paid
   
   // Lock level for workflow control
   lockLevel: LockLevel;          // 0=AVAILABLE, 1=RESERVED, 2=PROCESSING, 3=EXCHANGED
