@@ -93,27 +93,89 @@ export function ChatTab({ onOpenPickupModal }: ChatTabProps = {}) {
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Get all conversations for current user (both as hooker and hookee)
-  const myConversations = useMemo(() => {
+  // ============================================================================
+  // CHAT VISIBILITY LOGIC - Two separate chats based on offer relationships
+  // ============================================================================
+  // 
+  // CHAT 1 - OUTGOING (Destination offer chat):
+  //   - I hooked someone else's offer
+  //   - Available when my offer is Reserved (lockLevel >= 1)
+  //   - Available EVEN BEFORE I confirm pickup readiness
+  //   - Purpose: Ask questions, discuss logistics with destination offer owner
+  //
+  // CHAT 2 - INCOMING (Source offer inbound chat):
+  //   - Someone hooked MY offer
+  //   - Available ONLY AFTER I confirm pickup (readyState=true) AND escrow paid
+  //   - Purpose: Coordinate with the user who will receive my offer
+  // ============================================================================
+
+  // CHAT 1: Outgoing chats - offers I hooked (available when Reserved, before confirmation)
+  const outgoingChats = useMemo(() => {
     if (!auth.user) return [];
     
-    // Get conversations where I'm the one who hooked
-    const myHookConversations = conversations.filter((c) => {
-      const myOffer = getOfferById(c.myOfferId);
-      return myOffer?.ownerUserId === auth.user!.userId;
+    const myOfferIds = offers
+      .filter((o) => o.ownerUserId === auth.user!.userId)
+      .map((o) => o.offerId);
+    
+    // Find hooks where I hooked someone else's offer AND my offer is Reserved
+    return hooks.filter((h) => {
+      const myOffer = offers.find((o) => o.offerId === h.fromOfferId && myOfferIds.includes(o.offerId));
+      // Available when my source offer is Reserved (lockLevel >= 1)
+      return myOffer && myOffer.lockLevel >= 1 && h.isActive;
+    }).map((hook) => {
+      const targetOffer = getOfferById(hook.toOfferId);
+      return { hook, targetOffer, type: "outgoing" as const };
     });
+  }, [hooks, offers, auth.user, getOfferById]);
 
-    return myHookConversations;
+  // CHAT 2: Incoming chats - others hooked my offer (only after I confirm + escrow)
+  const incomingChats = useMemo(() => {
+    if (!auth.user) return [];
+    
+    const myOfferIds = offers
+      .filter((o) => o.ownerUserId === auth.user!.userId)
+      .map((o) => o.offerId);
+    
+    // Find hooks where someone hooked MY offer
+    return hooks.filter((h) => {
+      const myOffer = offers.find((o) => o.offerId === h.toOfferId && myOfferIds.includes(o.offerId));
+      // Only available when:
+      // 1. My offer is Reserved (lockLevel >= 1)
+      // 2. I have confirmed pickup readiness (readyState = true)
+      // 3. I have paid escrow (escrowPaid = true)
+      return myOffer && 
+             myOffer.lockLevel >= 1 && 
+             myOffer.readyState === true && 
+             myOffer.escrowPaid === true &&
+             h.isActive;
+    }).map((hook) => {
+      const fromOffer = getOfferById(hook.fromOfferId);
+      return { hook, fromOffer, type: "incoming" as const };
+    });
+  }, [hooks, offers, auth.user, getOfferById]);
+
+  // Legacy: kept for backward compatibility
+  const myConversations = useMemo(() => {
+    return conversations.filter((c) => {
+      const myOffer = getOfferById(c.myOfferId);
+      return myOffer?.ownerUserId === auth.user?.userId;
+    });
   }, [conversations, auth.user, getOfferById]);
 
-  // Get hooks on my offers (where others hooked my offer) for incoming chats
+  // Legacy: incomingHooks - kept for backward compatibility
   const incomingHooks = useMemo(() => {
     if (!auth.user) return [];
     const myOfferIds = offers
       .filter((o) => o.ownerUserId === auth.user!.userId)
       .map((o) => o.offerId);
-    return hooks.filter((h) => myOfferIds.includes(h.toOfferId) && 
-      (h.status === "reserved" || h.status === "processing"));
+    return hooks.filter((h) => {
+      const myOffer = offers.find((o) => o.offerId === h.toOfferId && myOfferIds.includes(o.offerId));
+      return myOffer && 
+             myOffer.lockLevel >= 1 && 
+             myOffer.readyState === true && 
+             myOffer.escrowPaid === true &&
+             h.isActive;
+    });
   }, [hooks, offers, auth.user]);
 
   const currentConversation = selectedConversation
@@ -181,7 +243,8 @@ export function ChatTab({ onOpenPickupModal }: ChatTabProps = {}) {
     }
   }
 
-  function openConversation(hookId: string) {
+  // Open outgoing conversation (I hooked their offer)
+  function openOutgoingConversation(hookId: string) {
     const hook = hooks.find((h) => h.hookId === hookId);
     if (!hook) return;
     
@@ -194,12 +257,41 @@ export function ChatTab({ onOpenPickupModal }: ChatTabProps = {}) {
       fromOffer.offerId,
       targetOffer.offerId,
       targetOffer.ownerUserId,
-      "User"
+      "User",
+      "outgoing"
     );
     
     setSelectedConversation(conv.conversationId);
     markConversationRead(conv.conversationId);
     setActiveView("conversation");
+  }
+
+  // Open incoming conversation (they hooked my offer)
+  function openIncomingConversation(hookId: string) {
+    const hook = hooks.find((h) => h.hookId === hookId);
+    if (!hook) return;
+    
+    const targetOffer = getOfferById(hook.toOfferId);
+    const fromOffer = getOfferById(hook.fromOfferId);
+    if (!targetOffer || !fromOffer) return;
+
+    const conv = getOrCreateConversation(
+      hookId,
+      targetOffer.offerId,  // My offer is the target (they hooked my offer)
+      fromOffer.offerId,    // Their offer is the from offer
+      fromOffer.ownerUserId, // Chat with the person who hooked my offer
+      "User",
+      "incoming"
+    );
+    
+    setSelectedConversation(conv.conversationId);
+    markConversationRead(conv.conversationId);
+    setActiveView("conversation");
+  }
+
+  // Legacy function for backward compatibility
+  function openConversation(hookId: string) {
+    openOutgoingConversation(hookId);
   }
 
   function handleRequestDelivery() {
@@ -289,30 +381,29 @@ export function ChatTab({ onOpenPickupModal }: ChatTabProps = {}) {
           </div>
         )}
 
-        {/* Conversations list */}
+        {/* Conversations list - shows both outgoing and incoming chats */}
         {activeView === "conversation" && !selectedConversation && (
           <div className="flex-1 overflow-y-auto">
-            {myConversations.length === 0 && incomingHooks.length === 0 ? (
+            {outgoingChats.length === 0 && incomingChats.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-center px-4">
                 <MessageSquare className="h-12 w-12 text-muted-foreground/30 mb-3" />
                 <p className="text-sm text-muted-foreground">No conversations yet</p>
                 <p className="text-xs text-muted-foreground/70 mt-1">
-                  Conversations will appear here when you or other users confirm pickup readiness.
+                  Conversations will appear when your offer is reserved in a cycle.
                 </p>
               </div>
             ) : (
               <div className="flex flex-col gap-2 max-w-lg">
-                {/* My outgoing hook conversations */}
-                {myConversations.map((conv) => {
-                  const targetOffer = getOfferById(conv.targetOfferId);
+                {/* CHAT 1: Outgoing chats - offers I hooked (available when Reserved, before confirmation) */}
+                {outgoingChats.map(({ hook, targetOffer }) => {
                   const targetProduct = targetOffer 
                     ? products.find((p) => p.productId === targetOffer.productId)
                     : null;
                   
                   return (
                     <button
-                      key={conv.conversationId}
-                      onClick={() => openConversation(conv.hookId || "")}
+                      key={`outgoing-${hook.hookId}`}
+                      onClick={() => openOutgoingConversation(hook.hookId)}
                       className="flex items-center gap-3 p-3 rounded-lg border border-border bg-card hover:bg-secondary/50 transition-colors text-left"
                     >
                       <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-secondary overflow-hidden">
@@ -328,36 +419,26 @@ export function ChatTab({ onOpenPickupModal }: ChatTabProps = {}) {
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
+                        <p className="text-xs text-muted-foreground mb-0.5">Offer I hooked</p>
                         <p className="text-sm font-medium text-foreground truncate">
                           {targetOffer?.title || "Unknown Offer"}
                         </p>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {conv.messages.length > 0
-                            ? conv.messages[conv.messages.length - 1].content
-                            : "No messages yet"}
-                        </p>
                       </div>
-                      {conv.unreadCount > 0 && (
-                        <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[10px] font-bold text-primary-foreground">
-                          {conv.unreadCount}
-                        </span>
-                      )}
                       <ChevronRight className="h-4 w-4 text-muted-foreground" />
                     </button>
                   );
                 })}
 
-                {/* Incoming hooks (others hooked my offer) */}
-                {incomingHooks.map((hook) => {
-                  const fromOffer = getOfferById(hook.fromOfferId);
+                {/* CHAT 2: Incoming chats - others hooked my offer (only after my confirmation + escrow) */}
+                {incomingChats.map(({ hook, fromOffer }) => {
                   const fromProduct = fromOffer
                     ? products.find((p) => p.productId === fromOffer.productId)
                     : null;
                   
                   return (
                     <button
-                      key={hook.hookId}
-                      onClick={() => openConversation(hook.hookId)}
+                      key={`incoming-${hook.hookId}`}
+                      onClick={() => openIncomingConversation(hook.hookId)}
                       className="flex items-center gap-3 p-3 rounded-lg border border-primary/30 bg-primary/5 hover:bg-primary/10 transition-colors text-left"
                     >
                       <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-secondary overflow-hidden">

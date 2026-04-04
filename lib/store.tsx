@@ -392,9 +392,13 @@ export function BarterProvider({ children }: { children: ReactNode }) {
       myOfferId: string,
       targetOfferId: string,
       otherUserId: string,
-      otherUserName: string
+      otherUserName: string,
+      conversationType: "outgoing" | "incoming" = "outgoing"
     ): Conversation => {
-      const existing = conversations.find((c) => c.hookId === hookId);
+      // Find existing conversation matching hookId AND conversationType
+      const existing = conversations.find(
+        (c) => c.hookId === hookId && c.conversationType === conversationType
+      );
       if (existing) return existing;
 
       const newConversation: Conversation = {
@@ -407,6 +411,7 @@ export function BarterProvider({ children }: { children: ReactNode }) {
         messages: [],
         unreadCount: 0,
         deliverySupportRequested: false,
+        conversationType,
       };
       setConversations((prev) => [...prev, newConversation]);
       return newConversation;

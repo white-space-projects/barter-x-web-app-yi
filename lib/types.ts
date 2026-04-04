@@ -250,6 +250,11 @@ export type ChatMessage = {
   isSystemMessage?: boolean;
 };
 
+// Type of conversation based on offer relationship
+export type ConversationType = "outgoing" | "incoming";
+// - "outgoing": I hooked their offer (Chat 1 - destination offer chat)
+// - "incoming": They hooked my offer (Chat 2 - source offer inbound chat)
+
 export type Conversation = {
   conversationId: string;
   hookId?: string;
@@ -260,6 +265,7 @@ export type Conversation = {
   messages: ChatMessage[];
   unreadCount: number;
   deliverySupportRequested: boolean;
+  conversationType?: ConversationType;
 };
 
 export type NotificationType = 
