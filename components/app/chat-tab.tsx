@@ -94,22 +94,18 @@ export function ChatTab({ onOpenPickupModal }: ChatTabProps = {}) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // ============================================================================
-  // CHAT VISIBILITY LOGIC - Two separate chats based on offer relationships
+  // CHAT VISIBILITY LOGIC
   // ============================================================================
-  // 
-  // CHAT 1 - OUTGOING (Destination offer chat):
-  //   - I hooked someone else's offer
-  //   - Available when my offer is Reserved (lockLevel >= 1)
-  //   - Available EVEN BEFORE I confirm pickup readiness
-  //   - Purpose: Ask questions, discuss logistics with destination offer owner
+  // A chat is enabled when:
+  //   myOffer.lockLevel >= 1 && targetOffer.readyState === true
   //
-  // CHAT 2 - INCOMING (Source offer inbound chat):
-  //   - Someone hooked MY offer
-  //   - Available ONLY AFTER I confirm pickup (readyState=true) AND escrow paid
-  //   - Purpose: Coordinate with the user who will receive my offer
+  // This applies to BOTH perspectives of the same hook relationship:
+  // - "Outgoing": I hooked their offer -> chat enabled when their offer.readyState === true
+  // - "Incoming": They hooked my offer -> chat enabled when my offer.readyState === true
   // ============================================================================
 
-  // CHAT 1: Outgoing chats - offers I hooked (available when Reserved, before confirmation)
+  // Outgoing chats: I hooked someone else's offer
+  // Enabled when: myOffer.lockLevel >= 1 && targetOffer.readyState === true
   const outgoingChats = useMemo(() => {
     if (!auth.user) return [];
     
@@ -117,18 +113,23 @@ export function ChatTab({ onOpenPickupModal }: ChatTabProps = {}) {
       .filter((o) => o.ownerUserId === auth.user!.userId)
       .map((o) => o.offerId);
     
-    // Find hooks where I hooked someone else's offer AND my offer is Reserved
     return hooks.filter((h) => {
       const myOffer = offers.find((o) => o.offerId === h.fromOfferId && myOfferIds.includes(o.offerId));
-      // Available when my source offer is Reserved (lockLevel >= 1)
-      return myOffer && myOffer.lockLevel >= 1 && h.isActive;
+      const targetOffer = getOfferById(h.toOfferId);
+      // Chat enabled when: myOffer.lockLevel >= 1 && targetOffer.readyState === true
+      return myOffer && 
+             myOffer.lockLevel >= 1 && 
+             targetOffer && 
+             targetOffer.readyState === true && 
+             h.isActive;
     }).map((hook) => {
       const targetOffer = getOfferById(hook.toOfferId);
       return { hook, targetOffer, type: "outgoing" as const };
     });
   }, [hooks, offers, auth.user, getOfferById]);
 
-  // CHAT 2: Incoming chats - others hooked my offer (only after I confirm + escrow)
+  // Incoming chats: Someone hooked my offer
+  // Enabled when: myOffer.lockLevel >= 1 && myOffer.readyState === true (same logic, I am the target)
   const incomingChats = useMemo(() => {
     if (!auth.user) return [];
     
@@ -136,47 +137,20 @@ export function ChatTab({ onOpenPickupModal }: ChatTabProps = {}) {
       .filter((o) => o.ownerUserId === auth.user!.userId)
       .map((o) => o.offerId);
     
-    // Find hooks where someone hooked MY offer
     return hooks.filter((h) => {
       const myOffer = offers.find((o) => o.offerId === h.toOfferId && myOfferIds.includes(o.offerId));
-      // Only available when:
-      // 1. My offer is Reserved (lockLevel >= 1)
-      // 2. I have confirmed pickup readiness (readyState = true)
-      // 3. I have paid escrow (escrowPaid = true)
+      const fromOffer = getOfferById(h.fromOfferId);
+      // Chat enabled when: fromOffer.lockLevel >= 1 && myOffer.readyState === true
       return myOffer && 
-             myOffer.lockLevel >= 1 && 
              myOffer.readyState === true && 
-             myOffer.escrowPaid === true &&
+             fromOffer &&
+             fromOffer.lockLevel >= 1 &&
              h.isActive;
     }).map((hook) => {
       const fromOffer = getOfferById(hook.fromOfferId);
       return { hook, fromOffer, type: "incoming" as const };
     });
   }, [hooks, offers, auth.user, getOfferById]);
-
-  // Legacy: kept for backward compatibility
-  const myConversations = useMemo(() => {
-    return conversations.filter((c) => {
-      const myOffer = getOfferById(c.myOfferId);
-      return myOffer?.ownerUserId === auth.user?.userId;
-    });
-  }, [conversations, auth.user, getOfferById]);
-
-  // Legacy: incomingHooks - kept for backward compatibility
-  const incomingHooks = useMemo(() => {
-    if (!auth.user) return [];
-    const myOfferIds = offers
-      .filter((o) => o.ownerUserId === auth.user!.userId)
-      .map((o) => o.offerId);
-    return hooks.filter((h) => {
-      const myOffer = offers.find((o) => o.offerId === h.toOfferId && myOfferIds.includes(o.offerId));
-      return myOffer && 
-             myOffer.lockLevel >= 1 && 
-             myOffer.readyState === true && 
-             myOffer.escrowPaid === true &&
-             h.isActive;
-    });
-  }, [hooks, offers, auth.user]);
 
   const currentConversation = selectedConversation
     ? conversations.find((c) => c.conversationId === selectedConversation)
@@ -394,7 +368,7 @@ export function ChatTab({ onOpenPickupModal }: ChatTabProps = {}) {
               </div>
             ) : (
               <div className="flex flex-col gap-2 max-w-lg">
-                {/* CHAT 1: Outgoing chats - offers I hooked (available when Reserved, before confirmation) */}
+                {/* Outgoing chats - offers I hooked (enabled when targetOffer.readyState === true) */}
                 {outgoingChats.map(({ hook, targetOffer }) => {
                   const targetProduct = targetOffer 
                     ? products.find((p) => p.productId === targetOffer.productId)
@@ -429,7 +403,7 @@ export function ChatTab({ onOpenPickupModal }: ChatTabProps = {}) {
                   );
                 })}
 
-                {/* CHAT 2: Incoming chats - others hooked my offer (only after my confirmation + escrow) */}
+                {/* Incoming chats - others hooked my offer (enabled when myOffer.readyState === true) */}
                 {incomingChats.map(({ hook, fromOffer }) => {
                   const fromProduct = fromOffer
                     ? products.find((p) => p.productId === fromOffer.productId)
