@@ -849,7 +849,8 @@ function ProgressSidebar({
 function MobileProgressIndicator({ currentStep, onBack }: { currentStep: Step; onBack?: () => void }) {
   return (
     <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-card">
-      {onBack && currentStep > 1 ? (
+      {/* Back button always visible - closes flow with confirmation on any step */}
+      {onBack ? (
         <button
           type="button"
           onClick={onBack}
@@ -1526,9 +1527,9 @@ export function AddOfferFlow({
           </button>
         </div>
 
-        {/* Mobile: Show progress indicator */}
+        {/* Mobile: Show progress indicator - back arrow always exits flow with confirmation */}
         <div className="lg:hidden mb-4">
-          <MobileProgressIndicator currentStep={currentStep} onBack={currentStep > minStep ? prevStep : onClose} />
+          <MobileProgressIndicator currentStep={currentStep} onBack={handleCloseAttempt} />
         </div>
 
         {/* Step content - same as overlay mode but without wrapper */}
@@ -2091,12 +2092,12 @@ export function AddOfferFlow({
         </div>
       </div>
 
-      {/* Mobile: Header with back/close */}
+      {/* Mobile: Header with back/close - back arrow always exits flow with confirmation */}
       <div className="lg:hidden flex-shrink-0 border-b border-border bg-card">
         <div className="flex h-14 items-center justify-between px-4">
           <button
             type="button"
-            onClick={currentStep > 1 ? prevStep : handleCloseAttempt}
+            onClick={handleCloseAttempt}
             className="p-2 -ml-2 rounded-lg text-primary hover:bg-primary/10 transition-colors"
           >
             <ArrowLeft className="h-5 w-5" />
