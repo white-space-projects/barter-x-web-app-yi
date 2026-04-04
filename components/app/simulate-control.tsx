@@ -22,7 +22,7 @@ export function SimulateControl({ currentLockLevel, hookId, sourceOfferId, targe
   const [showMenu, setShowMenu] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
   const buttonRef = useRef<HTMLButtonElement>(null);
-  const { updateOffer, updateHook, getOrCreateConversation, addSystemMessage, getOfferById, addNotification } = useBarterStore();
+  const { updateOffer, updateHook, addNotification } = useBarterStore();
 
   // Calculate menu position when opened
   useEffect(() => {
@@ -60,48 +60,17 @@ export function SimulateControl({ currentLockLevel, hookId, sourceOfferId, targe
       lockUpdatedAt: new Date().toISOString(),
     });
 
-    // When setting to Reserved, send chat notification with adaptive card
+    // When setting to Reserved, send notification only (no chat message - chat enabled after both confirm)
     if (lockLevel === 1) {
-      const targetOffer = getOfferById(targetOfferId);
-      const sourceOffer = getOfferById(sourceOfferId);
-      
-      if (targetOffer && sourceOffer) {
-        // Get or create conversation for this hook
-        const conversation = getOrCreateConversation(
-          hookId,
-          sourceOfferId,
-          targetOfferId,
-          targetOffer.userId,
-          "Other User" // In real app, would get user name
-        );
-        
-        // Add system message with adaptive card
-        addSystemMessage(
-          conversation.conversationId, 
-          "A barter cycle has been found! Please confirm your pickup readiness.",
-          {
-            title: "Cycle Matched!",
-            description: "A barter cycle has been found. Please confirm your pickup readiness to proceed with the exchange.",
-            action: {
-              type: "confirm_pickup",
-              label: "Confirm Pickup Readiness",
-              offerId: sourceOfferId,
-              hookId: hookId,
-            }
-          }
-        );
-        
-        // Also add a notification
-        addNotification({
-          type: "cycle_found",
-          title: "Barter Cycle Found!",
-          message: "A cycle has been matched. Confirm your pickup readiness to proceed.",
-          offerId: sourceOfferId,
-          hookId: hookId,
-          actionType: "confirm_pickup",
-          actionLabel: "Confirm Pickup",
-        });
-      }
+      addNotification({
+        type: "cycle_found",
+        title: "Barter Cycle Found!",
+        message: "A cycle has been matched. Confirm your pickup readiness to proceed.",
+        offerId: sourceOfferId,
+        hookId: hookId,
+        actionType: "confirm_pickup",
+        actionLabel: "Confirm Pickup",
+      });
     }
 
     const labels = ["Available", "Reserved", "Processing", "Exchanged"];

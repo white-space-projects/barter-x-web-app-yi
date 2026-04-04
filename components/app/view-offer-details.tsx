@@ -676,17 +676,39 @@ export function ViewOfferDetails({ offerId, onClose, onEdit, onAddOfferToProduct
             {/* Confirm Pickup Readiness (my offer only, greyed out if not reserved) */}
             {isMyOffer && (
               <div className="mb-5">
-                <button
-                  disabled={offer.lockLevel < 1}
-                  className={`w-full lg:w-auto lg:min-w-[280px] py-2.5 px-6 rounded-lg text-sm font-medium transition-colors ${
-                    offer.lockLevel >= 1
-                      ? "bg-green-500/10 text-green-500 hover:bg-green-500/20"
-                      : "bg-secondary text-muted-foreground cursor-not-allowed"
-                  }`}
-                >
-                  {offer.readyState ? "Pickup Readiness Confirmed" : "Confirm Pickup Readiness"}
-                </button>
-                {offer.lockLevel < 1 && (
+                {offer.readyState ? (
+                  <button
+                    onClick={() => {
+                      // Open pickup modal in edit mode (won't re-trigger escrow if already paid)
+                      window.dispatchEvent(new CustomEvent("openPickupModal", { 
+                        detail: { offerId: offer.offerId, isEdit: true } 
+                      }));
+                    }}
+                    className="w-full lg:w-auto lg:min-w-[280px] py-2.5 px-6 rounded-lg text-sm font-medium bg-green-500/10 text-green-500 hover:bg-green-500/20 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <span>Pickup Confirmed</span>
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                ) : (
+                  <button
+                    disabled={offer.lockLevel < 1}
+                    onClick={() => {
+                      if (offer.lockLevel >= 1) {
+                        window.dispatchEvent(new CustomEvent("openPickupModal", { 
+                          detail: { offerId: offer.offerId, isEdit: false } 
+                        }));
+                      }
+                    }}
+                    className={`w-full lg:w-auto lg:min-w-[280px] py-2.5 px-6 rounded-lg text-sm font-medium transition-colors ${
+                      offer.lockLevel >= 1
+                        ? "bg-green-500/10 text-green-500 hover:bg-green-500/20"
+                        : "bg-secondary text-muted-foreground cursor-not-allowed"
+                    }`}
+                  >
+                    Confirm Pickup Readiness
+                  </button>
+                )}
+                {offer.lockLevel < 1 && !offer.readyState && (
                   <p className="text-xs text-muted-foreground mt-1 text-center">
                     Available when offer is part of a reserved cycle
                   </p>
