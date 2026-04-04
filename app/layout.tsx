@@ -14,10 +14,20 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "BARTER-X | Exchange Without Money",
+  title: "BARTER-X | Trade What You Have. Get What You Want.",
   description:
-    "A marketplace where people exchange used products without money. Add an offer, hook what you want, and trade.",
+    "The world's first smart exchange platform. No money needed. Create offers, connect with others, and let our engine find perfect multi-party trades.",
   manifest: "/manifest.json",
+  openGraph: {
+    title: "BARTER-X | Trade What You Have. Get What You Want.",
+    description: "The world's first smart exchange platform. No money needed. Create offers, connect with others, and let our engine find perfect multi-party trades.",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "BARTER-X | Trade What You Have. Get What You Want.",
+    description: "The world's first smart exchange platform. No money needed.",
+  },
 };
 
 export const viewport: Viewport = {
