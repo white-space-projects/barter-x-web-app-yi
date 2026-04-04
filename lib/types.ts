@@ -267,7 +267,8 @@ export type NotificationType =
   | "trade_committed"
   | "delivery_requested"
   | "direct_exchange_req"
-  | "status_update";
+  | "status_update"
+  | "cycle_found";
 
 export type Notification = {
   notificationId: string;

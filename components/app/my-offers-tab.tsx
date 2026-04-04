@@ -487,6 +487,7 @@ export function MyOffersTab() {
                                     <SimulateControl
                                       currentLockLevel={targetLockLevel}
                                       hookId={hook.hookId}
+                                      sourceOfferId={offer.offerId}
                                       targetOfferId={hook.toOfferId}
                                     />
                                     {/* Unhook button - always visible but disabled when locked */}

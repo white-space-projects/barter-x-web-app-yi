@@ -133,6 +133,7 @@ type BarterStore = {
     otherUserName: string
   ) => Conversation;
   addMessage: (conversationId: string, content: string, isMe?: boolean) => void;
+  addSystemMessage: (conversationId: string, content: string, adaptiveCard?: ChatMessage["adaptiveCard"]) => void;
   markConversationRead: (conversationId: string) => void;
   requestDeliverySupport: (conversationId: string) => void;
   getTotalUnreadMessages: () => number;
@@ -436,6 +437,32 @@ export function BarterProvider({ children }: { children: ReactNode }) {
     [auth.user?.userId]
   );
 
+  // Add system message with optional adaptive card
+  const addSystemMessage = useCallback(
+    (conversationId: string, content: string, adaptiveCard?: ChatMessage["adaptiveCard"]) => {
+      const message: ChatMessage = {
+        messageId: generateGuid(),
+        senderId: "system",
+        content,
+        timestamp: new Date(),
+        isSystemMessage: true,
+        adaptiveCard,
+      };
+      setConversations((prev) =>
+        prev.map((c) =>
+          c.conversationId === conversationId
+            ? {
+                ...c,
+                messages: [...c.messages, message],
+                unreadCount: c.unreadCount + 1,
+              }
+            : c
+        )
+      );
+    },
+    []
+  );
+
   const markConversationRead = useCallback((conversationId: string) => {
     setConversations((prev) =>
       prev.map((c) =>
@@ -612,6 +639,7 @@ export function BarterProvider({ children }: { children: ReactNode }) {
     conversations,
     getOrCreateConversation,
     addMessage,
+    addSystemMessage,
     markConversationRead,
     requestDeliverySupport,
     getTotalUnreadMessages,
@@ -657,6 +685,7 @@ export function BarterProvider({ children }: { children: ReactNode }) {
     conversations,
     getOrCreateConversation,
     addMessage,
+    addSystemMessage,
     markConversationRead,
     requestDeliverySupport,
     getTotalUnreadMessages,
