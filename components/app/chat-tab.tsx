@@ -40,7 +40,6 @@ import {
   Send,
   Package,
   Check,
-  Check,
   CheckCheck,
   Clock,
   Truck,
