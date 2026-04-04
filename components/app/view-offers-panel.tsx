@@ -12,7 +12,7 @@
  */
 
 import { useState, useMemo, useEffect, useCallback } from "react";
-import { AlertCircle, Package, ArrowRightLeft, Plus, ChevronDown, ChevronUp, Link2Off, AlertTriangle, Loader2 } from "lucide-react";
+import { AlertCircle, Package, ArrowRightLeft, Plus, ChevronDown, ChevronUp, Link2Off, AlertTriangle, Loader2, Pencil } from "lucide-react";
 import { useBarterStore } from "@/lib/store";
 import type { Product, HookStatus, Hook, Offer } from "@/lib/types";
 import { LOCK_LEVEL_LABELS, LOCK_LEVEL_COLORS, LOCK_LEVEL_BG_COLORS } from "@/lib/types";
@@ -248,8 +248,9 @@ export function ViewOffersPanel({ product, onAddOffer, onViewModeChange }: Props
               {offers.map((offer) => {
                 const isOwn = offer.ownerUserId === auth.user?.userId;
                 const displayStatus = isOwn ? getOfferDisplayStatus(offer.offerId) : null;
-                const showConfirmPickup = isOwn && hasReservedHook(offer.offerId) && !offer.readyForCommit;
-                const showPickupDate = isOwn && offer.readyForCommit && offer.pickupReadyDate;
+const showConfirmPickup = isOwn && hasReservedHook(offer.offerId) && !offer.readyState;
+                  const showPickupConfirmed = isOwn && offer.readyState;
+                  const showPickupDate = isOwn && offer.readyState && offer.pickupReadyDate;
                 
                 return (
                   <div 
@@ -310,6 +311,14 @@ export function ViewOffersPanel({ product, onAddOffer, onViewModeChange }: Props
                               <div className="flex justify-end">
                                 <button onClick={() => setPickupOfferId(offer.offerId)} className="px-3 py-1.5 text-xs font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">
                                   Confirm Pickup Readiness
+                                </button>
+                              </div>
+                            )}
+                            {showPickupConfirmed && (
+                              <div className="flex justify-end">
+                                <button onClick={() => setPickupOfferId(offer.offerId)} className="px-3 py-1.5 text-xs font-medium rounded-md bg-green-500/10 text-green-500 hover:bg-green-500/20 transition-colors flex items-center gap-1.5">
+                                  <span>Pickup Confirmed</span>
+                                  <Pencil className="h-3 w-3" />
                                 </button>
                               </div>
                             )}

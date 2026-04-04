@@ -4,6 +4,7 @@ import { getProductInfo } from "./offer-info-fields";
 // Helper to create default workflow fields for offers
 const defaultOfferWorkflow = {
   readyState: false,
+  escrowPaid: false,
   lockLevel: 0 as LockLevel,
   notificationState: 0 as NotificationState,
   isActive: true,

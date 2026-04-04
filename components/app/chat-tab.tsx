@@ -48,6 +48,7 @@ import {
   MapPin,
   AlertCircle,
   ArrowRightLeft,
+  Pencil,
 } from "lucide-react";
 import { useBarterStore } from "@/lib/store";
 import { generateGuid } from "@/lib/guid";
@@ -542,8 +543,16 @@ const iconMap: Record<string, JSX.Element> = {
         {/* Message */}
         <p className="text-sm text-muted-foreground mb-3">{notification.message}</p>
 
-        {/* Action button */}
-        {notification.actionLabel && (
+        {/* Action button - show "Pickup Confirmed" with edit if already confirmed */}
+        {notification.actionType === "confirm_pickup" && offer?.readyState ? (
+          <button
+            onClick={() => onAction(notification)}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-green-500/10 text-sm font-medium text-green-500 hover:bg-green-500/20 transition-colors"
+          >
+            Pickup Confirmed
+            <Pencil className="h-4 w-4" />
+          </button>
+        ) : notification.actionLabel && (
           <button
             onClick={() => onAction(notification)}
             className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"

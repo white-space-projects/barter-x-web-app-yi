@@ -372,18 +372,16 @@ export function MyOffersTab() {
                   </div>
                 )}
                 
-                {/* Show Ready for Pickup label when confirmed */}
+                {/* Show Pickup Confirmed with edit button when confirmed */}
                 {showReadyLabel && !showConfirmPickup && (
-                  <div className="px-4 pb-3 pt-2 border-t border-border/50 flex justify-between items-center">
-                    <span className="text-xs text-green-500 font-medium">Ready for Pick-up</span>
-                    {canUnconfirmReady && (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleUnconfirmReadiness(offer.offerId); }}
-                        className="text-xs text-muted-foreground hover:text-foreground underline"
-                      >
-                        Cancel readiness
-                      </button>
-                    )}
+                  <div className="px-4 pb-3 pt-2 border-t border-border/50 flex justify-end">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setPickupOffer(offer.offerId); }}
+                      className="px-3 py-1.5 text-xs font-medium rounded-md bg-green-500/10 text-green-500 hover:bg-green-500/20 transition-colors flex items-center gap-1.5"
+                    >
+                      <span>Pickup Confirmed</span>
+                      <Pencil className="h-3 w-3" />
+                    </button>
                   </div>
                 )}
 

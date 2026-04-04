@@ -269,8 +269,9 @@ export function OfferCard({
   // ---------------------------------------------------------------------------
   
   const displayStatus = variant === "own" ? getDisplayStatus() : null;
-  const showConfirmPickup = variant === "own" && hasReservedHook() && !offer.readyForCommit;
-  const showPickupDate = variant === "own" && (hasProcessingHook() || offer.readyForCommit) && offer.pickupReadyDate;
+  const showConfirmPickup = variant === "own" && hasReservedHook() && !offer.readyState;
+  const showPickupConfirmed = variant === "own" && offer.readyState;
+  const showPickupDate = variant === "own" && (hasProcessingHook() || offer.readyState) && offer.pickupReadyDate;
   const { canRequest: canDirectExchange, myMatchingOffer } = variant === "other" ? canRequestDirectExchange() : { canRequest: false, myMatchingOffer: null };
 
   // ---------------------------------------------------------------------------
@@ -432,15 +433,26 @@ export function OfferCard({
         {/* Action buttons area */}
         <div className="mt-3 pt-2 border-t border-border/50 flex flex-wrap gap-2 justify-end">
           {variant === "own" ? (
-            /* OWN OFFER: Confirm pickup button */
-            showConfirmPickup && (
-              <button
-                onClick={() => onConfirmPickup?.(offer.offerId)}
-                className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-              >
-                Confirm Pickup Readiness
-              </button>
-            )
+            /* OWN OFFER: Confirm pickup button or Pickup Confirmed with edit */
+            <>
+              {showConfirmPickup && (
+                <button
+                  onClick={() => onConfirmPickup?.(offer.offerId)}
+                  className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+                >
+                  Confirm Pickup Readiness
+                </button>
+              )}
+              {showPickupConfirmed && (
+                <button
+                  onClick={() => onConfirmPickup?.(offer.offerId)}
+                  className="rounded-md bg-green-500/10 px-3 py-1.5 text-xs font-medium text-green-500 hover:bg-green-500/20 transition-colors flex items-center gap-1.5"
+                >
+                  <span>Pickup Confirmed</span>
+                  <Pencil className="h-3 w-3" />
+                </button>
+              )}
+            </>
           ) : (
             /* OTHER OFFER: Hook / Direct Exchange buttons */
             <>

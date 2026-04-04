@@ -205,8 +205,13 @@ export function PickupReadinessModal({ offerId, onClose }: Props) {
     });
 
     // Update the offer with address, selected date, and verified phone
+    // IMPORTANT: Set readyState: true so UI shows "Pickup Confirmed" instead of "Confirm Pickup Readiness"
     updateOffer(offerId, {
       readyForCommit: true,
+      readyState: true,
+      readyUpdatedAt: new Date().toISOString(),
+      escrowPaid: true,
+      escrowPaidAt: new Date().toISOString(),
       pickupAddress: {
         country,
         city,
