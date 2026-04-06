@@ -1,27 +1,25 @@
 /**
  * Login API Route
  * ================
- * Handles temporary login flow:
+ * Handles temporary login flow using direct PostgreSQL connection:
  * 1. Find or create user in application.users by email
  * 2. Create server-side session cookie
  * 3. Return user profile data
  * 
- * This is a temporary implementation without real OTP/OAuth validation.
+ * Easy for backend developer to replace with Laravel API calls.
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
 import { setSessionCookie, type UserSession } from "@/lib/auth";
 import { generateGuid } from "@/lib/guid";
-
-// Check if required env vars are set
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-// Create admin client with service role key
-const supabaseAdmin = SUPABASE_URL && SUPABASE_SERVICE_KEY 
-  ? createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
-  : null;
+import { 
+  findUserByEmail, 
+  createUser, 
+  updateLastLogin, 
+  findCountry, 
+  findCity,
+  findUserWithLocation 
+} from "@/lib/db/repositories/users";
 
 export async function POST(request: NextRequest) {
   try {
@@ -48,29 +46,9 @@ export async function POST(request: NextRequest) {
     const adminEmails = JSON.parse(process.env.NEXT_PUBLIC_ADMIN_EMAILS || "[]");
     isAdmin = adminEmails.includes(email.toLowerCase());
 
-    // If Supabase is configured, find or create user in database
-    if (supabaseAdmin) {
-      console.log("[v0] Login API: Checking database for existing user");
-      
+    try {
       // Try to find existing user by email
-      const { data: existingUser, error: findError } = await supabaseAdmin
-        .schema("application")
-        .from("users")
-        .select(`
-          user_id,
-          email,
-          display_name,
-          is_admin,
-          profile_country:countries!profile_country_id(name, country_code),
-          profile_city:cities!profile_city_id(name)
-        `)
-        .eq("email", email.toLowerCase())
-        .single();
-
-      if (findError && findError.code !== "PGRST116") {
-        console.error("[v0] Login API: Error finding user:", findError);
-        // Continue with mock user if DB query fails
-      }
+      const existingUser = await findUserByEmail(email);
 
       if (existingUser) {
         // User exists - use their data
@@ -78,81 +56,56 @@ export async function POST(request: NextRequest) {
         userId = existingUser.user_id;
         userName = existingUser.display_name || name || "User";
         isAdmin = existingUser.is_admin || isAdmin;
-        userCity = existingUser.profile_city?.name || city || "";
-        userCountry = existingUser.profile_country?.name || country || "";
-        userCountryCode = existingUser.profile_country?.country_code || countryCode || "";
+        
+        // Get location data
+        const userWithLocation = await findUserWithLocation(userId);
+        if (userWithLocation) {
+          userCity = userWithLocation.cityName || city || "";
+          userCountry = userWithLocation.countryName || country || "";
+          userCountryCode = userWithLocation.countryCode || countryCode || "";
+        }
         
         // Update last login time
-        await supabaseAdmin
-          .schema("application")
-          .from("users")
-          .update({ last_login_at: new Date().toISOString() })
-          .eq("user_id", userId);
+        await updateLastLogin(userId);
       } else {
         // User doesn't exist - create new user
         console.log("[v0] Login API: Creating new user");
-        userId = generateGuid();
 
         // Look up country and city IDs if provided
-        let countryId = null;
-        let cityId = null;
+        let detectedCountryId: string | undefined;
+        let detectedCityId: string | undefined;
 
         if (country) {
-          const { data: countryData } = await supabaseAdmin
-            .schema("application")
-            .from("countries")
-            .select("country_id")
-            .ilike("name", country)
-            .single();
-          
+          const countryData = await findCountry(country);
           if (countryData) {
-            countryId = countryData.country_id;
+            detectedCountryId = countryData.country_id;
+            userCountryCode = countryData.country_code;
+            userCountry = countryData.name;
             
             if (city) {
-              const { data: cityData } = await supabaseAdmin
-                .schema("application")
-                .from("cities")
-                .select("city_id")
-                .eq("country_id", countryId)
-                .ilike("name", city)
-                .single();
-              
+              const cityData = await findCity(city, detectedCountryId);
               if (cityData) {
-                cityId = cityData.city_id;
+                detectedCityId = cityData.city_id;
+                userCity = cityData.name;
               }
             }
           }
         }
 
-        // Insert new user
-        const { data: newUser, error: insertError } = await supabaseAdmin
-          .schema("application")
-          .from("users")
-          .insert({
-            user_id: userId,
-            email: email.toLowerCase(),
-            display_name: name || null,
-            is_admin: isAdmin,
-            detected_country_id: countryId,
-            detected_city_id: cityId,
-            profile_country_id: countryId,
-            profile_city_id: cityId,
-            last_login_at: new Date().toISOString(),
-            is_active: true,
-          })
-          .select("user_id")
-          .single();
+        // Create new user
+        const newUser = await createUser({
+          email: email.toLowerCase(),
+          displayName: name || undefined,
+          detectedCountryId,
+          detectedCityId,
+        });
 
-        if (insertError) {
-          console.error("[v0] Login API: Error creating user:", insertError);
-          // Continue with generated userId
-        } else if (newUser) {
-          userId = newUser.user_id;
-        }
+        userId = newUser.user_id;
+        console.log("[v0] Login API: Created new user:", userId);
       }
-    } else {
-      // No Supabase - use generated ID (temporary session only)
-      console.log("[v0] Login API: Supabase not configured, using temporary session");
+    } catch (dbError) {
+      // Database not available - use temporary session
+      console.warn("[v0] Login API: Database error, using temporary session:", dbError);
       userId = generateGuid();
     }
 

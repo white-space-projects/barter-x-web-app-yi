@@ -1,0 +1,228 @@
+/**
+ * Products Repository
+ * ====================
+ * Server-side data access for products from application schema.
+ * Uses direct PostgreSQL connection.
+ * 
+ * Easy to replace with Laravel API calls later.
+ */
+
+import { query } from "../postgres";
+import type { Product, ProductType } from "@/lib/types";
+
+interface DbProduct {
+  product_id: string;
+  title: string;
+  description: string | null;
+  image_key: string | null;
+  barter_type_id: string;
+  category_id: string | null;
+  subcategory_id: string | null;
+  brand_id: string | null;
+  model: string | null;
+  product_info: Record<string, unknown> | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  barter_type_slug: string | null;
+  barter_type_name: string | null;
+  category_name: string | null;
+  category_slug: string | null;
+  subcategory_name: string | null;
+  subcategory_slug: string | null;
+  brand_name: string | null;
+  brand_slug: string | null;
+}
+
+/**
+ * Map database row to Product type
+ * Note: Maps to existing Product type, using productType (not barterType)
+ */
+function mapToProduct(row: DbProduct): Product {
+  return {
+    productId: row.product_id,
+    productType: (row.barter_type_slug || "goods") as ProductType,
+    title: row.title,
+    category: row.category_name || "",
+    subcategory: row.subcategory_name || undefined,
+    brand: row.brand_name || undefined,
+    model: row.model || undefined,
+    imageUrl: row.image_key
+      ? `https://mdytcwlxlwvmioizaidu.supabase.co/storage/v1/object/public/product-images/${row.image_key}`
+      : undefined,
+    offerCount: 0, // TODO: Add offer count query
+    productInfo: row.product_info 
+      ? Object.entries(row.product_info).map(([key, value]) => ({ 
+          fieldName: key, 
+          value: String(value) 
+        }))
+      : undefined,
+  };
+}
+
+export interface FetchProductsOptions {
+  barterTypeSlug?: string;
+  categorySlug?: string;
+  limit?: number;
+  offset?: number;
+}
+
+/**
+ * Fetch products from application.products
+ */
+export async function fetchProducts(
+  options: FetchProductsOptions = {}
+): Promise<{ products: Product[]; total: number }> {
+  const { barterTypeSlug, limit = 100, offset = 0 } = options;
+
+  // Build WHERE clause
+  const conditions: string[] = ["p.is_active = true"];
+  const params: unknown[] = [];
+  let paramIndex = 1;
+
+  if (barterTypeSlug) {
+    conditions.push(`bt.slug = $${paramIndex}`);
+    params.push(barterTypeSlug);
+    paramIndex++;
+  }
+
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+
+  // Count query
+  const countSql = `
+    SELECT COUNT(*) as total
+    FROM application.products p
+    LEFT JOIN application.barter_types bt ON p.barter_type_id = bt.barter_type_id
+    ${whereClause}
+  `;
+
+  // Data query
+  const dataSql = `
+    SELECT 
+      p.product_id,
+      p.title,
+      p.description,
+      p.image_key,
+      p.barter_type_id,
+      p.category_id,
+      p.subcategory_id,
+      p.brand_id,
+      p.model,
+      p.product_info,
+      p.is_active,
+      p.created_at,
+      p.updated_at,
+      bt.slug as barter_type_slug,
+      bt.name as barter_type_name,
+      c.name as category_name,
+      c.slug as category_slug,
+      sc.name as subcategory_name,
+      sc.slug as subcategory_slug,
+      b.name as brand_name,
+      b.slug as brand_slug
+    FROM application.products p
+    LEFT JOIN application.barter_types bt ON p.barter_type_id = bt.barter_type_id
+    LEFT JOIN application.categories c ON p.category_id = c.category_id
+    LEFT JOIN application.subcategories sc ON p.subcategory_id = sc.subcategory_id
+    LEFT JOIN application.brands b ON p.brand_id = b.brand_id
+    ${whereClause}
+    ORDER BY p.created_at DESC
+    LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+  `;
+
+  params.push(limit, offset);
+
+  console.log("[v0] Products query with params:", { barterTypeSlug, limit, offset });
+
+  const [countResult, products] = await Promise.all([
+    query<{ total: string }>(countSql, barterTypeSlug ? [barterTypeSlug] : []),
+    query<DbProduct>(dataSql, params),
+  ]);
+
+  const total = parseInt(countResult[0]?.total || "0", 10);
+
+  console.log("[v0] Products fetched:", products.length, "total:", total);
+
+  return {
+    products: products.map(mapToProduct),
+    total,
+  };
+}
+
+/**
+ * Fetch a single product by ID
+ */
+export async function fetchProductById(productId: string): Promise<Product | null> {
+  const sql = `
+    SELECT 
+      p.product_id,
+      p.title,
+      p.description,
+      p.image_key,
+      p.barter_type_id,
+      p.category_id,
+      p.subcategory_id,
+      p.brand_id,
+      p.model,
+      p.product_info,
+      p.is_active,
+      p.created_at,
+      p.updated_at,
+      bt.slug as barter_type_slug,
+      bt.name as barter_type_name,
+      c.name as category_name,
+      c.slug as category_slug,
+      sc.name as subcategory_name,
+      sc.slug as subcategory_slug,
+      b.name as brand_name,
+      b.slug as brand_slug
+    FROM application.products p
+    LEFT JOIN application.barter_types bt ON p.barter_type_id = bt.barter_type_id
+    LEFT JOIN application.categories c ON p.category_id = c.category_id
+    LEFT JOIN application.subcategories sc ON p.subcategory_id = sc.subcategory_id
+    LEFT JOIN application.brands b ON p.brand_id = b.brand_id
+    WHERE p.product_id = $1
+  `;
+
+  const result = await query<DbProduct>(sql, [productId]);
+  return result[0] ? mapToProduct(result[0]) : null;
+}
+
+/**
+ * Fetch barter types
+ */
+export async function fetchBarterTypes(): Promise<{ barterTypeId: string; slug: string; name: string }[]> {
+  const sql = `SELECT barter_type_id, slug, name FROM application.barter_types WHERE is_active = true ORDER BY name`;
+  const result = await query<{ barter_type_id: string; slug: string; name: string }>(sql);
+  return result.map((r) => ({
+    barterTypeId: r.barter_type_id,
+    slug: r.slug,
+    name: r.name,
+  }));
+}
+
+/**
+ * Fetch categories
+ */
+export async function fetchCategories(): Promise<{ categoryId: string; slug: string; name: string }[]> {
+  const sql = `SELECT category_id, slug, name FROM application.categories WHERE is_active = true ORDER BY name`;
+  const result = await query<{ category_id: string; slug: string; name: string }>(sql);
+  return result.map((r) => ({
+    categoryId: r.category_id,
+    slug: r.slug,
+    name: r.name,
+  }));
+}
+
+/**
+ * Fetch brands
+ */
+export async function fetchBrands(): Promise<{ brandId: string; slug: string; name: string }[]> {
+  const sql = `SELECT brand_id, slug, name FROM application.brands WHERE is_active = true ORDER BY name`;
+  const result = await query<{ brand_id: string; slug: string; name: string }>(sql);
+  return result.map((r) => ({
+    brandId: r.brand_id,
+    slug: r.slug,
+    name: r.name,
+  }));
+}

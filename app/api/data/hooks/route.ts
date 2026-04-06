@@ -1,33 +1,18 @@
 /**
  * Hooks API Route
  * ================
- * CRUD operations for hooks (offer connections) directly via Supabase database.
- * Uses service role key to access the application schema.
+ * CRUD operations for hooks using direct PostgreSQL connection.
+ * Bypasses PostgREST limitations to access application schema.
+ * 
+ * Easy for backend developer to replace with Laravel API calls.
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-import type { Hook } from "@/lib/types";
-
-// Check if required env vars are set
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-// Create admin client with service role key for full schema access
-const supabaseAdmin = SUPABASE_URL && SUPABASE_SERVICE_KEY 
-  ? createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
-  : null;
+import { fetchHooks, createHook, updateHook, deleteHook } from "@/lib/db/repositories/hooks";
 
 export async function GET(request: NextRequest) {
   try {
     console.log("[v0] Hooks API: GET request received");
-    
-    if (!supabaseAdmin) {
-      return NextResponse.json(
-        { error: "Database not configured", hooks: [], total: 0 },
-        { status: 500 }
-      );
-    }
     
     const searchParams = request.nextUrl.searchParams;
     const userId = searchParams.get("userId");
@@ -35,51 +20,12 @@ export async function GET(request: NextRequest) {
     const targetOfferId = searchParams.get("targetOfferId");
     const limit = parseInt(searchParams.get("limit") || "200", 10);
 
-    // Query hooks from application schema
-    let query = supabaseAdmin
-      .schema("application")
-      .from("hooks")
-      .select(`
-        *,
-        from_offer:offers!hooks_from_offer_id_fkey(offer_id, title, product_id),
-        to_offer:offers!hooks_to_offer_id_fkey(offer_id, title, product_id)
-      `)
-      .eq("is_active", true)
-      .order("created_at", { ascending: false })
-      .limit(limit);
-    
-    if (userId) {
-      query = query.eq("created_by_user_id", userId);
-    }
-    if (sourceOfferId) {
-      query = query.eq("from_offer_id", sourceOfferId);
-    }
-    if (targetOfferId) {
-      query = query.eq("to_offer_id", targetOfferId);
-    }
-
-    const { data: rawHooks, error } = await query;
-    
-    if (error) {
-      console.error("[v0] Hooks query error:", error);
-      throw new Error(`Failed to fetch hooks: ${error.message}`);
-    }
-
-    // Map to Hook type
-    const hooks: Hook[] = (rawHooks || []).map((h: any) => ({
-      hookId: h.hook_id,
-      fromOfferId: h.from_offer_id,
-      toOfferId: h.to_offer_id,
-      correlationId: h.correlation_id,
-      status: h.status || "pending",
-      lockLevel: h.lock_level || "none",
-      cycleId: h.cycle_id,
-      isActive: h.is_active,
-      createdAt: h.created_at,
-      updatedAt: h.updated_at,
-      fromOfferTitle: h.from_offer?.title || "",
-      toOfferTitle: h.to_offer?.title || "",
-    }));
+    const hooks = await fetchHooks({
+      userId: userId || undefined,
+      sourceOfferId: sourceOfferId || undefined,
+      targetOfferId: targetOfferId || undefined,
+      limit,
+    });
 
     console.log("[v0] Hooks API: Fetched", hooks.length, "hooks");
 
@@ -87,7 +33,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error("[API] Hooks fetch error:", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to fetch hooks" },
+      { error: error instanceof Error ? error.message : "Failed to fetch hooks", hooks: [] },
       { status: 500 }
     );
   }
@@ -105,25 +51,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Insert hook into application schema
-    const { data: hook, error } = await supabaseAdmin
-      .schema("application")
-      .from("hooks")
-      .insert({
-        from_offer_id: sourceOfferId,
-        to_offer_id: targetOfferId,
-        correlation_id: correlationId || null,
-        created_by_user_id: userId || null,
-        status: "pending",
-        is_active: true,
-      })
-      .select()
-      .single();
-
-    if (error) {
-      console.error("[v0] Hook create error:", error);
-      throw new Error(`Failed to create hook: ${error.message}`);
-    }
+    const hook = await createHook({
+      sourceOfferId,
+      targetOfferId,
+      correlationId,
+      userId,
+    });
 
     return NextResponse.json({ hook }, { status: 201 });
   } catch (error) {
@@ -147,25 +80,13 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // Map frontend field names to database column names
-    const dbUpdates: Record<string, any> = {};
-    if (updates.status !== undefined) dbUpdates.status = updates.status;
-    if (updates.lockLevel !== undefined) dbUpdates.lock_level = updates.lockLevel;
-    if (updates.cycleId !== undefined) dbUpdates.cycle_id = updates.cycleId;
-    if (updates.isActive !== undefined) dbUpdates.is_active = updates.isActive;
-    dbUpdates.updated_at = new Date().toISOString();
+    const hook = await updateHook(hookId, updates);
 
-    const { data: hook, error } = await supabaseAdmin
-      .schema("application")
-      .from("hooks")
-      .update(dbUpdates)
-      .eq("hook_id", hookId)
-      .select()
-      .single();
-
-    if (error) {
-      console.error("[v0] Hook update error:", error);
-      throw new Error(`Failed to update hook: ${error.message}`);
+    if (!hook) {
+      return NextResponse.json(
+        { error: "Hook not found" },
+        { status: 404 }
+      );
     }
 
     return NextResponse.json({ hook });
@@ -190,17 +111,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // Soft delete - set is_active to false
-    const { error } = await supabaseAdmin
-      .schema("application")
-      .from("hooks")
-      .update({ is_active: false, updated_at: new Date().toISOString() })
-      .eq("hook_id", hookId);
-
-    if (error) {
-      console.error("[v0] Hook delete error:", error);
-      throw new Error(`Failed to delete hook: ${error.message}`);
-    }
+    await deleteHook(hookId);
 
     return NextResponse.json({ success: true });
   } catch (error) {
