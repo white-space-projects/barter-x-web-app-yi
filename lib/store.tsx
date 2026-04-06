@@ -244,14 +244,47 @@ export function BarterProvider({ children }: { children: ReactNode }) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
 
   // ---------------------------------------------------------------------------
-  // AUTH HYDRATION
+  // AUTH HYDRATION - Load from localStorage and sync with database
   // ---------------------------------------------------------------------------
   useEffect(() => {
-    const storedAuth = loadAuthFromStorage();
-    if (storedAuth && storedAuth.isAuthenticated) {
-      setAuth(storedAuth);
-    }
-    setAuthReady(true);
+    const hydrateAuth = async () => {
+      const storedAuth = loadAuthFromStorage();
+      if (storedAuth && storedAuth.isAuthenticated && storedAuth.user) {
+        // Set initial state from localStorage
+        setAuth(storedAuth);
+        
+        // Try to fetch fresh user data from database
+        try {
+          const response = await fetch("/api/data/user/profile");
+          if (response.ok) {
+            const data = await response.json();
+            if (data.profile && !data.fromSession) {
+              // Update user with data from database
+              const dbUser = data.profile;
+              const mergedUser = {
+                ...storedAuth.user,
+                name: dbUser.name || storedAuth.user.name,
+                city: dbUser.city || storedAuth.user.city,
+                country: dbUser.country || storedAuth.user.country,
+                countryCode: dbUser.countryCode || storedAuth.user.countryCode,
+                avatarUrl: dbUser.avatarUrl || storedAuth.user.avatarUrl,
+                isAdmin: dbUser.isAdmin ?? storedAuth.user.isAdmin,
+              };
+              const newAuth = { ...storedAuth, user: mergedUser };
+              setAuth(newAuth);
+              saveAuthToStorage(newAuth);
+              console.log("[v0] Auth hydrated from database:", mergedUser.name);
+            }
+          }
+        } catch (error) {
+          console.log("[v0] Could not fetch user profile from API:", error);
+          // Continue with localStorage data
+        }
+      }
+      setAuthReady(true);
+    };
+    
+    hydrateAuth();
   }, []);
 
   // ---------------------------------------------------------------------------

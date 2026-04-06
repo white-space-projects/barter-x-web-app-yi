@@ -10,6 +10,8 @@ import { fetchOffers, createOffer, updateOffer, deleteOffer } from "@/lib/supaba
 
 export async function GET(request: NextRequest) {
   try {
+    console.log("[v0] Offers API: GET request received");
+    
     const supabase = await createClient();
     
     const searchParams = request.nextUrl.searchParams;
@@ -18,13 +20,17 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get("limit") || "100", 10);
     const offset = parseInt(searchParams.get("offset") || "0", 10);
 
+    console.log("[v0] Offers API: Fetching with params:", { productId, userId, limit, offset });
+
+    // Note: fetchOffers already filters by is_active=true, no need to also filter by status
     const { offers, total } = await fetchOffers(supabase, {
       productId: productId || undefined,
       userId: userId || undefined,
-      status: "active",
       limit,
       offset,
     });
+
+    console.log("[v0] Offers API: Fetched", offers.length, "offers, total:", total);
 
     return NextResponse.json({ 
       offers, 
@@ -35,7 +41,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error("[API] Offers fetch error:", error);
     return NextResponse.json(
-      { error: "Failed to fetch offers" },
+      { error: error instanceof Error ? error.message : "Failed to fetch offers" },
       { status: 500 }
     );
   }

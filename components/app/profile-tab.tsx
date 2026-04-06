@@ -239,11 +239,37 @@ export function ProfileTab({ onProfileComplete }: ProfileTabProps) {
     }
 
     setSaving(true);
-    await new Promise((r) => setTimeout(r, 800));
+    
+    try {
+      // Save to database via API
+      const response = await fetch("/api/data/user/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: fullName.trim(),
+          city: addressCity,
+          country: addressCountry,
+        }),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        console.error("[v0] Profile save API error:", error);
+        // Continue anyway to save locally
+      } else {
+        console.log("[v0] Profile saved to database");
+      }
+    } catch (error) {
+      console.error("[v0] Failed to save profile to API:", error);
+      // Continue anyway to save locally
+    }
 
+    // Also update local store
     updateUser({
       name: fullName.trim(),
       phone: phone.trim() || undefined,
+      city: addressCity,
+      country: addressCountry,
       profileAddress: {
         country: addressCountry,
         city: addressCity,

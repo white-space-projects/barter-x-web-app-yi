@@ -2,39 +2,53 @@
  * ============================================================================
  * USE OFFERS HOOK
  * ============================================================================
- * SWR-based hook for fetching offers from Supabase.
- * Provides real-time data with caching, revalidation, and optimistic updates.
+ * SWR-based hook for fetching offers via API routes.
+ * Uses server-side Supabase queries for proper auth/RLS handling.
  * ============================================================================
  */
 
 import useSWR from "swr";
-import { createClient } from "@/lib/supabase/client";
-import { fetchOffers, fetchOfferById, createOffer, updateOffer, deleteOffer } from "@/lib/supabase/data-services";
 import type { Offer, OfferInfoFieldValue, LockLevel, NotificationState } from "@/lib/types";
 
-// SWR fetcher for all offers
-async function offersFetcher(key: string): Promise<Offer[]> {
-  const supabase = createClient();
+// SWR fetcher using API route
+async function offersFetcher(url: string): Promise<Offer[]> {
+  console.log("[v0] offersFetcher calling:", url);
   
-  const url = new URL(key, "http://localhost");
-  const productId = url.searchParams.get("productId");
-  const userId = url.searchParams.get("userId");
-  
-  const { offers } = await fetchOffers(supabase, {
-    productId: productId || undefined,
-    userId: userId || undefined,
-    status: "active",
-    limit: 100,
-  });
-  
-  return offers;
+  try {
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: "Unknown error" }));
+      console.error("[v0] Offers API error:", error);
+      throw new Error(error.error || `HTTP ${response.status}`);
+    }
+    
+    const data = await response.json();
+    console.log("[v0] Fetched offers count:", data.offers?.length || 0);
+    
+    return data.offers || [];
+  } catch (error) {
+    console.error("[v0] Error fetching offers:", error);
+    throw error;
+  }
 }
 
 // SWR fetcher for single offer
 async function offerFetcher([, offerId]: [string, string]): Promise<Offer | null> {
   if (!offerId) return null;
-  const supabase = createClient();
-  return fetchOfferById(supabase, offerId);
+  
+  try {
+    const response = await fetch(`/api/data/offers/${offerId}`);
+    if (!response.ok) {
+      if (response.status === 404) return null;
+      throw new Error(`HTTP ${response.status}`);
+    }
+    const data = await response.json();
+    return data.offer || null;
+  } catch (error) {
+    console.error("[v0] Error fetching single offer:", error);
+    return null;
+  }
 }
 
 // Hook for fetching all offers
@@ -43,7 +57,8 @@ export function useOffers(options?: { productId?: string; userId?: string }) {
   if (options?.productId) params.set("productId", options.productId);
   if (options?.userId) params.set("userId", options.userId);
   
-  const swrKey = `/api/offers?${params.toString()}`;
+  // Use the correct API route path
+  const swrKey = `/api/data/offers?${params.toString()}`;
 
   const { data, error, isLoading, isValidating, mutate } = useSWR<Offer[]>(
     swrKey,
@@ -94,7 +109,7 @@ export function useOffer(offerId: string | null) {
   };
 }
 
-// Mutations
+// Mutations - use API routes for proper auth
 export async function createOfferMutation(offer: {
   productId: string;
   userId: string;
@@ -106,8 +121,19 @@ export async function createOfferMutation(offer: {
   pickupAddress?: string;
   offerInfo?: OfferInfoFieldValue[];
 }): Promise<Offer> {
-  const supabase = createClient();
-  return createOffer(supabase, offer);
+  const response = await fetch("/api/data/offers", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(offer),
+  });
+  
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: "Unknown error" }));
+    throw new Error(error.error || `Failed to create offer: HTTP ${response.status}`);
+  }
+  
+  const data = await response.json();
+  return data.offer;
 }
 
 export async function updateOfferMutation(
@@ -127,11 +153,28 @@ export async function updateOfferMutation(
     isActive: boolean;
   }>
 ): Promise<Offer> {
-  const supabase = createClient();
-  return updateOffer(supabase, offerId, updates);
+  const response = await fetch("/api/data/offers", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ offerId, ...updates }),
+  });
+  
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: "Unknown error" }));
+    throw new Error(error.error || `Failed to update offer: HTTP ${response.status}`);
+  }
+  
+  const data = await response.json();
+  return data.offer;
 }
 
 export async function deleteOfferMutation(offerId: string): Promise<void> {
-  const supabase = createClient();
-  return deleteOffer(supabase, offerId);
+  const response = await fetch(`/api/data/offers?offerId=${offerId}`, {
+    method: "DELETE",
+  });
+  
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: "Unknown error" }));
+    throw new Error(error.error || `Failed to delete offer: HTTP ${response.status}`);
+  }
 }

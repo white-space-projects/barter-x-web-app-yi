@@ -2,31 +2,35 @@
  * ============================================================================
  * USE HOOKS HOOK
  * ============================================================================
- * SWR-based hook for fetching hooks (offer connections) from Supabase.
- * Provides real-time data with caching, revalidation, and optimistic updates.
+ * SWR-based hook for fetching hooks (offer connections) via API routes.
+ * Uses server-side Supabase queries for proper auth/RLS handling.
  * ============================================================================
  */
 
 import useSWR from "swr";
-import { createClient } from "@/lib/supabase/client";
-import { fetchHooks, createHook, updateHook, deleteHook } from "@/lib/supabase/data-services";
 import type { Hook, LockLevel } from "@/lib/types";
 
-// SWR fetcher for hooks
-async function hooksFetcher(key: string): Promise<Hook[]> {
-  const supabase = createClient();
+// SWR fetcher using API route
+async function hooksFetcher(url: string): Promise<Hook[]> {
+  console.log("[v0] hooksFetcher calling:", url);
   
-  const url = new URL(key, "http://localhost");
-  const userId = url.searchParams.get("userId");
-  const sourceOfferId = url.searchParams.get("sourceOfferId");
-  const targetOfferId = url.searchParams.get("targetOfferId");
-  
-  return fetchHooks(supabase, {
-    userId: userId || undefined,
-    sourceOfferId: sourceOfferId || undefined,
-    targetOfferId: targetOfferId || undefined,
-    limit: 200,
-  });
+  try {
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: "Unknown error" }));
+      console.error("[v0] Hooks API error:", error);
+      throw new Error(error.error || `HTTP ${response.status}`);
+    }
+    
+    const data = await response.json();
+    console.log("[v0] Fetched hooks count:", data.hooks?.length || 0);
+    
+    return data.hooks || [];
+  } catch (error) {
+    console.error("[v0] Error fetching hooks:", error);
+    throw error;
+  }
 }
 
 // Hook for fetching all hooks
@@ -40,7 +44,8 @@ export function useHooks(options?: {
   if (options?.sourceOfferId) params.set("sourceOfferId", options.sourceOfferId);
   if (options?.targetOfferId) params.set("targetOfferId", options.targetOfferId);
   
-  const swrKey = `/api/hooks?${params.toString()}`;
+  // Use the correct API route path
+  const swrKey = `/api/data/hooks?${params.toString()}`;
 
   const { data, error, isLoading, isValidating, mutate } = useSWR<Hook[]>(
     swrKey,
@@ -77,14 +82,25 @@ export function useHooksToOffer(offerId: string | null) {
   return useHooks({ targetOfferId: offerId || undefined });
 }
 
-// Mutations
+// Mutations - use API routes for proper auth
 export async function createHookMutation(hook: {
   sourceOfferId: string;
   targetOfferId: string;
   correlationId?: string;
 }): Promise<Hook> {
-  const supabase = createClient();
-  return createHook(supabase, hook);
+  const response = await fetch("/api/data/hooks", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(hook),
+  });
+  
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: "Unknown error" }));
+    throw new Error(error.error || `Failed to create hook: HTTP ${response.status}`);
+  }
+  
+  const data = await response.json();
+  return data.hook;
 }
 
 export async function updateHookMutation(
@@ -96,11 +112,28 @@ export async function updateHookMutation(
     isActive: boolean;
   }>
 ): Promise<Hook> {
-  const supabase = createClient();
-  return updateHook(supabase, hookId, updates);
+  const response = await fetch("/api/data/hooks", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ hookId, ...updates }),
+  });
+  
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: "Unknown error" }));
+    throw new Error(error.error || `Failed to update hook: HTTP ${response.status}`);
+  }
+  
+  const data = await response.json();
+  return data.hook;
 }
 
 export async function deleteHookMutation(hookId: string): Promise<void> {
-  const supabase = createClient();
-  return deleteHook(supabase, hookId);
+  const response = await fetch(`/api/data/hooks?hookId=${hookId}`, {
+    method: "DELETE",
+  });
+  
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: "Unknown error" }));
+    throw new Error(error.error || `Failed to delete hook: HTTP ${response.status}`);
+  }
 }

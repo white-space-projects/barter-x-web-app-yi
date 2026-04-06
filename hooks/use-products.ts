@@ -2,35 +2,47 @@
  * ============================================================================
  * USE PRODUCTS HOOK
  * ============================================================================
- * SWR-based hook for fetching products from Supabase.
- * Provides real-time data with caching, revalidation, and optimistic updates.
+ * SWR-based hook for fetching products from the API route.
+ * Uses server-side Supabase queries for proper auth/RLS handling.
  * ============================================================================
  */
 
 import useSWR from "swr";
-import { createClient } from "@/lib/supabase/client";
-import { fetchProducts } from "@/lib/supabase/data-services";
 import type { Product, ProductType } from "@/lib/types";
 
-// SWR fetcher for products
-async function productsFetcher(key: string): Promise<Product[]> {
-  const supabase = createClient();
+// SWR fetcher using API route (server-side Supabase)
+async function productsFetcher(url: string): Promise<Product[]> {
+  console.log("[v0] productsFetcher calling:", url);
   
-  // Parse options from key
-  const url = new URL(key, "http://localhost");
-  const barterTypeSlug = url.searchParams.get("barterType") as ProductType | null;
-  
-  const { products } = await fetchProducts(supabase, {
-    barterTypeSlug: barterTypeSlug || undefined,
-    limit: 100,
-  });
-  
-  return products;
+  try {
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: "Unknown error" }));
+      console.error("[v0] API error:", error);
+      throw new Error(error.error || `HTTP ${response.status}`);
+    }
+    
+    const data = await response.json();
+    console.log("[v0] Fetched products count:", data.products?.length || 0);
+    
+    if (data.products?.length > 0) {
+      console.log("[v0] Sample product:", data.products[0]);
+    }
+    
+    return data.products || [];
+  } catch (error) {
+    console.error("[v0] Error fetching products:", error);
+    throw error;
+  }
 }
 
 export function useProducts(options?: { barterType?: ProductType }) {
-  const barterType = options?.barterType || "goods";
-  const swrKey = `/api/products?barterType=${barterType}`;
+  const barterType = options?.barterType;
+  // Use the API route that fetches from Supabase server-side
+  const swrKey = barterType 
+    ? `/api/data/products?barterType=${barterType}` 
+    : `/api/data/products`;
 
   const { data, error, isLoading, isValidating, mutate } = useSWR<Product[]>(
     swrKey,

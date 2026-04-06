@@ -248,6 +248,8 @@ export async function fetchProducts(
     offset?: number;
   }
 ): Promise<{ products: Product[]; total: number }> {
+  console.log("[v0] fetchProducts called with options:", options);
+  
   let query = supabase
     .schema("application")
     .from("products")
@@ -262,8 +264,18 @@ export async function fetchProducts(
     .order("created_at", { ascending: false });
 
   if (options?.barterTypeSlug) {
-    // Join to filter by barter type slug
-    query = query.eq("barter_type.slug", options.barterTypeSlug);
+    // First get the barter_type_id for the slug
+    const { data: barterType } = await supabase
+      .schema("application")
+      .from("barter_types")
+      .select("barter_type_id")
+      .eq("slug", options.barterTypeSlug)
+      .single();
+    
+    if (barterType) {
+      query = query.eq("barter_type_id", barterType.barter_type_id);
+    }
+    console.log("[v0] Barter type lookup for", options.barterTypeSlug, ":", barterType);
   }
 
   if (options?.limit) {
@@ -275,6 +287,8 @@ export async function fetchProducts(
   }
 
   const { data, error, count } = await query;
+  
+  console.log("[v0] Supabase query result - data:", data?.length, "error:", error, "count:", count);
 
   if (error) {
     console.error("[v0] Error fetching products:", error);

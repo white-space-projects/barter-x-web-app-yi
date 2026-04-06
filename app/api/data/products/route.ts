@@ -12,6 +12,8 @@ import type { ProductType } from "@/lib/types";
 
 export async function GET(request: NextRequest) {
   try {
+    console.log("[v0] Products API: GET request received");
+    
     const supabase = await createClient();
     
     // Get query params
@@ -20,11 +22,15 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get("limit") || "100", 10);
     const offset = parseInt(searchParams.get("offset") || "0", 10);
 
+    console.log("[v0] Products API: Fetching with params:", { barterType, limit, offset });
+
     const { products, total } = await fetchProducts(supabase, {
       barterTypeSlug: barterType || undefined,
       limit,
       offset,
     });
+
+    console.log("[v0] Products API: Fetched", products.length, "products, total:", total);
 
     return NextResponse.json({ 
       products, 
@@ -35,7 +41,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error("[API] Products fetch error:", error);
     return NextResponse.json(
-      { error: "Failed to fetch products" },
+      { error: error instanceof Error ? error.message : "Failed to fetch products" },
       { status: 500 }
     );
   }
