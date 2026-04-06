@@ -52,11 +52,11 @@ import {
   type CategoryDefinition,
   type SubcategoryDefinition 
 } from "@/lib/product-types";
-import type { Product, Offer, OfferPickupAddress, OfferImage, OfferInfoFieldValue, ProductType } from "@/lib/types";
+import type { Product, Offer, OfferPickupAddress, OfferImage, OfferInfoFieldValue, OfferInfoFieldDefinition, ProductType } from "@/lib/types";
 import { OfferInfoSection } from "./offer-info-section";
 import { OfferCaptureQrModal } from "./offer-capture-qr-modal";
 import { ProductImage } from "./product-image";
-import { getOfferInfoFieldsForSubcategory, getProductInfo } from "@/lib/offer-info-fields";
+import { getProductInfo } from "@/lib/offer-info-fields";
 import { useNavigationGuard } from "@/lib/navigation-guard";
 import confetti from "canvas-confetti";
 import {
@@ -982,6 +982,8 @@ export function AddOfferFlow({
   const [offerDescription, setOfferDescription] = useState("");
   const [offerInfo, setOfferInfo] = useState<OfferInfoFieldValue[]>([]);
   const [showOfferInfo, setShowOfferInfo] = useState(false);
+  const [offerFieldDefinitions, setOfferFieldDefinitions] = useState<OfferInfoFieldDefinition[]>([]);
+  const [loadingOfferFields, setLoadingOfferFields] = useState(false);
 
   // Step 4: Pickup address
   const [sameAsProfile, setSameAsProfile] = useState(false);
@@ -1091,6 +1093,7 @@ export function AddOfferFlow({
     setOfferDescription("");
     setOfferInfo([]);
     setShowOfferInfo(false);
+    setOfferFieldDefinitions([]);
     setSameAsProfile(false);
     setPickupCountry("");
     setPickupCity("");
@@ -1101,6 +1104,95 @@ export function AddOfferFlow({
     setLoading(false);
     setSidebarCollapsed(false);
   }, [initialProductType]);
+
+  // Fetch offer field definitions from database when subcategory changes
+  const loadOfferFields = useCallback(async (subcategoryName: string | undefined) => {
+    if (!subcategoryName) {
+      console.log("[v0] loadOfferFields - no subcategory, returning empty fields");
+      setOfferFieldDefinitions([]);
+      return;
+    }
+    
+    setLoadingOfferFields(true);
+    try {
+      // First lookup subcategory by name to get the ID
+      const subResponse = await fetch(`/api/data/subcategories?name=${encodeURIComponent(subcategoryName)}`);
+      if (!subResponse.ok) {
+        console.log("[v0] loadOfferFields - failed to fetch subcategory");
+        setOfferFieldDefinitions([]);
+        return;
+      }
+      const subData = await subResponse.json();
+      const subcategoryId = subData.subcategories?.[0]?.subcategoryId;
+      
+      if (!subcategoryId) {
+        console.log("[v0] loadOfferFields - subcategory not found:", subcategoryName);
+        setOfferFieldDefinitions([]);
+        return;
+      }
+      
+      console.log("[v0] loadOfferFields - fetching offer fields for subcategoryId:", subcategoryId, "field_scope: offer");
+      
+      // Fetch offer fields from the database (field_scope = 'offer')
+      const response = await fetch(`/api/data/subcategories/${subcategoryId}/fields?scope=offer`);
+      if (!response.ok) {
+        console.log("[v0] loadOfferFields - failed to fetch fields");
+        setOfferFieldDefinitions([]);
+        return;
+      }
+      
+      const data = await response.json();
+      const fields = data.offerFields || [];
+      
+      console.log("[v0] loadOfferFields - loaded", fields.length, "offer fields for subcategory:", subcategoryName);
+      
+      // Map database fields to OfferInfoFieldDefinition format
+      const mappedFields: OfferInfoFieldDefinition[] = fields.map((f: { fieldId: string; fieldLabel: string; fieldType: string; isRequired: boolean; options?: { optionValue: string }[] }) => ({
+        fieldId: f.fieldId,
+        fieldName: f.fieldLabel,
+        fieldType: mapDbFieldType(f.fieldType),
+        options: f.options?.map((o: { optionValue: string }) => o.optionValue),
+        required: f.isRequired,
+      }));
+      
+      setOfferFieldDefinitions(mappedFields);
+    } catch (error) {
+      console.error("[v0] loadOfferFields error:", error);
+      setOfferFieldDefinitions([]);
+    } finally {
+      setLoadingOfferFields(false);
+    }
+  }, []);
+  
+  // Map database field types to OfferInfoFieldType
+  function mapDbFieldType(dbType: string): "text" | "number" | "date_select" | "single_select" | "multi_select" | "attachment" {
+    switch (dbType) {
+      case "text":
+      case "textarea":
+        return "text";
+      case "number":
+        return "number";
+      case "date":
+        return "date_select";
+      case "select":
+        return "single_select";
+      case "multiselect":
+        return "multi_select";
+      case "boolean":
+        return "single_select"; // Boolean rendered as Yes/No single select
+      default:
+        return "text";
+    }
+  }
+  
+  // Load offer fields when subcategory is selected
+  useEffect(() => {
+    if (selectedSubcategory?.name) {
+      loadOfferFields(selectedSubcategory.name);
+    } else {
+      setOfferFieldDefinitions([]);
+    }
+  }, [selectedSubcategory?.name, loadOfferFields]);
 
   // Initialize from initialProduct if provided (not in edit mode)
   useEffect(() => {
@@ -1940,12 +2032,15 @@ export function AddOfferFlow({
                 />
               </div>
 
-              {/* Optional Info Fields */}
-              <OfferInfoSection
-                subcategory={selectedSubcategory?.name || ""}
-                values={offerInfo}
-                onChange={setOfferInfo}
-              />
+              {/* Optional Info Fields - Only show if offer fields are defined in backoffice */}
+              {offerFieldDefinitions.length > 0 && (
+                <OfferInfoSection
+                  subcategoryId={selectedSubcategory?.id || ""}
+                  fieldDefinitions={offerFieldDefinitions}
+                  values={offerInfo}
+                  onChange={setOfferInfo}
+                />
+              )}
 
               {/* Navigation */}
               <div className="flex gap-3 pt-4">
@@ -2575,26 +2670,29 @@ export function AddOfferFlow({
                   />
                 </div>
 
-                {/* Optional offer info */}
-                <div className="border border-border rounded-xl overflow-hidden">
-                  <button
-                    type="button"
-                    onClick={() => setShowOfferInfo(!showOfferInfo)}
-                    className="w-full flex items-center justify-between p-4 text-left hover:bg-secondary/50 transition-colors"
-                  >
-                    <span className="text-sm font-medium text-foreground">Additional Details (Optional)</span>
-                    <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${showOfferInfo ? "rotate-180" : ""}`} />
-                  </button>
-                  {showOfferInfo && selectedSubcategory && (
-                    <div className="border-t border-border p-4">
-                      <OfferInfoSection
-                        subcategory={selectedSubcategory.name}
-                        values={offerInfo}
-                        onChange={setOfferInfo}
-                      />
-                    </div>
-                  )}
-                </div>
+                {/* Optional offer info - only show if offer fields are defined in backoffice */}
+                {offerFieldDefinitions.length > 0 && (
+                  <div className="border border-border rounded-xl overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => setShowOfferInfo(!showOfferInfo)}
+                      className="w-full flex items-center justify-between p-4 text-left hover:bg-secondary/50 transition-colors"
+                    >
+                      <span className="text-sm font-medium text-foreground">Additional Details (Optional)</span>
+                      <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${showOfferInfo ? "rotate-180" : ""}`} />
+                    </button>
+                    {showOfferInfo && selectedSubcategory && (
+                      <div className="border-t border-border p-4">
+                        <OfferInfoSection
+                          subcategoryId={selectedSubcategory.id}
+                          fieldDefinitions={offerFieldDefinitions}
+                          values={offerInfo}
+                          onChange={setOfferInfo}
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Navigation */}
                 <div className="flex gap-3 pt-4">

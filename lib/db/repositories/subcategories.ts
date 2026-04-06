@@ -190,6 +190,7 @@ export async function fetchSubcategories(options: {
   categoryId?: string;
   barterTypeSlug?: string;
   includeFields?: boolean;
+  name?: string; // Filter by exact subcategory name
 } = {}): Promise<Subcategory[]> {
   const conditions: string[] = [];
   const params: unknown[] = [];
@@ -203,6 +204,11 @@ export async function fetchSubcategories(options: {
   if (options.barterTypeSlug) {
     conditions.push(`bt.slug = $${paramIndex++}`);
     params.push(options.barterTypeSlug);
+  }
+
+  if (options.name) {
+    conditions.push(`sc.name = $${paramIndex++}`);
+    params.push(options.name);
   }
 
   const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";

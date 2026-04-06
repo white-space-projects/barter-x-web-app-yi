@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react"
+import React, { useEffect, useCallback } from "react"
 
 import { useState } from "react";
 import { X, Loader2 } from "lucide-react";
@@ -9,7 +9,7 @@ import { generateGuid } from "@/lib/guid";
 import { toast } from "sonner";
 import { getOfferTitlePlaceholder, getOfferDescPlaceholder } from "@/lib/mock-data";
 import { getCountryNames, getCitiesForCountry } from "@/lib/countries-data";
-import type { Product, OfferPickupAddress, OfferImage, OfferInfoFieldValue } from "@/lib/types";
+import type { Product, OfferPickupAddress, OfferImage, OfferInfoFieldValue, OfferInfoFieldDefinition } from "@/lib/types";
 import { OfferImageSection } from "./offer-image-section";
 import { OfferInfoSection } from "./offer-info-section";
 
@@ -36,12 +36,100 @@ export function InlineAddOffer({ product, onClose, onOfferAdded }: Props) {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [images, setImages] = useState<OfferImage[]>([]);
   const [offerInfo, setOfferInfo] = useState<OfferInfoFieldValue[]>([]);
+  const [offerFieldDefinitions, setOfferFieldDefinitions] = useState<OfferInfoFieldDefinition[]>([]);
+  const [loadingFields, setLoadingFields] = useState(false);
 
   const titlePlaceholder = getOfferTitlePlaceholder(product.subcategory);
   const descPlaceholder = getOfferDescPlaceholder(product.subcategory);
   
   const countryNames = getCountryNames();
   const availableCities = pickupCountry ? getCitiesForCountry(pickupCountry) : [];
+
+  // Fetch offer field definitions from database (field_scope = 'offer')
+  const loadOfferFields = useCallback(async () => {
+    // Product must have a subcategoryId (UUID) to fetch fields
+    // Note: product.subcategory is the name, we need the ID
+    // For now, we'll fetch by subcategory name via API that looks it up
+    if (!product.subcategory) {
+      console.log("[v0] loadOfferFields - no subcategory, returning empty fields");
+      setOfferFieldDefinitions([]);
+      return;
+    }
+    
+    setLoadingFields(true);
+    try {
+      // Fetch subcategory by name to get ID, then fetch offer fields
+      const subResponse = await fetch(`/api/data/subcategories?name=${encodeURIComponent(product.subcategory)}`);
+      if (!subResponse.ok) {
+        console.log("[v0] loadOfferFields - failed to fetch subcategory");
+        setOfferFieldDefinitions([]);
+        return;
+      }
+      const subData = await subResponse.json();
+      const subcategoryId = subData.subcategories?.[0]?.subcategoryId;
+      
+      if (!subcategoryId) {
+        console.log("[v0] loadOfferFields - subcategory not found:", product.subcategory);
+        setOfferFieldDefinitions([]);
+        return;
+      }
+      
+      console.log("[v0] loadOfferFields - fetching offer fields for subcategoryId:", subcategoryId);
+      
+      const response = await fetch(`/api/data/subcategories/${subcategoryId}/fields?scope=offer`);
+      if (!response.ok) {
+        console.log("[v0] loadOfferFields - failed to fetch fields");
+        setOfferFieldDefinitions([]);
+        return;
+      }
+      
+      const data = await response.json();
+      const fields = data.offerFields || [];
+      
+      console.log("[v0] loadOfferFields - loaded", fields.length, "offer fields for subcategory:", product.subcategory);
+      
+      // Map database fields to OfferInfoFieldDefinition format
+      const mappedFields: OfferInfoFieldDefinition[] = fields.map((f: { fieldId: string; fieldLabel: string; fieldType: string; isRequired: boolean; options?: { optionValue: string }[] }) => ({
+        fieldId: f.fieldId,
+        fieldName: f.fieldLabel,
+        fieldType: mapDbFieldType(f.fieldType),
+        options: f.options?.map((o: { optionValue: string }) => o.optionValue),
+        required: f.isRequired,
+      }));
+      
+      setOfferFieldDefinitions(mappedFields);
+    } catch (error) {
+      console.error("[v0] loadOfferFields error:", error);
+      setOfferFieldDefinitions([]);
+    } finally {
+      setLoadingFields(false);
+    }
+  }, [product.subcategory]);
+  
+  // Map database field types to OfferInfoFieldType
+  function mapDbFieldType(dbType: string): "text" | "number" | "date_select" | "single_select" | "multi_select" | "attachment" {
+    switch (dbType) {
+      case "text":
+      case "textarea":
+        return "text";
+      case "number":
+        return "number";
+      case "date":
+        return "date_select";
+      case "select":
+        return "single_select";
+      case "multiselect":
+        return "multi_select";
+      case "boolean":
+        return "single_select"; // Boolean rendered as Yes/No single select
+      default:
+        return "text";
+    }
+  }
+  
+  useEffect(() => {
+    loadOfferFields();
+  }, [loadOfferFields]);
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -171,14 +259,17 @@ setLoading(false);
             />
           </div>
           
-          {/* Offer Info Section */}
-          <div className="mb-4">
-            <OfferInfoSection
-              subcategory={product.subcategory}
-              values={offerInfo}
-              onChange={setOfferInfo}
-            />
-          </div>
+          {/* Offer Info Section - only show if there are offer fields defined */}
+          {offerFieldDefinitions.length > 0 && (
+            <div className="mb-4">
+              <OfferInfoSection
+                subcategoryId={product.productId} // Used for debug logging
+                fieldDefinitions={offerFieldDefinitions}
+                values={offerInfo}
+                onChange={setOfferInfo}
+              />
+            </div>
+          )}
           
           {/* Pickup Address Section */}
           <div className="mb-5 rounded-lg border border-border bg-secondary/20 p-4">

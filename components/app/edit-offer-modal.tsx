@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { X, Loader2, Trash2, AlertTriangle } from "lucide-react";
 import { useBarterStore } from "@/lib/store";
 import { toast } from "sonner";
 import { COUNTRIES_DATA, getCitiesForCountry } from "@/lib/countries-data";
-import type { OfferImage, OfferInfoFieldValue } from "@/lib/types";
+import type { OfferImage, OfferInfoFieldValue, OfferInfoFieldDefinition } from "@/lib/types";
 import { OfferImageSection } from "./offer-image-section";
 import { OfferInfoSection } from "./offer-info-section";
 
@@ -40,8 +40,86 @@ export function EditOfferModal({ offerId, onClose }: Props) {
   
   // Offer info state - initialized from existing offer
   const [offerInfo, setOfferInfo] = useState<OfferInfoFieldValue[]>(offer?.offerInfo || []);
+  const [offerFieldDefinitions, setOfferFieldDefinitions] = useState<OfferInfoFieldDefinition[]>([]);
 
   const availableCities = useMemo(() => getCitiesForCountry(country), [country]);
+  
+  // Map database field types to OfferInfoFieldType
+  function mapDbFieldType(dbType: string): "text" | "number" | "date_select" | "single_select" | "multi_select" | "attachment" {
+    switch (dbType) {
+      case "text":
+      case "textarea":
+        return "text";
+      case "number":
+        return "number";
+      case "date":
+        return "date_select";
+      case "select":
+        return "single_select";
+      case "multiselect":
+        return "multi_select";
+      case "boolean":
+        return "single_select";
+      default:
+        return "text";
+    }
+  }
+  
+  // Fetch offer field definitions from database (field_scope = 'offer')
+  const loadOfferFields = useCallback(async () => {
+    if (!product?.subcategory) {
+      console.log("[v0] edit-offer loadOfferFields - no subcategory");
+      setOfferFieldDefinitions([]);
+      return;
+    }
+    
+    try {
+      // Lookup subcategory by name to get ID
+      const subResponse = await fetch(`/api/data/subcategories?name=${encodeURIComponent(product.subcategory)}`);
+      if (!subResponse.ok) {
+        setOfferFieldDefinitions([]);
+        return;
+      }
+      const subData = await subResponse.json();
+      const subcategoryId = subData.subcategories?.[0]?.subcategoryId;
+      
+      if (!subcategoryId) {
+        console.log("[v0] edit-offer loadOfferFields - subcategory not found:", product.subcategory);
+        setOfferFieldDefinitions([]);
+        return;
+      }
+      
+      console.log("[v0] edit-offer loadOfferFields - fetching offer fields for subcategoryId:", subcategoryId);
+      
+      const response = await fetch(`/api/data/subcategories/${subcategoryId}/fields?scope=offer`);
+      if (!response.ok) {
+        setOfferFieldDefinitions([]);
+        return;
+      }
+      
+      const data = await response.json();
+      const fields = data.offerFields || [];
+      
+      console.log("[v0] edit-offer loadOfferFields - loaded", fields.length, "offer fields");
+      
+      const mappedFields: OfferInfoFieldDefinition[] = fields.map((f: { fieldId: string; fieldLabel: string; fieldType: string; isRequired: boolean; options?: { optionValue: string }[] }) => ({
+        fieldId: f.fieldId,
+        fieldName: f.fieldLabel,
+        fieldType: mapDbFieldType(f.fieldType),
+        options: f.options?.map((o: { optionValue: string }) => o.optionValue),
+        required: f.isRequired,
+      }));
+      
+      setOfferFieldDefinitions(mappedFields);
+    } catch (error) {
+      console.error("[v0] edit-offer loadOfferFields error:", error);
+      setOfferFieldDefinitions([]);
+    }
+  }, [product?.subcategory]);
+  
+  useEffect(() => {
+    loadOfferFields();
+  }, [loadOfferFields]);
   const canDelete = offer ? canDeleteOffer(offerId) : false;
 
   if (!offer || !product) {
@@ -170,14 +248,17 @@ export function EditOfferModal({ offerId, onClose }: Props) {
             />
           </div>
           
-          {/* Offer Info section */}
-          <div className="mb-5">
-            <OfferInfoSection
-              subcategory={product.subcategory}
-              values={offerInfo}
-              onChange={setOfferInfo}
-            />
-          </div>
+          {/* Offer Info section - only show if offer fields are defined in backoffice */}
+          {offerFieldDefinitions.length > 0 && (
+            <div className="mb-5">
+              <OfferInfoSection
+                subcategoryId={product.productId}
+                fieldDefinitions={offerFieldDefinitions}
+                values={offerInfo}
+                onChange={setOfferInfo}
+              />
+            </div>
+          )}
           
           {/* Address section */}
           <div className="mb-5">

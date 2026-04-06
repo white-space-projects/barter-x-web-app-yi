@@ -12,7 +12,7 @@ import {
 } from "@/lib/mock-data";
 import { getCountryNames, getCitiesForCountry } from "@/lib/countries-data";
 import { PRODUCT_TYPES, getProductTypeCategories, getSubcategories as getTypeSubcategories, type SubcategoryDefinition } from "@/lib/product-types";
-import type { Product, OfferPickupAddress, OfferImage, OfferInfoFieldValue, ProductType } from "@/lib/types";
+import type { Product, OfferPickupAddress, OfferImage, OfferInfoFieldValue, OfferInfoFieldDefinition, ProductType } from "@/lib/types";
 import { OfferImageSection } from "./offer-image-section";
 import { OfferInfoSection } from "./offer-info-section";
 import { ProductImage } from "./product-image";
@@ -222,6 +222,7 @@ export function AddOfferModal({ open, onClose, initialProductType }: Props) {
   
   // Offer info fields (varies by subcategory)
   const [offerInfo, setOfferInfo] = useState<OfferInfoFieldValue[]>([]);
+  const [offerFieldDefinitions, setOfferFieldDefinitions] = useState<OfferInfoFieldDefinition[]>([]);
   
   // Pickup address fields
   const [pickupCountry, setPickupCountry] = useState("");
@@ -328,6 +329,7 @@ export function AddOfferModal({ open, onClose, initialProductType }: Props) {
     setOfferDescription("");
     setOfferImages([]);
     setOfferInfo([]);
+    setOfferFieldDefinitions([]);
     setPickupCountry("");
     setPickupCity("");
     setPickupState("");
@@ -354,6 +356,88 @@ export function AddOfferModal({ open, onClose, initialProductType }: Props) {
     resetAll();
     onClose();
   }, [unregisterBlocker, BLOCKER_ID, onClose]);
+
+  // Map database field types to OfferInfoFieldType
+  function mapDbFieldType(dbType: string): "text" | "number" | "date_select" | "single_select" | "multi_select" | "attachment" {
+    switch (dbType) {
+      case "text":
+      case "textarea":
+        return "text";
+      case "number":
+        return "number";
+      case "date":
+        return "date_select";
+      case "select":
+        return "single_select";
+      case "multiselect":
+        return "multi_select";
+      case "boolean":
+        return "single_select";
+      default:
+        return "text";
+    }
+  }
+
+  // Fetch offer fields from database when subcategory changes
+  const loadOfferFields = useCallback(async (subcategoryName: string) => {
+    if (!subcategoryName) {
+      console.log("[v0] add-offer-modal loadOfferFields - no subcategory");
+      setOfferFieldDefinitions([]);
+      return;
+    }
+    
+    try {
+      // Lookup subcategory by name to get ID
+      const subResponse = await fetch(`/api/data/subcategories?name=${encodeURIComponent(subcategoryName)}`);
+      if (!subResponse.ok) {
+        setOfferFieldDefinitions([]);
+        return;
+      }
+      const subData = await subResponse.json();
+      const subcategoryId = subData.subcategories?.[0]?.subcategoryId;
+      
+      if (!subcategoryId) {
+        console.log("[v0] add-offer-modal loadOfferFields - subcategory not found:", subcategoryName);
+        setOfferFieldDefinitions([]);
+        return;
+      }
+      
+      console.log("[v0] add-offer-modal loadOfferFields - fetching offer fields for subcategoryId:", subcategoryId);
+      
+      const response = await fetch(`/api/data/subcategories/${subcategoryId}/fields?scope=offer`);
+      if (!response.ok) {
+        setOfferFieldDefinitions([]);
+        return;
+      }
+      
+      const data = await response.json();
+      const fields = data.offerFields || [];
+      
+      console.log("[v0] add-offer-modal loadOfferFields - loaded", fields.length, "offer fields");
+      
+      const mappedFields: OfferInfoFieldDefinition[] = fields.map((f: { fieldId: string; fieldLabel: string; fieldType: string; isRequired: boolean; options?: { optionValue: string }[] }) => ({
+        fieldId: f.fieldId,
+        fieldName: f.fieldLabel,
+        fieldType: mapDbFieldType(f.fieldType),
+        options: f.options?.map((o: { optionValue: string }) => o.optionValue),
+        required: f.isRequired,
+      }));
+      
+      setOfferFieldDefinitions(mappedFields);
+    } catch (error) {
+      console.error("[v0] add-offer-modal loadOfferFields error:", error);
+      setOfferFieldDefinitions([]);
+    }
+  }, []);
+
+  // Load offer fields when subcategory is selected
+  useEffect(() => {
+    if (selectedSubcategory) {
+      loadOfferFields(selectedSubcategory);
+    } else {
+      setOfferFieldDefinitions([]);
+    }
+  }, [selectedSubcategory, loadOfferFields]);
 
   function handleClose() {
     handleCloseAttempt();
@@ -907,12 +991,15 @@ export function AddOfferModal({ open, onClose, initialProductType }: Props) {
                 }}
               />
 
-              {/* Offer Info Section */}
-              <OfferInfoSection
-                subcategory={subcategoryForPlaceholder}
-                values={offerInfo}
-                onChange={setOfferInfo}
-              />
+              {/* Offer Info Section - only show if offer fields are defined in backoffice */}
+              {offerFieldDefinitions.length > 0 && (
+                <OfferInfoSection
+                  subcategoryId={selectedSubcategory || ""}
+                  fieldDefinitions={offerFieldDefinitions}
+                  values={offerInfo}
+                  onChange={setOfferInfo}
+                />
+              )}
 
               {/* Pickup Location Section */}
               <div className="mb-4 rounded-lg border border-border bg-secondary/30 p-4 lg:p-5">

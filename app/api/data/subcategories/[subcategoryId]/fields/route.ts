@@ -9,17 +9,39 @@ type RouteParams = { params: Promise<{ subcategoryId: string }> };
 /**
  * GET /api/data/subcategories/[subcategoryId]/fields
  * Fetch all fields for a subcategory
+ * Query params:
+ *   - scope: 'product' | 'offer' - filter by field_scope (optional, returns all if not specified)
  */
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const { subcategoryId } = await params;
+    const { searchParams } = new URL(request.url);
+    const scope = searchParams.get("scope");
+    
     const subcategory = await fetchSubcategoryById(subcategoryId);
 
     if (!subcategory) {
       return NextResponse.json({ error: "Subcategory not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ fields: subcategory.productFields });
+    // subcategory object has productFields and offerFields as separate arrays
+    const productFields = subcategory.productFields || [];
+    const offerFields = subcategory.offerFields || [];
+    const allFields = [...productFields, ...offerFields];
+    
+    // Debug log for offer field fetching
+    console.log("[v0] Fields API - subcategoryId:", subcategoryId, "scope:", scope, "productFields:", productFields.length, "offerFields:", offerFields.length);
+    
+    // Filter by scope if specified
+    if (scope === "offer") {
+      console.log("[v0] Fields API - returning", offerFields.length, "offer fields (field_scope: offer)");
+      return NextResponse.json({ offerFields, totalCount: offerFields.length });
+    } else if (scope === "product") {
+      return NextResponse.json({ productFields, totalCount: productFields.length });
+    }
+    
+    // Return all fields if no scope filter
+    return NextResponse.json({ fields: allFields, totalCount: allFields.length });
   } catch (error) {
     console.error("[API] Fields fetch error:", error);
     return NextResponse.json(

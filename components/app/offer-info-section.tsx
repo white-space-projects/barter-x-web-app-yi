@@ -1,26 +1,26 @@
 "use client";
 
-import { useState, useMemo, useRef } from "react";
-import { ChevronRight, ChevronDown, Plus, X, Info, Calendar, Check, Upload } from "lucide-react";
+import { useState } from "react";
+import { ChevronRight, ChevronDown, Info, Check, Upload } from "lucide-react";
 import type { OfferInfoFieldValue, OfferInfoFieldDefinition } from "@/lib/types";
-import { getOfferInfoFieldsForSubcategory } from "@/lib/offer-info-fields";
 
 type Props = {
-  subcategory: string;
+  subcategoryId: string; // subcategory UUID for debug logging
+  fieldDefinitions: OfferInfoFieldDefinition[]; // Fields from database (field_scope = 'offer')
   values: OfferInfoFieldValue[];
   onChange: (values: OfferInfoFieldValue[]) => void;
   readOnly?: boolean;
 };
 
-export function OfferInfoSection({ subcategory, values = [], onChange, readOnly = false }: Props) {
+export function OfferInfoSection({ subcategoryId, fieldDefinitions, values = [], onChange, readOnly = false }: Props) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [expandedFieldId, setExpandedFieldId] = useState<string | null>(null);
   
+  // Debug log - confirm source is database
+  console.log("[v0] OfferInfoSection - subcategoryId:", subcategoryId, "offer fields count:", fieldDefinitions.length, "field_scope: offer");
+  
   // Ensure values is always an array
   const safeValues = values || [];
-  
-  // Get field definitions for this subcategory
-  const fieldDefinitions = useMemo(() => getOfferInfoFieldsForSubcategory(subcategory), [subcategory]);
   
   // Count filled fields
   const filledCount = safeValues.filter(v => {
