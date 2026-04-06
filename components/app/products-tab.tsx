@@ -29,6 +29,7 @@ import { AddOfferFlow } from "./add-offer-flow";
 import { ArrowLeft } from "lucide-react";
 import type { Product, ProductType } from "@/lib/types";
 import { useProducts } from "@/hooks/use-products";
+import { ProductShimmer } from "./product-shimmer";
 import { getProductTypeCategories, getSubcategories as getTypeSubcategories, getCategoryByName, isOfferCreationEnabled, getAvailabilityNote, getProductType, type CategoryDefinition, type SubcategoryDefinition } from "@/lib/product-types";
 
 type Props = {
@@ -144,7 +145,7 @@ export function ProductsTab({ productType = "goods", onAddOfferWithProduct }: Pr
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
   
-  const { data: products = [], isLoading } = useProducts();
+  const { data: products = [], isLoading, error } = useProducts({ barterType: productType });
   
   // Get categories for the current product type
   const categories = useMemo(() => getProductTypeCategories(productType), [productType]);
@@ -724,7 +725,14 @@ export function ProductsTab({ productType = "goods", onAddOfferWithProduct }: Pr
       )}
 
       {/* Product grid - 3 columns on laptop, 4 on larger screens */}
-      {filteredProducts.length === 0 ? (
+      {isLoading ? (
+        <ProductShimmer count={8} />
+      ) : error ? (
+        <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+          <Package className="mb-3 h-10 w-10 opacity-40" />
+          <p className="text-sm">Failed to load products. Please try again.</p>
+        </div>
+      ) : filteredProducts.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
           <Package className="mb-3 h-10 w-10 opacity-40" />
           <p className="text-sm">No products match your filters.</p>

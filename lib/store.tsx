@@ -23,6 +23,9 @@
 "use client";
 
 import React, { createContext, useContext, useState, useCallback, useEffect, useMemo, type ReactNode } from "react";
+import { useProducts } from "@/hooks/use-products";
+import { useOffers } from "@/hooks/use-offers";
+import { useHooks } from "@/hooks/use-hooks";
 import type {
   User,
   AuthState,
@@ -39,12 +42,8 @@ import type {
   Conversation,
   Notification,
 } from "./types";
-import {
-  MOCK_PRODUCTS,
-  MOCK_OFFERS,
-  MOCK_HOOKS,
-  MOCK_DASHBOARD_STATS,
-} from "./mock-data";
+// Mock data removed - now using Supabase via DataProvider
+// Import useBarterData/useBarterActions for real data access
 import { generateGuid } from "./guid";
 
 // ==========================================
@@ -173,11 +172,44 @@ export function BarterProvider({ children }: { children: ReactNode }) {
     isAuthenticated: false,
   });
   
-  // Lazy initialize from mock data
-  const [products, setProducts] = useState<Product[]>(() => MOCK_PRODUCTS);
-  const [offers, setOffers] = useState<Offer[]>(() => MOCK_OFFERS);
-  const [hooks, setHooks] = useState<Hook[]>(() => MOCK_HOOKS);
-  const [dashboardStats] = useState<DashboardStats>(() => MOCK_DASHBOARD_STATS);
+  // ---------------------------------------------------------------------------
+  // SWR DATA HOOKS - Real data from Supabase
+  // ---------------------------------------------------------------------------
+  const { data: swrProducts = [], isLoading: productsLoading, mutate: mutateProducts } = useProducts();
+  const { data: swrOffers = [], isLoading: offersLoading, mutate: mutateOffers } = useOffers();
+  const { data: swrHooks = [], isLoading: hooksLoading, mutate: mutateHooks } = useHooks();
+
+  // Local state synced with SWR data
+  const [products, setProducts] = useState<Product[]>([]);
+  const [offers, setOffers] = useState<Offer[]>([]);
+  const [hooks, setHooks] = useState<Hook[]>([]);
+  const [dashboardStats] = useState<DashboardStats>({
+    totalUsers: 0,
+    activeOffers: 0,
+    activeHooks: 0,
+    reservedCycles: 0,
+    committedOffers: 0,
+    totalProducts: 0,
+  });
+
+  // Sync SWR data to local state
+  useEffect(() => {
+    if (swrProducts.length > 0 || !productsLoading) {
+      setProducts(swrProducts);
+    }
+  }, [swrProducts, productsLoading]);
+
+  useEffect(() => {
+    if (swrOffers.length > 0 || !offersLoading) {
+      setOffers(swrOffers);
+    }
+  }, [swrOffers, offersLoading]);
+
+  useEffect(() => {
+    if (swrHooks.length > 0 || !hooksLoading) {
+      setHooks(swrHooks);
+    }
+  }, [swrHooks, hooksLoading]);
   
   // Global filters shared across all exchange types
   const [globalFilters, setGlobalFiltersState] = useState<GlobalFilters>({
@@ -252,7 +284,9 @@ export function BarterProvider({ children }: { children: ReactNode }) {
   // ---------------------------------------------------------------------------
   const addProduct = useCallback((product: Product) => {
     setProducts((prev) => [...prev, product]);
-  }, []);
+    // Trigger SWR revalidation to sync with server
+    mutateProducts();
+  }, [mutateProducts]);
   
   const getProductById = useCallback((productId: string) => {
     return products.find((p) => p.productId === productId);
@@ -282,18 +316,27 @@ export function BarterProvider({ children }: { children: ReactNode }) {
           : p
       )
     );
-  }, []);
+    // Trigger SWR revalidation
+    mutateOffers();
+    mutateProducts();
+  }, [mutateOffers, mutateProducts]);
 
   const updateOffer = useCallback((offerId: string, updates: Partial<Offer>) => {
     setOffers((prev) =>
       prev.map((o) => (o.offerId === offerId ? { ...o, ...updates } : o))
     );
-  }, []);
+    // Trigger SWR revalidation
+    mutateOffers();
+  }, [mutateOffers]);
 
   const deleteOffer = useCallback((offerId: string) => {
     setOffers((prev) => prev.filter((o) => o.offerId !== offerId));
     setHooks((prev) => prev.filter((h) => h.fromOfferId !== offerId));
-  }, []);
+    // Trigger SWR revalidation
+    mutateOffers();
+    mutateHooks();
+    mutateProducts();
+  }, [mutateOffers, mutateHooks, mutateProducts]);
 
   const canDeleteOffer = useCallback((offerId: string) => {
     const offerHooks = hooks.filter((h) => h.fromOfferId === offerId);
@@ -336,7 +379,10 @@ export function BarterProvider({ children }: { children: ReactNode }) {
             : o
       )
     );
-  }, []);
+    // Trigger SWR revalidation
+    mutateHooks();
+    mutateOffers();
+  }, [mutateHooks, mutateOffers]);
 
   const removeHook = useCallback((hookId: string) => {
     setHooks((prev) => {
@@ -354,13 +400,18 @@ export function BarterProvider({ children }: { children: ReactNode }) {
       }
       return prev.filter((h) => h.hookId !== hookId);
     });
-  }, []);
+    // Trigger SWR revalidation
+    mutateHooks();
+    mutateOffers();
+  }, [mutateHooks, mutateOffers]);
 
   const updateHook = useCallback((hookId: string, updates: Partial<Hook>) => {
     setHooks((prev) =>
       prev.map((h) => (h.hookId === hookId ? { ...h, ...updates } : h))
     );
-  }, []);
+    // Trigger SWR revalidation
+    mutateHooks();
+  }, [mutateHooks]);
 
   const getMyHooks = useCallback(() => {
     if (!auth.user) return [];
