@@ -160,21 +160,33 @@ export async function PUT(request: NextRequest) {
     let profileCityId: string | null = null;
 
     if (country) {
-      const countries = await query<{ country_id: string }>(
-        `SELECT country_id FROM application.countries WHERE LOWER(name) = LOWER($1) LIMIT 1`,
-        [country]
+      // Try exact match first, then partial match
+      const countries = await query<{ country_id: string; name: string }>(
+        `SELECT country_id, name FROM application.countries 
+         WHERE LOWER(name) = LOWER($1) 
+         OR LOWER(name) LIKE LOWER($2)
+         ORDER BY CASE WHEN LOWER(name) = LOWER($1) THEN 0 ELSE 1 END
+         LIMIT 1`,
+        [country, `%${country}%`]
       );
+      
+      console.log("[v0] Country lookup for", country, "found:", countries[0]?.name || "none");
       
       if (countries[0]) {
         profileCountryId = countries[0].country_id;
         
         // Look up city ID if city name provided
         if (city) {
-          const cities = await query<{ city_id: string }>(
-            `SELECT city_id FROM application.cities 
-             WHERE country_id = $1 AND LOWER(name) = LOWER($2) LIMIT 1`,
-            [profileCountryId, city]
+          const cities = await query<{ city_id: string; name: string }>(
+            `SELECT city_id, name FROM application.cities 
+             WHERE country_id = $1 
+             AND (LOWER(name) = LOWER($2) OR LOWER(name) LIKE LOWER($3))
+             ORDER BY CASE WHEN LOWER(name) = LOWER($2) THEN 0 ELSE 1 END
+             LIMIT 1`,
+            [profileCountryId, city, `%${city}%`]
           );
+          
+          console.log("[v0] City lookup for", city, "in country", countries[0].name, "found:", cities[0]?.name || "none");
           
           if (cities[0]) {
             profileCityId = cities[0].city_id;

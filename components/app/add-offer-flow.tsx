@@ -1268,60 +1268,101 @@ export function AddOfferFlow({
       addressLine2: pickupAddressLine2 || undefined,
     };
 
-    // Simulate API call
-    await new Promise(r => setTimeout(r, 1000));
-
     if (isEditMode && editOffer) {
-      // UPDATE existing offer
-      updateOffer(editOffer.offerId, {
-        title: offerTitle.trim(),
-        description: offerDescription.trim(),
-        pickupAddress,
-        images: offerImages,
-        offerInfo: offerInfo.length > 0 ? offerInfo : undefined,
-      });
+      // UPDATE existing offer via API
+      try {
+        const response = await fetch(`/api/data/offers/${editOffer.offerId}`, {
+          method: "PUT",
+          headers: { 
+            "Content-Type": "application/json",
+            "x-user-id": auth.user.userId,
+          },
+          credentials: "include",
+          body: JSON.stringify({
+            title: offerTitle.trim(),
+            description: offerDescription.trim(),
+          }),
+        });
+        
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({}));
+          throw new Error(error.error || "Failed to update offer");
+        }
+        
+        // Also update local store
+        updateOffer(editOffer.offerId, {
+          title: offerTitle.trim(),
+          description: offerDescription.trim(),
+          pickupAddress,
+          images: offerImages,
+          offerInfo: offerInfo.length > 0 ? offerInfo : undefined,
+        });
 
-      unregisterBlocker(BLOCKER_ID);
-
-      toast.success("Your offer has been saved successfully.", {
-        duration: 3000,
-      });
-
-      setLoading(false);
-      
-      // Close without confetti for edit
-      resetAll();
-      onClose();
-      onSuccess?.();
-    } else {
-      // CREATE new offer
-      
-      // If this is a custom/new product (temp product), add it to the products store
-      // so it can be found for type matching when checking hook eligibility
-      if (selectedProduct.productId.startsWith('temp-')) {
-        addProduct(selectedProduct);
+        unregisterBlocker(BLOCKER_ID);
+        toast.success("Your offer has been saved successfully.", { duration: 3000 });
+        setLoading(false);
+        resetAll();
+        onClose();
+        onSuccess?.();
+      } catch (error) {
+        console.error("[v0] Failed to update offer:", error);
+        toast.error("Failed to save offer. Please try again.");
+        setLoading(false);
       }
-      
-      addOffer({
-        offerId: generateGuid(),
-        productId: selectedProduct.productId,
-        ownerUserId: auth.user.userId,
-        title: offerTitle.trim(),
-        description: offerDescription.trim(),
-        hookedCount: 0,
-        outgoingHookCount: 0,
-        readyForCommit: false,
-        pickupAddress,
-        images: offerImages,
-        offerInfo: offerInfo.length > 0 ? offerInfo : undefined,
-        // Workflow fields - initialized for new offers
-        readyState: false,
-        lockLevel: 0,
-        notificationState: 0,
-        isActive: true,
-      });
+    } else {
+      // CREATE new offer via API
+      try {
+        // If this is a custom/new product (temp product), add it to the products store
+        if (selectedProduct.productId.startsWith('temp-')) {
+          addProduct(selectedProduct);
+        }
+        
+        // Call API to create offer in database
+        const response = await fetch("/api/data/offers", {
+          method: "POST",
+          headers: { 
+            "Content-Type": "application/json",
+            "x-user-id": auth.user.userId,
+          },
+          credentials: "include",
+          body: JSON.stringify({
+            productId: selectedProduct.productId,
+            userId: auth.user.userId,
+            title: offerTitle.trim(),
+            description: offerDescription.trim(),
+            condition: "good", // Default condition
+          }),
+        });
 
-      // Fire confetti (only for create)
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({}));
+          throw new Error(error.error || "Failed to create offer");
+        }
+
+        const data = await response.json();
+        console.log("[v0] Offer created via API:", data.offer?.offerId);
+        
+        // Add to local store with the returned offer data
+        const newOffer: Offer = {
+          offerId: data.offer?.offerId || generateGuid(),
+          productId: selectedProduct.productId,
+          ownerUserId: auth.user.userId,
+          title: offerTitle.trim(),
+          description: offerDescription.trim(),
+          hookedCount: 0,
+          outgoingHookCount: 0,
+          readyForCommit: false,
+          pickupAddress,
+          images: offerImages,
+          offerInfo: offerInfo.length > 0 ? offerInfo : undefined,
+          readyState: false,
+          lockLevel: 0,
+          notificationState: 0,
+          isActive: true,
+        };
+        addOffer(newOffer);
+
+        // Fire confetti (only for create)
       const colors = ["#FBBF24", "#F59E0B", "#EF4444", "#10B981", "#3B82F6", "#8B5CF6"];
       const particleCount = isMobile ? 100 : 200;
       
@@ -1357,6 +1398,11 @@ export function AddOfferFlow({
         onClose();
         onSuccess?.();
       }, isMobile ? 1500 : 2000);
+      } catch (error) {
+        console.error("[v0] Failed to create offer:", error);
+        toast.error("Failed to create offer. Please try again.");
+        setLoading(false);
+      }
     }
   }, [
     canCreate, auth.user, selectedProduct, pickupCountry, pickupCity, pickupState, pickupZip,
