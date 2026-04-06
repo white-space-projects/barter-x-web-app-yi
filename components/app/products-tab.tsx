@@ -735,7 +735,7 @@ export function ProductsTab({ productType = "goods", onAddOfferWithProduct }: Pr
         </div>
       )}
 
-      {/* Product grid - 3 columns on laptop, 4 on larger screens */}
+      {/* Product grid - max 2-3 columns with min-width 368px to prevent title cutoff */}
       {isLoading ? (
         <ProductShimmer count={8} />
       ) : error ? (
@@ -749,7 +749,7 @@ export function ProductsTab({ productType = "goods", onAddOfferWithProduct }: Pr
           <p className="text-sm">No products match your filters.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(368px, 1fr))' }}>
           {filteredProducts.map((product) => (
             <div
               key={product.productId}
