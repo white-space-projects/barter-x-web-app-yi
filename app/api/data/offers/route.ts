@@ -49,7 +49,9 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { productId, userId, title, description, condition, pickupCountryId, pickupCityId, pickupAddress, offerInfo } = body;
+    const { productId, userId, title, description, condition, exchangePreferences } = body;
+
+    console.log("[v0] Offers API POST: Creating offer", { productId, userId, title });
 
     if (!productId || !userId) {
       return NextResponse.json(
@@ -64,11 +66,10 @@ export async function POST(request: NextRequest) {
       title,
       description,
       condition,
-      pickupCountryId,
-      pickupCityId,
-      pickupAddress,
-      offerInfo,
+      exchangePreferences,
     });
+
+    console.log("[v0] Offers API POST: Offer created successfully", offer.offerId);
 
     return NextResponse.json({ offer }, { status: 201 });
   } catch (error) {

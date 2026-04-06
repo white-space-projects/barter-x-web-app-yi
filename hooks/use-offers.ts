@@ -8,7 +8,7 @@
  */
 
 import useSWR from "swr";
-import type { Offer, OfferInfoFieldValue, LockLevel, NotificationState } from "@/lib/types";
+import type { Offer, LockLevel, NotificationState } from "@/lib/types";
 
 // SWR fetcher using API route
 async function offersFetcher(url: string): Promise<Offer[]> {
@@ -116,11 +116,10 @@ export async function createOfferMutation(offer: {
   title: string;
   description?: string;
   condition?: string;
-  pickupCountryId?: string;
-  pickupCityId?: string;
-  pickupAddress?: string;
-  offerInfo?: OfferInfoFieldValue[];
+  exchangePreferences?: Record<string, unknown>;
 }): Promise<Offer> {
+  console.log("[v0] createOfferMutation called with:", { productId: offer.productId, userId: offer.userId });
+  
   const response = await fetch("/api/data/offers", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -129,10 +128,12 @@ export async function createOfferMutation(offer: {
   
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: "Unknown error" }));
+    console.error("[v0] createOfferMutation error:", error);
     throw new Error(error.error || `Failed to create offer: HTTP ${response.status}`);
   }
   
   const data = await response.json();
+  console.log("[v0] createOfferMutation success:", data.offer?.offerId);
   return data.offer;
 }
 
@@ -142,12 +143,8 @@ export async function updateOfferMutation(
     title: string;
     description: string;
     condition: string;
-    pickupCountryId: string;
-    pickupCityId: string;
-    pickupAddress: string;
-    offerInfo: OfferInfoFieldValue[];
+    exchangePreferences: Record<string, unknown>;
     readyState: boolean;
-    escrowPaid: boolean;
     lockLevel: LockLevel;
     notificationState: NotificationState;
     isActive: boolean;
