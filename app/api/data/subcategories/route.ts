@@ -11,10 +11,12 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const categoryId = searchParams.get("categoryId") || undefined;
     const barterTypeSlug = searchParams.get("barterTypeSlug") || undefined;
+    const includeFields = searchParams.get("includeFields") === "true";
 
     const subcategories = await fetchSubcategories({
       categoryId,
       barterTypeSlug,
+      includeFields,
     });
 
     return NextResponse.json({ subcategories });
