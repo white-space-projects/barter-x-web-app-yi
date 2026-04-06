@@ -16,15 +16,20 @@ export interface FieldOption {
   isActive: boolean;
 }
 
+// Date mode type for date fields
+export type DateMode = "month_year" | "day_month_year" | "year_only";
+
 // Field definition type
 export interface FieldDefinition {
   fieldId: string;
   subcategoryId: string;
   fieldKey: string;
   fieldLabel: string;
-  fieldType: "text" | "number" | "select" | "boolean" | "date" | "textarea";
+  fieldType: "text" | "number" | "select" | "multiselect" | "boolean" | "date" | "textarea";
+  fieldScope: FieldScope;
   placeholder?: string;
   helpText?: string;
+  dateMode?: DateMode;
   isRequired: boolean;
   isFilterable: boolean;
   isActive: boolean;
@@ -69,8 +74,10 @@ interface DbField {
   field_key: string;
   field_label: string;
   field_type: string;
+  field_scope: string;
   placeholder: string | null;
   help_text: string | null;
+  date_mode: string | null;
   is_required: boolean;
   is_filterable: boolean;
   is_active: boolean;
@@ -103,8 +110,10 @@ function mapToFieldDefinition(row: DbField, options: FieldOption[] = []): FieldD
     fieldKey: row.field_key,
     fieldLabel: row.field_label,
     fieldType: row.field_type as FieldDefinition["fieldType"],
+    fieldScope: (row.field_scope || "product") as FieldScope,
     placeholder: row.placeholder || undefined,
     helpText: row.help_text || undefined,
+    dateMode: row.date_mode as FieldDefinition["dateMode"] || undefined,
     isRequired: row.is_required,
     isFilterable: row.is_filterable,
     isActive: row.is_active,
