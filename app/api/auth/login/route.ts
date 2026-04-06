@@ -14,10 +14,7 @@ import { setSessionCookie, type UserSession } from "@/lib/auth";
 import { generateGuid } from "@/lib/guid";
 import { 
   findUserByEmail, 
-  createUser, 
   updateLastLogin, 
-  findCountry, 
-  findCity,
   findUserWithLocation 
 } from "@/lib/db/repositories/users";
 
@@ -47,11 +44,13 @@ export async function POST(request: NextRequest) {
     isAdmin = adminEmails.includes(email.toLowerCase());
 
     try {
-      // Try to find existing user by email
+      // Try to find existing user by email in application.users
+      // Note: application.users.user_id has FK to auth.users, so we can only
+      // find users who were created via Supabase Auth
       const existingUser = await findUserByEmail(email);
 
       if (existingUser) {
-        // User exists - use their data
+        // User exists in DB - use their data
         console.log("[v0] Login API: Found existing user:", existingUser.user_id);
         userId = existingUser.user_id;
         userName = existingUser.display_name || name || "User";
@@ -68,40 +67,15 @@ export async function POST(request: NextRequest) {
         // Update last login time
         await updateLastLogin(userId);
       } else {
-        // User doesn't exist - create new user
-        console.log("[v0] Login API: Creating new user");
-
-        // Look up country and city IDs if provided
-        let detectedCountryId: string | undefined;
-        let detectedCityId: string | undefined;
-
-        if (country) {
-          const countryData = await findCountry(country);
-          if (countryData) {
-            detectedCountryId = countryData.country_id;
-            userCountryCode = countryData.country_code;
-            userCountry = countryData.name;
-            
-            if (city) {
-              const cityData = await findCity(city, detectedCountryId);
-              if (cityData) {
-                detectedCityId = cityData.city_id;
-                userCity = cityData.name;
-              }
-            }
-          }
-        }
-
-        // Create new user
-        const newUser = await createUser({
-          email: email.toLowerCase(),
-          displayName: name || undefined,
-          detectedCountryId,
-          detectedCityId,
-        });
-
-        userId = newUser.user_id;
-        console.log("[v0] Login API: Created new user:", userId);
+        // User doesn't exist in application.users
+        // Cannot create because user_id must reference auth.users (Supabase Auth)
+        // Use temporary client-side session instead
+        console.log("[v0] Login API: User not found in DB, using temporary session");
+        userId = generateGuid();
+        userName = name || "Guest User";
+        userCity = city || "";
+        userCountry = country || "";
+        userCountryCode = countryCode || "";
       }
     } catch (dbError) {
       // Database not available - use temporary session
