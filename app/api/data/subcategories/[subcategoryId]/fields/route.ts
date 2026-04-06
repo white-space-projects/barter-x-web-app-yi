@@ -32,25 +32,43 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 /**
  * POST /api/data/subcategories/[subcategoryId]/fields
  * Create a new field for the subcategory
+ * Required body: fieldLabel, fieldType, fieldScope
+ * fieldKey is auto-generated from fieldLabel if not provided
  */
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
     const { subcategoryId } = await params;
     const body = await request.json();
-    const { fieldKey, fieldLabel, fieldType, placeholder, helpText, isRequired, isFilterable, sortOrder } = body;
+    const { fieldKey, fieldLabel, fieldType, fieldScope, placeholder, helpText, isRequired, isFilterable, sortOrder } = body;
 
-    if (!fieldKey || !fieldLabel || !fieldType) {
+    // fieldLabel, fieldType, and fieldScope are required; fieldKey is auto-generated
+    if (!fieldLabel || !fieldType || !fieldScope) {
       return NextResponse.json(
-        { error: "Missing required fields: fieldKey, fieldLabel, fieldType" },
+        { error: "Missing required fields: fieldLabel, fieldType, fieldScope" },
         { status: 400 }
       );
     }
 
+    // Validate fieldScope
+    if (!["product", "offer"].includes(fieldScope)) {
+      return NextResponse.json(
+        { error: "fieldScope must be 'product' or 'offer'" },
+        { status: 400 }
+      );
+    }
+
+    // Auto-generate fieldKey from fieldLabel if not provided
+    const generatedFieldKey = fieldKey || fieldLabel
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/^_|_$/g, "");
+
     const field = await createField({
       subcategoryId,
-      fieldKey,
+      fieldKey: generatedFieldKey,
       fieldLabel,
       fieldType,
+      fieldScope,
       placeholder,
       helpText,
       isRequired,
