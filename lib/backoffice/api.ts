@@ -720,7 +720,7 @@ export const backofficeApi = {
   getMetrics,
   
   // Simulate
-  runSimulation,
+  simulate,
   
   // Nodes
   getNodes,
