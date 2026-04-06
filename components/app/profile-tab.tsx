@@ -241,14 +241,18 @@ export function ProfileTab({ onProfileComplete }: ProfileTabProps) {
     setSaving(true);
     
     try {
-      // Save to database via API
+      // Save to database via API - include all address fields
       const response = await fetch("/api/data/user/profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: fullName.trim(),
+          phone: phone.trim() || undefined,
           city: addressCity,
           country: addressCountry,
+          addressLine1: addressLine1.trim() || undefined,
+          addressLine2: addressLine2.trim() || undefined,
+          zip: addressZip.trim() || undefined,
         }),
       });
       
@@ -395,18 +399,31 @@ export function ProfileTab({ onProfileComplete }: ProfileTabProps) {
 
     setSaving(true);
     
-    /**
-     * BACKEND NOTE:
-     * Save profile data to backend. These fields are critical:
-     * - fullName, addressCountry, addressCity
-     * 
-     * After save, check if city/country changed from auto-detected.
-     * If yes, trigger product re-fetch with new location.
-     * Store in session: { fullName, city, country, isProfileComplete: true }
-     */
-    
-    // Simulate API call
-    await new Promise((r) => setTimeout(r, 800));
+    // Save to database via API
+    try {
+      const response = await fetch("/api/data/user/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: fullName.trim(),
+          phone: phone.trim() || undefined,
+          city: addressCity,
+          country: addressCountry,
+          addressLine1: addressLine1.trim() || undefined,
+          addressLine2: addressLine2.trim() || undefined,
+          zip: addressZip.trim() || undefined,
+        }),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        console.error("[v0] Profile save API error:", error);
+      } else {
+        console.log("[v0] Profile saved to database");
+      }
+    } catch (error) {
+      console.error("[v0] Failed to save profile to API:", error);
+    }
 
     // Update the user in the store with new profile data
     updateUser({

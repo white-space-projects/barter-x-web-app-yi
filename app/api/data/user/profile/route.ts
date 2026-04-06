@@ -1,28 +1,47 @@
 /**
  * User Profile API Route
  * =======================
- * Get or update current user's profile from Supabase.
+ * Get or update current user's profile using direct PostgreSQL.
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
 import { getSession } from "@/lib/auth";
-
-// Use service role to bypass RLS for profile operations
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { query } from "@/lib/db/postgres";
 
 interface UserProfile {
   userId: string;
   email: string;
   name: string;
+  phone?: string;
   city?: string;
   country?: string;
   countryCode?: string;
+  state?: string;
+  zip?: string;
+  addressLine1?: string;
+  addressLine2?: string;
   avatarUrl?: string;
   isAdmin: boolean;
+}
+
+interface DbUserWithLocation {
+  user_id: string;
+  email: string;
+  phone: string | null;
+  display_name: string | null;
+  is_admin: boolean;
+  avatar_image_key: string | null;
+  // Detected location
+  detected_country_name: string | null;
+  detected_country_code: string | null;
+  detected_city_name: string | null;
+  // Profile location
+  profile_country_name: string | null;
+  profile_country_code: string | null;
+  profile_city_name: string | null;
+  profile_address_line1: string | null;
+  profile_address_line2: string | null;
+  profile_zip_code: string | null;
 }
 
 export async function GET() {
@@ -39,31 +58,34 @@ export async function GET() {
 
     console.log("[v0] Getting user profile for:", session.user_id);
 
-    // Try to get user from application.users
-    const { data: user, error } = await supabaseAdmin
-      .schema("application")
-      .from("users")
-      .select(`
-        user_id,
-        email,
-        display_name,
-        is_admin,
-        detected_country:countries!detected_country_id(name, country_code),
-        detected_city:cities!detected_city_id(name),
-        profile_country:countries!profile_country_id(name, country_code),
-        profile_city:cities!profile_city_id(name),
-        avatar_image_key
-      `)
-      .eq("user_id", session.user_id)
-      .single();
+    // Get user with location data using direct SQL
+    const users = await query<DbUserWithLocation>(
+      `SELECT 
+        u.user_id,
+        u.email,
+        u.phone,
+        u.display_name,
+        u.is_admin,
+        u.avatar_image_key,
+        u.profile_address_line1,
+        u.profile_address_line2,
+        u.profile_zip_code,
+        dc.name as detected_country_name,
+        dc.country_code as detected_country_code,
+        dci.name as detected_city_name,
+        pc.name as profile_country_name,
+        pc.country_code as profile_country_code,
+        pci.name as profile_city_name
+      FROM application.users u
+      LEFT JOIN application.countries dc ON u.detected_country_id = dc.country_id
+      LEFT JOIN application.cities dci ON u.detected_city_id = dci.city_id
+      LEFT JOIN application.countries pc ON u.profile_country_id = pc.country_id
+      LEFT JOIN application.cities pci ON u.profile_city_id = pci.city_id
+      WHERE u.user_id = $1`,
+      [session.user_id]
+    );
 
-    if (error && error.code !== "PGRST116") {
-      console.error("[v0] Error fetching user profile:", error);
-      return NextResponse.json(
-        { error: "Failed to fetch profile" },
-        { status: 500 }
-      );
-    }
+    const user = users[0];
 
     // If user doesn't exist in our DB yet, return session data
     if (!user) {
@@ -79,14 +101,18 @@ export async function GET() {
       });
     }
 
-    // Map DB user to profile
+    // Map DB user to profile - prefer profile location over detected
     const profile: UserProfile = {
       userId: user.user_id,
       email: user.email || session.email,
       name: user.display_name || session.name || "User",
-      city: user.profile_city?.name || user.detected_city?.name || "",
-      country: user.profile_country?.name || user.detected_country?.name || "",
-      countryCode: user.profile_country?.country_code || user.detected_country?.country_code || "",
+      phone: user.phone || undefined,
+      city: user.profile_city_name || user.detected_city_name || "",
+      country: user.profile_country_name || user.detected_country_name || "",
+      countryCode: user.profile_country_code || user.detected_country_code || "",
+      addressLine1: user.profile_address_line1 || undefined,
+      addressLine2: user.profile_address_line2 || undefined,
+      zip: user.profile_zip_code || undefined,
       avatarUrl: user.avatar_image_key || undefined,
       isAdmin: user.is_admin || false,
     };
@@ -113,86 +139,144 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, city, country, avatarUrl } = body;
+    const { name, phone, city, country, addressLine1, addressLine2, zip, avatarUrl } = body;
 
-    console.log("[v0] Updating user profile for:", session.user_id, body);
+    console.log("[v0] Updating user profile for:", session.user_id, { name, city, country });
 
-    // Build update object
-    const updateData: Record<string, unknown> = {};
-    if (name !== undefined) updateData.display_name = name;
-    if (avatarUrl !== undefined) updateData.avatar_image_key = avatarUrl;
+    // Look up country ID if country name provided
+    let profileCountryId: string | null = null;
+    let profileCityId: string | null = null;
 
-    // Handle location updates
     if (country) {
-      const { data: countryData } = await supabaseAdmin
-        .schema("application")
-        .from("countries")
-        .select("country_id")
-        .ilike("name", country)
-        .single();
+      const countries = await query<{ country_id: string }>(
+        `SELECT country_id FROM application.countries WHERE LOWER(name) = LOWER($1) LIMIT 1`,
+        [country]
+      );
       
-      if (countryData) {
-        updateData.profile_country_id = countryData.country_id;
+      if (countries[0]) {
+        profileCountryId = countries[0].country_id;
         
+        // Look up city ID if city name provided
         if (city) {
-          const { data: cityData } = await supabaseAdmin
-            .schema("application")
-            .from("cities")
-            .select("city_id")
-            .eq("country_id", countryData.country_id)
-            .ilike("name", city)
-            .single();
+          const cities = await query<{ city_id: string }>(
+            `SELECT city_id FROM application.cities 
+             WHERE country_id = $1 AND LOWER(name) = LOWER($2) LIMIT 1`,
+            [profileCountryId, city]
+          );
           
-          if (cityData) {
-            updateData.profile_city_id = cityData.city_id;
+          if (cities[0]) {
+            profileCityId = cities[0].city_id;
           }
         }
       }
     }
 
-    // Upsert user in database
-    const { data: user, error } = await supabaseAdmin
-      .schema("application")
-      .from("users")
-      .upsert({
-        user_id: session.user_id,
-        email: session.email,
-        ...updateData,
-        last_login_at: new Date().toISOString(),
-      }, {
-        onConflict: "user_id",
-      })
-      .select(`
-        user_id,
-        email,
-        display_name,
-        is_admin,
-        detected_country:countries!detected_country_id(name, country_code),
-        detected_city:cities!detected_city_id(name),
-        profile_country:countries!profile_country_id(name, country_code),
-        profile_city:cities!profile_city_id(name),
-        avatar_image_key
-      `)
-      .single();
+    // Build dynamic UPDATE query
+    const updateFields: string[] = ['updated_at = NOW()'];
+    const values: unknown[] = [];
+    let paramIndex = 1;
 
-    if (error) {
-      console.error("[v0] Error updating user profile:", error);
+    if (name !== undefined) {
+      updateFields.push(`display_name = $${paramIndex++}`);
+      values.push(name);
+    }
+    if (phone !== undefined) {
+      updateFields.push(`phone = $${paramIndex++}`);
+      values.push(phone || null);
+    }
+    if (profileCountryId !== null) {
+      updateFields.push(`profile_country_id = $${paramIndex++}`);
+      values.push(profileCountryId);
+    }
+    if (profileCityId !== null) {
+      updateFields.push(`profile_city_id = $${paramIndex++}`);
+      values.push(profileCityId);
+    }
+    if (addressLine1 !== undefined) {
+      updateFields.push(`profile_address_line1 = $${paramIndex++}`);
+      values.push(addressLine1 || null);
+    }
+    if (addressLine2 !== undefined) {
+      updateFields.push(`profile_address_line2 = $${paramIndex++}`);
+      values.push(addressLine2 || null);
+    }
+    if (zip !== undefined) {
+      updateFields.push(`profile_zip_code = $${paramIndex++}`);
+      values.push(zip || null);
+    }
+    if (avatarUrl !== undefined) {
+      updateFields.push(`avatar_image_key = $${paramIndex++}`);
+      values.push(avatarUrl || null);
+    }
+
+    // Add user_id as the last parameter
+    values.push(session.user_id);
+
+    // Update user
+    const updateQuery = `
+      UPDATE application.users 
+      SET ${updateFields.join(', ')}
+      WHERE user_id = $${paramIndex}
+      RETURNING user_id
+    `;
+
+    console.log("[v0] Profile update query:", updateQuery, values);
+
+    const updateResult = await query<{ user_id: string }>(updateQuery, values);
+
+    if (!updateResult[0]) {
+      console.error("[v0] User not found for update:", session.user_id);
       return NextResponse.json(
-        { error: "Failed to update profile" },
-        { status: 500 }
+        { error: "User not found" },
+        { status: 404 }
       );
     }
+
+    // Fetch updated profile
+    const users = await query<DbUserWithLocation>(
+      `SELECT 
+        u.user_id,
+        u.email,
+        u.phone,
+        u.display_name,
+        u.is_admin,
+        u.avatar_image_key,
+        u.profile_address_line1,
+        u.profile_address_line2,
+        u.profile_zip_code,
+        dc.name as detected_country_name,
+        dc.country_code as detected_country_code,
+        dci.name as detected_city_name,
+        pc.name as profile_country_name,
+        pc.country_code as profile_country_code,
+        pci.name as profile_city_name
+      FROM application.users u
+      LEFT JOIN application.countries dc ON u.detected_country_id = dc.country_id
+      LEFT JOIN application.cities dci ON u.detected_city_id = dci.city_id
+      LEFT JOIN application.countries pc ON u.profile_country_id = pc.country_id
+      LEFT JOIN application.cities pci ON u.profile_city_id = pci.city_id
+      WHERE u.user_id = $1`,
+      [session.user_id]
+    );
+
+    const user = users[0];
 
     const profile: UserProfile = {
       userId: user.user_id,
       email: user.email || session.email,
       name: user.display_name || session.name || "User",
-      city: user.profile_city?.name || user.detected_city?.name || "",
-      country: user.profile_country?.name || user.detected_country?.name || "",
-      countryCode: user.profile_country?.country_code || user.detected_country?.country_code || "",
+      phone: user.phone || undefined,
+      city: user.profile_city_name || user.detected_city_name || "",
+      country: user.profile_country_name || user.detected_country_name || "",
+      countryCode: user.profile_country_code || user.detected_country_code || "",
+      addressLine1: user.profile_address_line1 || undefined,
+      addressLine2: user.profile_address_line2 || undefined,
+      zip: user.profile_zip_code || undefined,
       avatarUrl: user.avatar_image_key || undefined,
       isAdmin: user.is_admin || false,
     };
+
+    console.log("[v0] Profile updated successfully:", profile);
 
     return NextResponse.json({ profile });
   } catch (error) {
