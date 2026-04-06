@@ -156,6 +156,9 @@ export function LandingPage() {
 
             {/* Desktop CTA */}
             <div className="hidden md:flex items-center gap-3">
+              <Link href="/backoffice" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+                Back Office
+              </Link>
               <Link href="/login">
                 <Button variant="ghost" size="sm">
                   Log in
@@ -205,16 +208,25 @@ export function LandingPage() {
               >
                 FAQ
               </Link>
-              <div className="pt-3 border-t border-border flex gap-3">
-                <Link href="/login" className="flex-1">
-                  <Button variant="outline" size="sm" className="w-full">
-                    Log in
-                  </Button>
-                </Link>
-                <Link href="/workspace" className="flex-1">
-                  <Button size="sm" className="w-full">
-                    Get Started
-                  </Button>
+              <div className="pt-3 border-t border-border space-y-3">
+                <div className="flex gap-3">
+                  <Link href="/login" className="flex-1">
+                    <Button variant="outline" size="sm" className="w-full">
+                      Log in
+                    </Button>
+                  </Link>
+                  <Link href="/workspace" className="flex-1">
+                    <Button size="sm" className="w-full">
+                      Get Started
+                    </Button>
+                  </Link>
+                </div>
+                <Link 
+                  href="/backoffice" 
+                  className="block text-center text-xs text-muted-foreground hover:text-foreground"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Back Office
                 </Link>
               </div>
             </div>

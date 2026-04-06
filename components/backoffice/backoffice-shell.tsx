@@ -112,13 +112,28 @@ export function BackOfficeShell({ children }: { children: React.ReactNode }) {
   const { user, isAuthenticated, logout } = useBackOfficeAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [expandedItems, setExpandedItems] = useState<string[]>(["engine-tables"]);
+  const [hydrated, setHydrated] = useState(false);
 
-  // Redirect to login if not authenticated
+  // Wait for hydration before checking auth
   useEffect(() => {
-    if (!isAuthenticated) {
+    setHydrated(true);
+  }, []);
+
+  // Redirect to login if not authenticated (only after hydration)
+  useEffect(() => {
+    if (hydrated && !isAuthenticated) {
       router.push("/backoffice/login");
     }
-  }, [isAuthenticated, router]);
+  }, [hydrated, isAuthenticated, router]);
+
+  // Show loading state during hydration
+  if (!hydrated) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-pulse text-muted-foreground">Loading...</div>
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return null;
