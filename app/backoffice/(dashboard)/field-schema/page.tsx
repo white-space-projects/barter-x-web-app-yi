@@ -309,10 +309,6 @@ export default function FieldSchemaPage() {
     setSelectOptions(updated);
   };
 
-  const currentFields = selectedSubcategory 
-    ? (activeScope === "product" ? selectedSubcategory.productFields : selectedSubcategory.offerFields)
-    : [];
-
   // Filter subcategories by search
   const filteredSubcategories = subcategories.filter(sc =>
     search === "" ||
@@ -426,11 +422,11 @@ export default function FieldSchemaPage() {
                   </TabsTrigger>
                 </TabsList>
 
-                <TabsContent value={activeScope} className="mt-0">
+                <TabsContent value="product" className="mt-0">
                   <ScrollArea className="h-[calc(100vh-420px)]">
-                    {currentFields.length > 0 ? (
+                    {(selectedSubcategory.productFields?.length || 0) > 0 ? (
                       <div className="space-y-2">
-                        {currentFields.map((field) => (
+                        {selectedSubcategory.productFields?.map((field) => (
                           <div
                             key={field.fieldId}
                             className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
@@ -477,16 +473,75 @@ export default function FieldSchemaPage() {
                       </div>
                     ) : (
                       <div className="flex flex-col items-center justify-center py-12 text-center">
-                        {activeScope === "product" ? (
-                          <Package className="h-12 w-12 text-muted-foreground/30 mb-3" />
-                        ) : (
-                          <FileText className="h-12 w-12 text-muted-foreground/30 mb-3" />
-                        )}
+                        <Package className="h-12 w-12 text-muted-foreground/30 mb-3" />
                         <p className="text-sm text-muted-foreground">
-                          No {activeScope} fields defined yet
+                          No product fields defined yet
                         </p>
                         <p className="text-xs text-muted-foreground mt-1">
-                          Click &quot;Add Field&quot; to create your first {activeScope} field
+                          Click &quot;Add Field&quot; to create your first product field
+                        </p>
+                      </div>
+                    )}
+                  </ScrollArea>
+                </TabsContent>
+
+                <TabsContent value="offer" className="mt-0">
+                  <ScrollArea className="h-[calc(100vh-420px)]">
+                    {(selectedSubcategory.offerFields?.length || 0) > 0 ? (
+                      <div className="space-y-2">
+                        {selectedSubcategory.offerFields?.map((field) => (
+                          <div
+                            key={field.fieldId}
+                            className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
+                          >
+                            <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium text-sm">{field.fieldLabel}</span>
+                                {field.isRequired && (
+                                  <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+                                    Required
+                                  </Badge>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                <Badge variant="secondary" className="text-[10px]">
+                                  {FIELD_TYPES.find(t => t.value === field.fieldType)?.label || field.fieldType}
+                                </Badge>
+                                <span className="text-xs text-muted-foreground">
+                                  {field.fieldKey}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => handleEditField(field)}
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-destructive hover:text-destructive"
+                                onClick={() => setDeleteField(field)}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-12 text-center">
+                        <FileText className="h-12 w-12 text-muted-foreground/30 mb-3" />
+                        <p className="text-sm text-muted-foreground">
+                          No offer fields defined yet
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Click &quot;Add Field&quot; to create your first offer field
                         </p>
                       </div>
                     )}
