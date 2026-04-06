@@ -178,15 +178,16 @@ export function ProfileTab({ onProfileComplete }: ProfileTabProps) {
   // LOAD EXISTING DATA
   // ---------------------------------------------------------------------------
   useEffect(() => {
-    if (auth.user) {
-      const name = auth.user.name || "";
-      const userPhone = auth.user.phone || "";
-      const country = auth.user.profileAddress?.country || "";
-      const city = auth.user.profileAddress?.city || "";
-      const state = auth.user.profileAddress?.state || "";
-      const zip = auth.user.profileAddress?.zip || "";
-      const line1 = auth.user.profileAddress?.addressLine1 || "";
-      const line2 = auth.user.profileAddress?.addressLine2 || "";
+  if (auth.user) {
+  const name = auth.user.name || "";
+  const userPhone = auth.user.phone || "";
+  // Check both top-level and profileAddress for backwards compatibility
+  const country = auth.user.profileAddress?.country || auth.user.country || "";
+  const city = auth.user.profileAddress?.city || auth.user.city || "";
+  const state = auth.user.profileAddress?.state || "";
+  const zip = auth.user.profileAddress?.zip || "";
+  const line1 = auth.user.profileAddress?.addressLine1 || "";
+  const line2 = auth.user.profileAddress?.addressLine2 || "";
       const push = auth.user.notificationPrefs?.push ?? true;
       const emailNotif = auth.user.notificationPrefs?.email ?? true;
       const sms = auth.user.notificationPrefs?.sms ?? false;

@@ -239,6 +239,11 @@ export async function POST(request: NextRequest) {
           city: userCity,
           country: userCountry,
           countryCode: userCountryCode,
+          // Include profileAddress for components that expect it
+          profileAddress: userCity || userCountry ? {
+            city: userCity,
+            country: userCountry,
+          } : undefined,
         },
         token,
         isNewUser,
