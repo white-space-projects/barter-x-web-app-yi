@@ -98,6 +98,31 @@ function mapToOffer(row: DbOffer): Offer {
   };
 }
 
+/**
+ * Fetch a single offer by ID
+ */
+export async function fetchOfferById(offerId: string): Promise<Offer | null> {
+  const sql = `
+    SELECT 
+      o.*,
+      p.title as product_title,
+      p.image_key as product_image_key,
+      u.display_name as user_display_name
+    FROM application.offers o
+    LEFT JOIN application.products p ON o.product_id = p.product_id
+    LEFT JOIN application.users u ON o.created_by_user_id = u.user_id
+    WHERE o.offer_id = $1
+  `;
+
+  const result = await query<DbOffer>(sql, [offerId]);
+  
+  if (result.length === 0) {
+    return null;
+  }
+  
+  return mapToOffer(result[0]);
+}
+
 export interface FetchOffersOptions {
   productId?: string;
   userId?: string;
