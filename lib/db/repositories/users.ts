@@ -139,6 +139,7 @@ export async function findUserWithLocation(userId: string): Promise<UserWithLoca
 
 /**
  * Create a new user
+ * Note: user_id must be explicitly provided as it doesn't have a default
  */
 export async function createUser(data: {
   email: string;
@@ -150,14 +151,17 @@ export async function createUser(data: {
   profileCountryId?: string;
   profileCityId?: string;
 }): Promise<DbUser> {
+  // Generate UUID using PostgreSQL's gen_random_uuid()
   const result = await query<DbUser>(
     `INSERT INTO application.users (
+      user_id,
       email, display_name, first_name, last_name,
       detected_country_id, detected_city_id, detected_at,
       profile_country_id, profile_city_id,
       is_active, is_verified, is_admin, 
       created_at, updated_at, last_login_at
     ) VALUES (
+      gen_random_uuid(),
       $1, $2, $3, $4, $5, $6, NOW(), $7, $8,
       true, false, false, NOW(), NOW(), NOW()
     ) RETURNING *`,
