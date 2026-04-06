@@ -93,6 +93,8 @@ export type OfferImage = {
 export type Offer = {
   offerId: string;
   productId: string;
+  tempProductId?: string;        // For custom products pending review
+  isPendingReview?: boolean;     // True if linked to a temp product awaiting approval
   ownerUserId: string;
   title: string;
   description: string;

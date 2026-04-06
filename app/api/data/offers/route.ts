@@ -49,19 +49,21 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { productId, userId, title, description, condition, exchangePreferences } = body;
+    const { productId, tempProductId, userId, title, description, condition, exchangePreferences } = body;
 
-    console.log("[v0] Offers API POST: Creating offer", { productId, userId, title });
+    console.log("[v0] Offers API POST: Creating offer", { productId, tempProductId, userId, title });
 
-    if (!productId || !userId) {
+    // Either productId or tempProductId is required, but not both required
+    if (!userId || (!productId && !tempProductId)) {
       return NextResponse.json(
-        { error: "Missing required fields: productId, userId" },
+        { error: "Missing required fields: userId and either productId or tempProductId" },
         { status: 400 }
       );
     }
 
     const offer = await createOffer({
-      productId,
+      productId: productId || null,
+      tempProductId: tempProductId || null,
       userId,
       title,
       description,

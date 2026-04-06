@@ -12,7 +12,8 @@ import type { Offer, LockLevel, NotificationState, OfferInfoFieldValue } from "@
 
 interface DbOffer {
   offer_id: string;
-  product_id: string;
+  product_id: string | null;
+  temp_product_id: string | null;
   created_by_user_id: string;
   title: string | null;
   description: string | null;
@@ -66,7 +67,9 @@ function parseNotificationState(value: unknown): NotificationState {
 function mapToOffer(row: DbOffer): Offer {
   return {
     offerId: row.offer_id,
-    productId: row.product_id,
+    productId: row.product_id || "",
+    tempProductId: row.temp_product_id || undefined,
+    isPendingReview: !!row.temp_product_id && !row.product_id,
     ownerUserId: row.created_by_user_id,
     title: row.title || row.product_title || "",
     description: row.description || "",
@@ -174,21 +177,24 @@ export async function fetchOffers(
 /**
  * Create a new offer
  * Note: offer_id must be explicitly generated as there's no default
+ * Supports both regular products (productId) and temp products (tempProductId)
  */
 export async function createOffer(data: {
-  productId: string;
+  productId: string | null;
+  tempProductId?: string | null;
   userId: string;
   title?: string;
   description?: string;
   condition?: string;
   exchangePreferences?: Record<string, unknown>;
 }): Promise<Offer> {
-  console.log("[v0] Creating offer with data:", { productId: data.productId, userId: data.userId });
+  console.log("[v0] Creating offer with data:", { productId: data.productId, tempProductId: data.tempProductId, userId: data.userId });
   
   const result = await query<DbOffer>(
     `INSERT INTO application.offers (
       offer_id,
       product_id, 
+      temp_product_id,
       created_by_user_id, 
       title, 
       description, 
@@ -203,12 +209,13 @@ export async function createOffer(data: {
       updated_at
     ) VALUES (
       gen_random_uuid(),
-      $1, $2, $3, $4, $5, $6,
+      $1, $2, $3, $4, $5, $6, $7,
       'active',
       false, 0, 0, true, NOW(), NOW()
     ) RETURNING *`,
     [
-      data.productId,
+      data.productId || null,
+      data.tempProductId || null,
       data.userId,
       data.title || null,
       data.description || null,

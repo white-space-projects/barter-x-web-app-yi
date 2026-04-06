@@ -59,6 +59,7 @@ import {
   MessageSquare,
   Loader2,
   Home,
+  Clock,
 } from "lucide-react";
 import { useBarterStore } from "@/lib/store";
 import { toast } from "sonner";
@@ -383,14 +384,25 @@ export function OfferCard({
 
 {/* Offer info */}
             <div className="flex-1 min-w-0 flex flex-col justify-center">
-              <p className="text-sm font-medium text-foreground truncate">
-                {offer.title}
-              </p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-medium text-foreground truncate">
+                  {offer.title}
+                </p>
+                {/* Pending Review Badge */}
+                {offer.isPendingReview && (
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                    <Clock className="h-3 w-3" />
+                    Pending Review
+                  </span>
+                )}
+              </div>
               <p className="text-xs text-muted-foreground flex items-center gap-1">
                 {offerProduct?.subcategory} <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary" /> {offerProduct?.brand}
               </p>
               <p className="text-xs text-primary font-medium">
-                {variant === "own"
+                {offer.isPendingReview
+                  ? "Custom product awaiting approval"
+                  : variant === "own"
                   ? `Hooks ${offer.outgoingHookCount}/3`
                   : offer.outgoingHookCount === 0
                     ? "Not hooked yet"

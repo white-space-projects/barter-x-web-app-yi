@@ -1321,14 +1321,71 @@ export function AddOfferFlow({
         
         const isTempProduct = selectedProduct.productId.startsWith('temp-');
         let apiOfferId: string | null = null;
+        let tempProductId: string | null = null;
+        let isPendingReview = false;
         
-        // If this is a custom/new product (temp product), add it to the products store
-        // but skip the API call since temp products aren't in the database
         if (isTempProduct) {
-          console.log("[v0] Temp product detected, adding to local store only (not persisting to DB)");
+          // Create temp product in DB first, then create offer linked to it
+          console.log("[v0] Creating temp product in DB");
+          
+          const tempProductResponse = await fetch("/api/data/temp-products", {
+            method: "POST",
+            headers: { 
+              "Content-Type": "application/json",
+              "x-user-id": auth.user.userId,
+            },
+            credentials: "include",
+            body: JSON.stringify({
+              barterTypeId: selectedProduct.barterTypeId,
+              categoryId: selectedProduct.categoryId,
+              subcategoryId: selectedProduct.subcategoryId,
+              brandName: selectedProduct.brand || null,
+              modelName: selectedProduct.model || null,
+              title: selectedProduct.title,
+              description: selectedProduct.description || null,
+            }),
+          });
+          
+          if (!tempProductResponse.ok) {
+            const error = await tempProductResponse.json().catch(() => ({}));
+            throw new Error(error.error || "Failed to create custom product");
+          }
+          
+          const tempProductData = await tempProductResponse.json();
+          tempProductId = tempProductData.tempProduct.temp_product_id;
+          isPendingReview = true;
+          console.log("[v0] Temp product created:", tempProductId);
+          
+          // Also add to local store for immediate display
           addProduct(selectedProduct);
+          
+          // Create offer linked to temp product
+          const offerResponse = await fetch("/api/data/offers", {
+            method: "POST",
+            headers: { 
+              "Content-Type": "application/json",
+              "x-user-id": auth.user.userId,
+            },
+            credentials: "include",
+            body: JSON.stringify({
+              tempProductId: tempProductId,
+              userId: auth.user.userId,
+              title: offerTitle.trim(),
+              description: offerDescription.trim(),
+              condition: "good",
+            }),
+          });
+          
+          if (!offerResponse.ok) {
+            const error = await offerResponse.json().catch(() => ({}));
+            throw new Error(error.error || "Failed to create offer");
+          }
+          
+          const offerData = await offerResponse.json();
+          apiOfferId = offerData.offer?.offerId;
+          console.log("[v0] Offer created with temp product:", apiOfferId);
         } else {
-          // Only call API for real products that exist in the database
+          // Create offer for existing catalog product
           console.log("[v0] Calling POST /api/data/offers");
           const response = await fetch("/api/data/offers", {
             method: "POST",
@@ -1342,7 +1399,7 @@ export function AddOfferFlow({
               userId: auth.user.userId,
               title: offerTitle.trim(),
               description: offerDescription.trim(),
-              condition: "good", // Default condition
+              condition: "good",
             }),
           });
 
@@ -1359,10 +1416,12 @@ export function AddOfferFlow({
           apiOfferId = data.offer?.offerId;
         }
         
-        // Add to local store with the returned offer data (or generated ID for temp products)
+        // Add to local store with the returned offer data
         const newOffer: Offer = {
           offerId: apiOfferId || generateGuid(),
-          productId: selectedProduct.productId,
+          productId: isTempProduct ? selectedProduct.productId : selectedProduct.productId,
+          tempProductId: tempProductId || undefined,
+          isPendingReview,
           ownerUserId: auth.user.userId,
           title: offerTitle.trim(),
           description: offerDescription.trim(),

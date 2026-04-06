@@ -93,10 +93,10 @@ const navItems: NavItem[] = [
     href: "/backoffice/tickets",
   },
   {
-    id: "products",
+    id: "product-review",
     label: "Product Review",
     icon: Package,
-    href: "/backoffice/products",
+    href: "/backoffice/product-review",
   },
   {
     id: "allowed-emails",
