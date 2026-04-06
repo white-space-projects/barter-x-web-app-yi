@@ -108,12 +108,13 @@ export async function POST(request: NextRequest) {
         console.log("[v0] Login API: Creating new user via Supabase Admin");
         isNewUser = true;
 
-        // Check if user exists in auth.users
-        const { data: authUserData, error: lookupError } = await supabaseAdmin.auth.admin.getUserByEmail(normalizedEmail);
+        // Check if user exists in auth.users using listUsers
+        const { data: listData, error: lookupError } = await supabaseAdmin.auth.admin.listUsers();
+        const existingAuthUser = listData?.users?.find(u => u.email?.toLowerCase() === normalizedEmail);
         
-        if (authUserData?.user) {
+        if (existingAuthUser) {
           // User exists in auth but not in application.users - use their ID
-          userId = authUserData.user.id;
+          userId = existingAuthUser.id;
           console.log("[v0] Login API: Found existing auth user:", userId);
         } else {
           // Create new user in auth.users
