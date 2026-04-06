@@ -255,7 +255,10 @@ export function BarterProvider({ children }: { children: ReactNode }) {
         
         // Try to fetch fresh user data from database
         try {
-          const response = await fetch("/api/data/user/profile");
+          const response = await fetch("/api/data/user/profile", { 
+            credentials: "include",
+            headers: { "x-user-id": storedAuth.user.userId || "" }, // Fallback auth
+          });
           if (response.ok) {
             const data = await response.json();
             if (data.profile && !data.fromSession) {

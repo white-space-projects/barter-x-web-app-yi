@@ -74,15 +74,18 @@ export async function verifySessionToken(token: string): Promise<UserSession | n
 export async function setSessionCookie(user: UserSession): Promise<void> {
   const token = await createSessionToken(user)
   const cookieStore = await cookies()
-  const isProduction = process.env.NODE_ENV === 'production';
 
+  // Use lax sameSite for better compatibility with preview environments
+  // The cookie needs to work across the preview iframe
   cookieStore.set("session", token, {
     httpOnly: true,
-    secure: isProduction,
-    sameSite: isProduction ? 'none' : 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: "lax",
     maxAge: SESSION_DURATION / 1000,
     path: "/",
   })
+  
+  console.log("[v0] Session cookie set for user:", user.user_id)
 }
 
 // #Auth#Session#Get# - Get current session
@@ -91,10 +94,17 @@ export async function getSession(): Promise<UserSession | null> {
   const token = cookieStore.get("session")?.value
 
   if (!token) {
+    console.log("[v0] getSession: No session cookie found")
     return null
   }
 
-  return verifySessionToken(token)
+  const session = await verifySessionToken(token)
+  if (session) {
+    console.log("[v0] getSession: Session verified for user:", session.user_id)
+  } else {
+    console.log("[v0] getSession: Session token invalid or expired")
+  }
+  return session
 }
 
 // #Auth#Session#Clear# - Clear session cookie

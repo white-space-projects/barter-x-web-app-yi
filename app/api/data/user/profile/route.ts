@@ -44,19 +44,25 @@ interface DbUserWithLocation {
   profile_zip_code: string | null;
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     // Get session from our JWT cookie
     const session = await getSession();
     
-    if (!session) {
+    // Fallback: Check for x-user-id header (sent by client when cookie fails)
+    const headerUserId = request.headers.get("x-user-id");
+    const userId = session?.user_id || headerUserId;
+    
+    console.log("[v0] Profile GET: Session:", session?.user_id || "none", "Header:", headerUserId || "none");
+    
+    if (!userId) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
       );
     }
 
-    console.log("[v0] Getting user profile for:", session.user_id);
+    console.log("[v0] Getting user profile for:", userId);
 
     // Get user with location data using direct SQL
     const users = await query<DbUserWithLocation>(
@@ -82,7 +88,7 @@ export async function GET() {
       LEFT JOIN application.countries pc ON u.profile_country_id = pc.country_id
       LEFT JOIN application.cities pci ON u.profile_city_id = pci.city_id
       WHERE u.user_id = $1`,
-      [session.user_id]
+      [userId]
     );
 
     const user = users[0];
@@ -92,9 +98,9 @@ export async function GET() {
       console.log("[v0] User not in DB yet, returning session data");
       return NextResponse.json({
         profile: {
-          userId: session.user_id,
-          email: session.email,
-          name: session.name || "User",
+          userId: userId,
+          email: session?.email || "",
+          name: session?.name || "User",
           isAdmin: false,
         },
         fromSession: true,
@@ -104,8 +110,8 @@ export async function GET() {
     // Map DB user to profile - prefer profile location over detected
     const profile: UserProfile = {
       userId: user.user_id,
-      email: user.email || session.email,
-      name: user.display_name || session.name || "User",
+      email: user.email || session?.email || "",
+      name: user.display_name || session?.name || "User",
       phone: user.phone || undefined,
       city: user.profile_city_name || user.detected_city_name || "",
       country: user.profile_country_name || user.detected_country_name || "",
@@ -131,7 +137,13 @@ export async function PUT(request: NextRequest) {
   try {
     const session = await getSession();
     
-    if (!session) {
+    // Fallback: Check for x-user-id header (sent by client when cookie fails)
+    const headerUserId = request.headers.get("x-user-id");
+    const userId = session?.user_id || headerUserId;
+    
+    console.log("[v0] Profile PUT: Session:", session?.user_id || "none", "Header:", headerUserId || "none");
+    
+    if (!userId) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
@@ -141,7 +153,7 @@ export async function PUT(request: NextRequest) {
     const body = await request.json();
     const { name, phone, city, country, addressLine1, addressLine2, zip, avatarUrl } = body;
 
-    console.log("[v0] Updating user profile for:", session.user_id, { name, city, country });
+    console.log("[v0] Updating user profile for:", userId, { name, city, country });
 
     // Look up country ID if country name provided
     let profileCountryId: string | null = null;
@@ -210,7 +222,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Add user_id as the last parameter
-    values.push(session.user_id);
+    values.push(userId);
 
     // Update user
     const updateQuery = `
@@ -225,7 +237,7 @@ export async function PUT(request: NextRequest) {
     const updateResult = await query<{ user_id: string }>(updateQuery, values);
 
     if (!updateResult[0]) {
-      console.error("[v0] User not found for update:", session.user_id);
+      console.error("[v0] User not found for update:", userId);
       return NextResponse.json(
         { error: "User not found" },
         { status: 404 }
@@ -256,15 +268,15 @@ export async function PUT(request: NextRequest) {
       LEFT JOIN application.countries pc ON u.profile_country_id = pc.country_id
       LEFT JOIN application.cities pci ON u.profile_city_id = pci.city_id
       WHERE u.user_id = $1`,
-      [session.user_id]
+      [userId]
     );
 
     const user = users[0];
 
     const profile: UserProfile = {
       userId: user.user_id,
-      email: user.email || session.email,
-      name: user.display_name || session.name || "User",
+      email: user.email || session?.email || "",
+      name: user.display_name || session?.name || "User",
       phone: user.phone || undefined,
       city: user.profile_city_name || user.detected_city_name || "",
       country: user.profile_country_name || user.detected_country_name || "",

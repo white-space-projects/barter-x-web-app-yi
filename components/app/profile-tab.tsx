@@ -244,7 +244,11 @@ export function ProfileTab({ onProfileComplete }: ProfileTabProps) {
       // Save to database via API - include all address fields
       const response = await fetch("/api/data/user/profile", {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "x-user-id": auth.user?.userId || "", // Fallback auth via header
+        },
+        credentials: "include", // Include session cookie
         body: JSON.stringify({
           name: fullName.trim(),
           phone: phone.trim() || undefined,
@@ -403,7 +407,11 @@ export function ProfileTab({ onProfileComplete }: ProfileTabProps) {
     try {
       const response = await fetch("/api/data/user/profile", {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "x-user-id": auth.user?.userId || "", // Fallback auth via header
+        },
+        credentials: "include", // Include session cookie
         body: JSON.stringify({
           name: fullName.trim(),
           phone: phone.trim() || undefined,
