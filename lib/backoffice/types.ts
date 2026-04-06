@@ -227,7 +227,7 @@ export interface SqlQueryResponse {
 // TICKETS TYPES
 // =============================================================================
 
-export type TicketSource = "login_issue" | "feedback" | "complaint" | "product_review";
+export type TicketSource = "login_issue" | "feedback" | "product_review" | "support";
 export type TicketStatus = "open" | "in_progress" | "resolved" | "closed";
 export type TicketPriority = "low" | "medium" | "high" | "urgent";
 
@@ -240,8 +240,9 @@ export interface Ticket {
   description: string;
   user_id?: string;
   user_email?: string;
-  product_id?: string;
-  offer_id?: string;
+  related_product_id?: string;
+  related_offer_id?: string;
+  metadata?: Record<string, unknown>;
   created_at: string;
   updated_at: string;
   resolved_at?: string;
@@ -260,22 +261,23 @@ export interface TicketsFilter {
 // PRODUCT REVIEW TYPES
 // =============================================================================
 
-export type ProductReviewStatus = "pending" | "in_review" | "approved" | "rejected";
+export type ProductReviewStatus = "pending" | "approved" | "rejected" | "needs_info";
 
 export interface ProductForReview {
-  product_id: string;
-  title: string;
+  id: string;
+  name: string;
   category: string;
   subcategory?: string;
-  brand?: string;
-  model?: string;
-  image_url?: string;
-  product_info: Record<string, string>;
+  brand: string;
+  model: string;
+  image_url: string | null;
+  product_info: Record<string, string> | null;
   review_status: ProductReviewStatus;
   needs_review: boolean;
   review_note?: string;
   reviewed_by?: string;
   reviewed_at?: string;
+  created_by?: string;
   created_at: string;
   updated_at: string;
 }

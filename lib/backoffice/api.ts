@@ -534,36 +534,38 @@ export async function updateTicketStatus(
 
 const mockProductsForReview: ProductForReview[] = [
   {
-    product_id: "prod-001",
-    title: "iPhone 15 Pro Max",
+    id: "prod-001",
+    name: "iPhone 15 Pro Max",
     category: "Goods",
     subcategory: "Smartphones",
     brand: "Apple",
     model: "iPhone 15 Pro Max",
-    image_url: undefined,
+    image_url: null,
     product_info: {},
     review_status: "pending",
     needs_review: true,
+    created_by: "user-123",
     created_at: randomDate(3),
     updated_at: randomDate(2),
   },
   {
-    product_id: "prod-002",
-    title: "Samsung Galaxy S24 Ultra",
+    id: "prod-002",
+    name: "Samsung Galaxy S24 Ultra",
     category: "Goods",
     subcategory: "Smartphones",
     brand: "Samsung",
     model: "Galaxy S24 Ultra",
     image_url: "/placeholder.svg",
     product_info: { "Storage": "256GB", "Color": "Black" },
-    review_status: "in_review",
+    review_status: "needs_info",
     needs_review: true,
+    created_by: "user-456",
     created_at: randomDate(5),
     updated_at: randomDate(1),
   },
   {
-    product_id: "prod-003",
-    title: "MacBook Pro 16",
+    id: "prod-003",
+    name: "MacBook Pro 16",
     category: "Goods",
     subcategory: "Laptops",
     brand: "Apple",
@@ -574,61 +576,124 @@ const mockProductsForReview: ProductForReview[] = [
     needs_review: false,
     reviewed_by: "admin@project-x.com",
     reviewed_at: randomDate(10),
+    created_by: "user-789",
     created_at: randomDate(20),
     updated_at: randomDate(10),
+  },
+  {
+    id: "prod-004",
+    name: "Sony WH-1000XM5",
+    category: "Goods",
+    subcategory: "Headphones",
+    brand: "Sony",
+    model: "WH-1000XM5",
+    image_url: null,
+    product_info: null,
+    review_status: "pending",
+    needs_review: true,
+    created_by: "user-111",
+    created_at: randomDate(1),
+    updated_at: randomDate(1),
+  },
+  {
+    id: "prod-005",
+    name: "Canon EOS R5",
+    category: "Goods",
+    subcategory: "Cameras",
+    brand: "Canon",
+    model: "EOS R5",
+    image_url: "/placeholder.svg",
+    product_info: { "Sensor": "45MP Full Frame", "Video": "8K RAW" },
+    review_status: "rejected",
+    needs_review: false,
+    review_note: "Duplicate entry - already exists",
+    reviewed_by: "admin@project-x.com",
+    reviewed_at: randomDate(2),
+    created_by: "user-222",
+    created_at: randomDate(7),
+    updated_at: randomDate(2),
   },
 ];
 
 export async function getProductsForReview(
-  status?: ProductReviewStatus,
-  pagination?: PaginationParams
+  params: Record<string, string | number> = {}
 ): Promise<PaginatedResponse<ProductForReview>> {
   await new Promise((r) => setTimeout(r, 400));
 
   let filtered = [...mockProductsForReview];
-  if (status) {
-    filtered = filtered.filter((p) => p.review_status === status);
+  
+  if (params.review_status) {
+    filtered = filtered.filter((p) => p.review_status === params.review_status);
+  }
+  
+  if (params.search) {
+    const searchLower = String(params.search).toLowerCase();
+    filtered = filtered.filter((p) => 
+      p.name.toLowerCase().includes(searchLower) ||
+      p.brand.toLowerCase().includes(searchLower) ||
+      p.model.toLowerCase().includes(searchLower)
+    );
   }
 
-  const pag = pagination || { page: 1, pageSize: 20 };
+  const page = Number(params.page) || 1;
+  const limit = Number(params.limit) || 20;
   const total = filtered.length;
-  const start = (pag.page - 1) * pag.pageSize;
-  const data = filtered.slice(start, start + pag.pageSize);
+  const start = (page - 1) * limit;
+  const data = filtered.slice(start, start + limit);
 
   return {
     data,
     total,
-    page: pag.page,
-    pageSize: pag.pageSize,
-    totalPages: Math.ceil(total / pag.pageSize),
+    page,
+    pageSize: limit,
+    totalPages: Math.ceil(total / limit),
   };
 }
 
 export async function getProductForReview(productId: string): Promise<ProductForReview | null> {
   await new Promise((r) => setTimeout(r, 300));
-  return mockProductsForReview.find((p) => p.product_id === productId) || null;
+  return mockProductsForReview.find((p) => p.id === productId) || null;
 }
 
-export async function updateProductImage(productId: string, imageUrl: string): Promise<boolean> {
-  await new Promise((r) => setTimeout(r, 500));
-  const product = mockProductsForReview.find((p) => p.product_id === productId);
+export async function updateProductImage(productId: string, file: File): Promise<boolean> {
+  await new Promise((r) => setTimeout(r, 800));
+  const product = mockProductsForReview.find((p) => p.id === productId);
   if (product) {
-    product.image_url = imageUrl;
+    // In real implementation, upload file to storage and get URL
+    product.image_url = URL.createObjectURL(file);
     product.updated_at = new Date().toISOString();
     return true;
   }
   return false;
 }
 
-export async function updateProductInfo(request: UpdateProductInfoRequest): Promise<ProductForReview | null> {
-  await new Promise((r) => setTimeout(r, 500));
-  const product = mockProductsForReview.find((p) => p.product_id === request.product_id);
+export async function deleteProductImage(productId: string): Promise<boolean> {
+  await new Promise((r) => setTimeout(r, 400));
+  const product = mockProductsForReview.find((p) => p.id === productId);
   if (product) {
-    product.product_info = request.product_info;
-    if (request.review_status) product.review_status = request.review_status;
-    if (request.review_note) product.review_note = request.review_note;
+    product.image_url = null;
     product.updated_at = new Date().toISOString();
-    if (request.review_status === "approved" || request.review_status === "rejected") {
+    return true;
+  }
+  return false;
+}
+
+export async function updateProductInfo(
+  productId: string,
+  data: {
+    product_info?: Record<string, string>;
+    review_status?: ProductReviewStatus;
+    review_note?: string;
+  }
+): Promise<ProductForReview | null> {
+  await new Promise((r) => setTimeout(r, 500));
+  const product = mockProductsForReview.find((p) => p.id === productId);
+  if (product) {
+    if (data.product_info) product.product_info = data.product_info;
+    if (data.review_status) product.review_status = data.review_status;
+    if (data.review_note !== undefined) product.review_note = data.review_note;
+    product.updated_at = new Date().toISOString();
+    if (data.review_status === "approved" || data.review_status === "rejected") {
       product.reviewed_by = "admin@project-x.com";
       product.reviewed_at = new Date().toISOString();
       product.needs_review = false;
@@ -637,3 +702,54 @@ export async function updateProductInfo(request: UpdateProductInfoRequest): Prom
   }
   return null;
 }
+
+// =============================================================================
+// CONSOLIDATED API EXPORT
+// =============================================================================
+// Single export object for all API functions
+// This makes it easy to swap mock implementations for real API calls
+
+export const backofficeApi = {
+  // Auth
+  loginWithOtp,
+  getAllowedEmails,
+  addAllowedEmail,
+  removeAllowedEmail,
+  
+  // Metrics
+  getMetrics,
+  
+  // Simulate
+  runSimulation,
+  
+  // Nodes
+  getNodes,
+  
+  // Edges
+  getEdges,
+  
+  // Snapshots
+  getSnapshots,
+  
+  // Reservations
+  getReservations,
+  
+  // Config
+  getConfig,
+  updateConfig,
+  
+  // SQL Query
+  runSqlQuery,
+  
+  // Tickets
+  getTickets,
+  getTicketById,
+  updateTicketStatus,
+  
+  // Products
+  getProductsForReview,
+  getProductForReview,
+  updateProductImage,
+  deleteProductImage,
+  updateProductInfo,
+};
