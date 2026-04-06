@@ -38,7 +38,6 @@
 import React from "react";
 import { GlobalNav } from "@/components/global-nav";
 import { useBarterStore } from "@/lib/store";
-import { generateGuid } from "@/lib/guid";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -220,30 +219,36 @@ export default function LoginPage() {
     // #Analytics#Login#OTP#VerifyInitiated# - TODO: Track OTP verify initiated
     
     try {
-      // #API#Login#OTP#VerifyRequest# - POST /api/verify-otp
-      // #API#Login#OTP#RequestPayload# - Request: { email, otp, name, device_id, region }
-      // MOCK OTP VERIFY - Accept any 6-digit OTP (replace with actual API call)
-      await new Promise((r) => setTimeout(r, 500)); // Simulate network delay
+      // #API#Login#OTP#VerifyRequest# - POST /api/auth/login
+      // For now, skip real OTP verification - just create/find user
+      // TODO: Replace with real OTP verification when backend is ready
       
-      // #Auth#AdminCheck# - Check if user is admin
-      const isAdmin = adminEmails.includes(email.toLowerCase());
+      // Call login API to find/create user in database and set session cookie
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email.toLowerCase(),
+          name: name.trim() || "Barter User",
+          city: city.trim(),
+          country: country.trim(),
+          countryCode: countryCode,
+        }),
+      });
 
-      // #Auth#SupabaseMapping#UserObject# - User object structure
-      // #API#Login#OTP#ResponsePayload# - Response: { success, access_token, user }
-      const user = {
-          userId: generateGuid(), // #Auth#SupabaseMapping#UserId#
-          name: name.trim() || "Barter User", // #Auth#SupabaseMapping#UserName#
-          email: email.toLowerCase(), // #Auth#SupabaseMapping#UserEmail#
-          isAdmin, // #Auth#SupabaseMapping#UserRole#
-          city: city.trim() || "Berlin", // #Auth#SupabaseMapping#UserCity#
-          country: country.trim() || "Germany", // #Auth#SupabaseMapping#UserCountry#
-          countryCode: countryCode || "DE", // #Auth#SupabaseMapping#UserCountryCode#
-      };
-      // #Auth#PAT#Generation# - Generate access token
-      const token = generateGuid();
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Login failed");
+      }
 
-      // #Auth#Session#Create# - Create user session
-      login(user, token);
+      const data = await response.json();
+      
+      if (!data.success) {
+        throw new Error(data.error || "Login failed");
+      }
+
+      // #Auth#Session#Create# - Create user session in client store
+      login(data.user, data.token);
       setLoading(false);
       // #Logging#Login#OTP#VerifySuccess# - TODO: Log successful verification
       // #Analytics#Login#OTP#VerifySuccess# - TODO: Track OTP verify success
@@ -272,27 +277,51 @@ export default function LoginPage() {
         // #Analytics#Login#Google#Initiated# - TODO: Track Google sign-in initiated
         
         try {
-          // #API#Login#Google#VerifyRequest# - POST /api/auth/google/verify
-          // #API#Login#Google#RequestPayload# - Request: { id_token, device_id, region }
-          // MOCK GOOGLE LOGIN - Bypassing real API (replace with actual API call)
-          await new Promise((r) => setTimeout(r, 800)); // Simulate network delay
+          // #API#Login#Google#VerifyRequest# - POST /api/auth/login
+          // TODO: Replace with real Google token verification when backend is ready
+          // For now, extract email from Google credential if possible
           
-          // #Auth#SupabaseMapping#GoogleUser# - Google user mapping
-          // #API#Login#Google#ResponsePayload# - Response: { success, access_token, user }
-          const mockGoogleUser = {
-            userId: generateGuid(), // #Auth#SupabaseMapping#UserId#
-            name: "Google User", // #Auth#SupabaseMapping#UserName#
-            email: "google.user@gmail.com", // #Auth#SupabaseMapping#UserEmail#
-            isAdmin: false, // #Auth#SupabaseMapping#UserRole#
-            city: city.trim() || "Berlin", // #Auth#SupabaseMapping#UserCity#
-            country: country.trim() || "Germany", // #Auth#SupabaseMapping#UserCountry#
-            countryCode: countryCode || "DE", // #Auth#SupabaseMapping#UserCountryCode#
-          };
-          // #Auth#PAT#Generation# - Generate access token
-          const token = generateGuid();
+          // Decode Google credential to get email (simplified - in production use proper JWT verification)
+          let googleEmail = "google.user@gmail.com";
+          let googleName = "Google User";
+          
+          if (credentialResponse?.credential) {
+            try {
+              // Google ID tokens are base64 JWTs - decode the payload
+              const payload = JSON.parse(atob(credentialResponse.credential.split('.')[1]));
+              googleEmail = payload.email || googleEmail;
+              googleName = payload.name || googleName;
+            } catch {
+              // Use defaults if decoding fails
+            }
+          }
 
-          // #Auth#Session#Create# - Create user session
-          login(mockGoogleUser, token);
+          // Call login API to find/create user and set session cookie
+          const response = await fetch("/api/auth/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              email: googleEmail,
+              name: googleName,
+              city: city.trim(),
+              country: country.trim(),
+              countryCode: countryCode,
+            }),
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || "Google sign-in failed");
+          }
+
+          const data = await response.json();
+          
+          if (!data.success) {
+            throw new Error(data.error || "Google sign-in failed");
+          }
+
+          // #Auth#Session#Create# - Create user session in client store
+          login(data.user, data.token);
           setGoogleLoading(false);
           // #Logging#Login#Google#Success# - TODO: Log successful Google sign-in
           // #Analytics#Login#Google#Success# - TODO: Track Google sign-in success
@@ -332,34 +361,36 @@ export default function LoginPage() {
     
     try {
       // #Login#Apple#ProviderStart# - Initialize Apple Sign-In
-      // #Login#Apple#TokenAcquisition# - Get identity token from Apple
-      // #API#Login#Apple#VerifyRequest# - POST /api/auth/apple/verify
-      // #API#Login#Apple#RequestPayload# - Request: { identity_token, authorization_code, device_id, region, user_info }
-      /**
-       * APPLE AUTH API PLACEHOLDER
-       * ==========================
-       * Implement Apple Sign-In using Sign in with Apple JS.
-       * On success, call backend to verify and create session.
-       * On failure, set hasLoginError and lastError for trouble reporting.
-       */
-      await new Promise((r) => setTimeout(r, 1200));
+      // TODO: Implement real Apple Sign-In using Sign in with Apple JS
+      // For now, use a temporary email-based login
       
-      // #Auth#SupabaseMapping#AppleUser# - Apple user mapping
-      // #API#Login#Apple#ResponsePayload# - Response: { success, access_token, user }
-      const mockAppleUser = {
-        userId: generateGuid(), // #Auth#SupabaseMapping#UserId#
-        name: "Apple User", // #Auth#SupabaseMapping#UserName#
-        email: "user@icloud.com", // #Auth#SupabaseMapping#UserEmail#
-        isAdmin: false, // #Auth#SupabaseMapping#UserRole#
-        city: city.trim(), // #Auth#SupabaseMapping#UserCity#
-        country: country.trim(), // #Auth#SupabaseMapping#UserCountry#
-        countryCode: countryCode || undefined, // #Auth#SupabaseMapping#UserCountryCode#
-      };
-      // #Auth#PAT#Generation# - Generate access token
-      const token = generateGuid();
+      // Call login API with Apple user placeholder
+      // In production, this should verify Apple identity token first
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: "apple.user@icloud.com", // TODO: Get from Apple Sign-In
+          name: "Apple User",
+          city: city.trim(),
+          country: country.trim(),
+          countryCode: countryCode,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Apple sign-in failed");
+      }
+
+      const data = await response.json();
       
-      // #Auth#Session#Create# - Create user session
-      login(mockAppleUser, token);
+      if (!data.success) {
+        throw new Error(data.error || "Apple sign-in failed");
+      }
+
+      // #Auth#Session#Create# - Create user session in client store
+      login(data.user, data.token);
       setAppleLoading(false);
       // #Logging#Login#Apple#Success# - TODO: Log successful Apple sign-in
       // #Analytics#Login#Apple#Success# - TODO: Track Apple sign-in success

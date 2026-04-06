@@ -9,15 +9,25 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import type { Hook } from "@/lib/types";
 
+// Check if required env vars are set
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
 // Create admin client with service role key for full schema access
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+const supabaseAdmin = SUPABASE_URL && SUPABASE_SERVICE_KEY 
+  ? createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+  : null;
 
 export async function GET(request: NextRequest) {
   try {
     console.log("[v0] Hooks API: GET request received");
+    
+    if (!supabaseAdmin) {
+      return NextResponse.json(
+        { error: "Database not configured", hooks: [], total: 0 },
+        { status: 500 }
+      );
+    }
     
     const searchParams = request.nextUrl.searchParams;
     const userId = searchParams.get("userId");

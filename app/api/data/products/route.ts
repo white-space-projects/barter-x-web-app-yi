@@ -9,15 +9,27 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import type { Product, ProductType } from "@/lib/types";
 
+// Check if required env vars are set
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
 // Create admin client with service role key for full schema access
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+const supabaseAdmin = SUPABASE_URL && SUPABASE_SERVICE_KEY 
+  ? createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+  : null;
 
 export async function GET(request: NextRequest) {
   try {
     console.log("[v0] Products API: GET request received");
+    
+    // Check env vars
+    if (!supabaseAdmin) {
+      console.error("[v0] Products API: Supabase not configured - missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
+      return NextResponse.json(
+        { error: "Database not configured", products: [], total: 0 },
+        { status: 500 }
+      );
+    }
     
     // Get query params
     const searchParams = request.nextUrl.searchParams;
@@ -27,149 +39,100 @@ export async function GET(request: NextRequest) {
 
     console.log("[v0] Products API: Fetching with params:", { barterType, limit, offset });
 
-    // Build SQL query for application schema
-    let sql = `
-      SELECT 
-        p.product_id,
-        p.title,
-        p.description,
-        p.image_key,
-        p.barter_type_id,
-        p.category_id,
-        p.subcategory_id,
-        p.brand_id,
-        p.model,
-        p.product_info,
-        p.is_active,
-        p.created_at,
-        p.updated_at,
-        bt.slug as barter_type_slug,
-        bt.name as barter_type_name,
-        c.name as category_name,
-        c.slug as category_slug,
-        sc.name as subcategory_name,
-        sc.slug as subcategory_slug,
-        b.name as brand_name,
-        b.slug as brand_slug
-      FROM application.products p
-      LEFT JOIN application.barter_types bt ON p.barter_type_id = bt.barter_type_id
-      LEFT JOIN application.categories c ON p.category_id = c.category_id
-      LEFT JOIN application.subcategories sc ON p.subcategory_id = sc.subcategory_id
-      LEFT JOIN application.brands b ON p.brand_id = b.brand_id
-      WHERE p.is_active = true
-    `;
+    // Try using the schema() method to query application schema
+    // This requires the 'application' schema to be exposed in Supabase API settings
+    let query = supabaseAdmin
+      .schema("application")
+      .from("products")
+      .select(`
+        *,
+        barter_type:barter_types(slug, name),
+        category:categories(name, slug),
+        subcategory:subcategories(name, slug),
+        brand:brands(name, slug)
+      `, { count: "exact" })
+      .eq("is_active", true)
+      .order("created_at", { ascending: false })
+      .limit(limit);
+    
+    if (offset > 0) {
+      query = query.range(offset, offset + limit - 1);
+    }
     
     if (barterType) {
-      sql += ` AND bt.slug = '${barterType}'`;
-    }
-    
-    sql += ` ORDER BY p.created_at DESC LIMIT ${limit} OFFSET ${offset}`;
-
-    // Execute query using Supabase's SQL execution
-    const { data: rawProducts, error } = await supabaseAdmin.rpc('exec_sql_query', { query_text: sql });
-    
-    // If RPC doesn't exist, try direct query on public schema view or fall back
-    if (error) {
-      console.log("[v0] RPC not available, trying schema query:", error.message);
-      
-      // Try using the schema() method as fallback
-      let query = supabaseAdmin
+      // Get barter type id first
+      const { data: btData, error: btError } = await supabaseAdmin
         .schema("application")
-        .from("products")
-        .select(`
-          *,
-          barter_type:barter_types(slug, name),
-          category:categories(name, slug),
-          subcategory:subcategories(name, slug),
-          brand:brands(name, slug)
-        `, { count: "exact" })
-        .eq("is_active", true)
-        .order("created_at", { ascending: false })
-        .limit(limit);
+        .from("barter_types")
+        .select("barter_type_id")
+        .eq("slug", barterType)
+        .single();
       
-      if (offset > 0) {
-        query = query.range(offset, offset + limit - 1);
+      console.log("[v0] Barter type lookup:", { barterType, btData, btError: btError?.message });
+      
+      if (btData) {
+        query = query.eq("barter_type_id", btData.barter_type_id);
       }
-      
-      if (barterType) {
-        // Get barter type id first
-        const { data: btData } = await supabaseAdmin
-          .schema("application")
-          .from("barter_types")
-          .select("barter_type_id")
-          .eq("slug", barterType)
-          .single();
-        
-        if (btData) {
-          query = query.eq("barter_type_id", btData.barter_type_id);
-        }
-      }
-      
-      const { data: schemaProducts, error: schemaError, count } = await query;
-      
-      if (schemaError) {
-        console.error("[v0] Schema query also failed:", schemaError);
-        throw new Error(`Failed to fetch products: ${schemaError.message}`);
-      }
-      
-      // Map the schema query results
-      const products: Product[] = (schemaProducts || []).map((p: any) => ({
-        productId: p.product_id,
-        name: p.title,
-        title: p.title,
-        description: p.description || "",
-        imageUrl: p.image_key ? `https://mdytcwlxlwvmioizaidu.supabase.co/storage/v1/object/public/product-images/${p.image_key}` : "/placeholder.svg",
-        barterType: (p.barter_type?.slug || "goods") as ProductType,
-        category: p.category?.name || "",
-        subcategory: p.subcategory?.name || "",
-        brand: p.brand?.name || "",
-        model: p.model || "",
-        offerCount: 0,
-        isActive: p.is_active,
-        createdAt: p.created_at,
-        updatedAt: p.updated_at,
-      }));
-      
-      console.log("[v0] Products API: Fetched", products.length, "products via schema query");
-      
-      return NextResponse.json({ 
-        products, 
-        total: count || products.length,
-        limit,
-        offset,
-      });
     }
-
-    // Map raw SQL results to Product type
-    const products: Product[] = (rawProducts || []).map((p: any) => ({
+    
+    const { data: schemaProducts, error: schemaError, count } = await query;
+    
+    console.log("[v0] Products query result:", { 
+      count: schemaProducts?.length, 
+      error: schemaError?.message,
+      code: schemaError?.code,
+      hint: schemaError?.hint
+    });
+    
+    if (schemaError) {
+      console.error("[v0] Schema query failed:", schemaError);
+      
+      // Provide helpful error message for common issues
+      if (schemaError.message.includes("relation") && schemaError.message.includes("does not exist")) {
+        return NextResponse.json({
+          error: "The 'application' schema may not be exposed in Supabase API settings. Please add 'application' to the Exposed Schemas in your Supabase dashboard under Settings > API.",
+          products: [],
+          total: 0,
+        }, { status: 500 });
+      }
+      
+      return NextResponse.json({
+        error: `Database query failed: ${schemaError.message}`,
+        products: [],
+        total: 0,
+      }, { status: 500 });
+    }
+    
+    // Map the schema query results
+    const products: Product[] = (schemaProducts || []).map((p: any) => ({
       productId: p.product_id,
       name: p.title,
       title: p.title,
       description: p.description || "",
       imageUrl: p.image_key ? `https://mdytcwlxlwvmioizaidu.supabase.co/storage/v1/object/public/product-images/${p.image_key}` : "/placeholder.svg",
-      barterType: (p.barter_type_slug || "goods") as ProductType,
-      category: p.category_name || "",
-      subcategory: p.subcategory_name || "",
-      brand: p.brand_name || "",
+      barterType: (p.barter_type?.slug || "goods") as ProductType,
+      category: p.category?.name || "",
+      subcategory: p.subcategory?.name || "",
+      brand: p.brand?.name || "",
       model: p.model || "",
       offerCount: 0,
       isActive: p.is_active,
       createdAt: p.created_at,
       updatedAt: p.updated_at,
     }));
-
+    
     console.log("[v0] Products API: Fetched", products.length, "products");
-
+    
     return NextResponse.json({ 
       products, 
-      total: products.length,
+      total: count || products.length,
       limit,
       offset,
     });
   } catch (error) {
     console.error("[API] Products fetch error:", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to fetch products" },
+      { error: error instanceof Error ? error.message : "Failed to fetch products", products: [], total: 0 },
       { status: 500 }
     );
   }
