@@ -1319,44 +1319,49 @@ export function AddOfferFlow({
       try {
         console.log("[v0] Creating offer - productId:", selectedProduct.productId, "userId:", auth.user.userId);
         
+        const isTempProduct = selectedProduct.productId.startsWith('temp-');
+        let apiOfferId: string | null = null;
+        
         // If this is a custom/new product (temp product), add it to the products store
-        if (selectedProduct.productId.startsWith('temp-')) {
-          console.log("[v0] Temp product detected, adding to store");
+        // but skip the API call since temp products aren't in the database
+        if (isTempProduct) {
+          console.log("[v0] Temp product detected, adding to local store only (not persisting to DB)");
           addProduct(selectedProduct);
+        } else {
+          // Only call API for real products that exist in the database
+          console.log("[v0] Calling POST /api/data/offers");
+          const response = await fetch("/api/data/offers", {
+            method: "POST",
+            headers: { 
+              "Content-Type": "application/json",
+              "x-user-id": auth.user.userId,
+            },
+            credentials: "include",
+            body: JSON.stringify({
+              productId: selectedProduct.productId,
+              userId: auth.user.userId,
+              title: offerTitle.trim(),
+              description: offerDescription.trim(),
+              condition: "good", // Default condition
+            }),
+          });
+
+          console.log("[v0] Offer API response status:", response.status);
+          
+          if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            console.error("[v0] Offer API error:", error);
+            throw new Error(error.error || "Failed to create offer");
+          }
+
+          const data = await response.json();
+          console.log("[v0] Offer created via API:", data.offer?.offerId);
+          apiOfferId = data.offer?.offerId;
         }
         
-        // Call API to create offer in database
-        console.log("[v0] Calling POST /api/data/offers");
-        const response = await fetch("/api/data/offers", {
-          method: "POST",
-          headers: { 
-            "Content-Type": "application/json",
-            "x-user-id": auth.user.userId,
-          },
-          credentials: "include",
-          body: JSON.stringify({
-            productId: selectedProduct.productId,
-            userId: auth.user.userId,
-            title: offerTitle.trim(),
-            description: offerDescription.trim(),
-            condition: "good", // Default condition
-          }),
-        });
-
-        console.log("[v0] Offer API response status:", response.status);
-        
-        if (!response.ok) {
-          const error = await response.json().catch(() => ({}));
-          console.error("[v0] Offer API error:", error);
-          throw new Error(error.error || "Failed to create offer");
-        }
-
-        const data = await response.json();
-        console.log("[v0] Offer created via API:", data.offer?.offerId);
-        
-        // Add to local store with the returned offer data
+        // Add to local store with the returned offer data (or generated ID for temp products)
         const newOffer: Offer = {
-          offerId: data.offer?.offerId || generateGuid(),
+          offerId: apiOfferId || generateGuid(),
           productId: selectedProduct.productId,
           ownerUserId: auth.user.userId,
           title: offerTitle.trim(),
