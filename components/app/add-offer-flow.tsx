@@ -1254,7 +1254,12 @@ export function AddOfferFlow({
 
   // Handle create or save offer (depending on edit mode)
   const handleCreateOffer = useCallback(async () => {
-    if (!canCreate || !auth.user || !selectedProduct) return;
+    console.log("[v0] handleCreateOffer called - canCreate:", canCreate, "auth.user:", !!auth.user, "selectedProduct:", !!selectedProduct);
+    
+    if (!canCreate || !auth.user || !selectedProduct) {
+      console.log("[v0] handleCreateOffer early return - missing:", !canCreate ? "canCreate" : "", !auth.user ? "auth.user" : "", !selectedProduct ? "selectedProduct" : "");
+      return;
+    }
 
     setLoading(true);
 
@@ -1312,12 +1317,16 @@ export function AddOfferFlow({
     } else {
       // CREATE new offer via API
       try {
+        console.log("[v0] Creating offer - productId:", selectedProduct.productId, "userId:", auth.user.userId);
+        
         // If this is a custom/new product (temp product), add it to the products store
         if (selectedProduct.productId.startsWith('temp-')) {
+          console.log("[v0] Temp product detected, adding to store");
           addProduct(selectedProduct);
         }
         
         // Call API to create offer in database
+        console.log("[v0] Calling POST /api/data/offers");
         const response = await fetch("/api/data/offers", {
           method: "POST",
           headers: { 
@@ -1334,8 +1343,11 @@ export function AddOfferFlow({
           }),
         });
 
+        console.log("[v0] Offer API response status:", response.status);
+        
         if (!response.ok) {
           const error = await response.json().catch(() => ({}));
+          console.error("[v0] Offer API error:", error);
           throw new Error(error.error || "Failed to create offer");
         }
 
