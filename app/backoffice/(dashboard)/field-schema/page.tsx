@@ -125,6 +125,14 @@ const DATE_MODES: { value: DateMode; label: string }[] = [
   { value: "year_only", label: "Year only" },
 ];
 
+// Only show these barter types (Goods, Rentals, Mini Jobs)
+const ALLOWED_BARTER_TYPE_IDS = [
+  "27a2dfe7-2527-4195-8a0c-7663cb405f8a", // Goods
+  "46e8b0d9-b53b-40c6-bace-774647f0ce57", // Rentals
+  "34c6aceb-5b83-4ed3-a1f8-2be770a17f52", // Mini Jobs
+];
+const DEFAULT_BARTER_TYPE_ID = "27a2dfe7-2527-4195-8a0c-7663cb405f8a"; // Goods
+
 // =============================================================================
 // MAIN COMPONENT
 // =============================================================================
@@ -140,11 +148,11 @@ export default function FieldSchemaPage() {
   
   // Filters
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedBarterType, setSelectedBarterType] = useState<string>("all");
+  const [selectedBarterType, setSelectedBarterType] = useState<string>(DEFAULT_BARTER_TYPE_ID); // Default to Goods
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [showNoFields, setShowNoFields] = useState(false);
-  const [sortNewest, setSortNewest] = useState(true); // Default to newest first
   const [categorySearch, setCategorySearch] = useState("");
+  const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false);
   
   // ---------------------------------------------------------------------------
   // STATE - Detail View
@@ -201,7 +209,11 @@ export default function FieldSchemaPage() {
       const response = await fetch("/api/data/barter-types");
       if (!response.ok) throw new Error("Failed to fetch barter types");
       const data = await response.json();
-      setBarterTypes(data.barterTypes || []);
+      // Filter to only allowed barter types (Goods, Rentals, Mini Jobs)
+      const allowedTypes = (data.barterTypes || []).filter(
+        (bt: BarterType) => ALLOWED_BARTER_TYPE_IDS.includes(bt.barterTypeId)
+      );
+      setBarterTypes(allowedTypes);
     } catch (error) {
       console.error("Failed to load barter types:", error);
     }
@@ -234,8 +246,8 @@ export default function FieldSchemaPage() {
       return false;
     }
     
-    // Barter type filter
-    if (selectedBarterType !== "all" && sub.barterTypeId !== selectedBarterType) {
+    // Barter type filter (always filter since we removed "all" option)
+    if (sub.barterTypeId !== selectedBarterType) {
       return false;
     }
     
@@ -252,11 +264,8 @@ export default function FieldSchemaPage() {
     
     return true;
   }).sort((a, b) => {
-    if (sortNewest) {
-      // Sort by name for now (would need createdAt field for proper sorting)
-      return b.name.localeCompare(a.name);
-    }
-    return a.name.localeCompare(b.name);
+    // Sort by newest (reverse alphabetical as proxy - would need createdAt field for proper sorting)
+    return b.name.localeCompare(a.name);
   });
 
   const filteredCategories = categories.filter((cat) => {
@@ -264,8 +273,8 @@ export default function FieldSchemaPage() {
     if (categorySearch && !cat.name.toLowerCase().includes(categorySearch.toLowerCase())) {
       return false;
     }
-    // Filter by selected barter type
-    if (selectedBarterType !== "all" && cat.barterTypeId !== selectedBarterType) {
+    // Filter by selected barter type (always filter since we removed "all" option)
+    if (cat.barterTypeId !== selectedBarterType) {
       return false;
     }
     return true;
@@ -509,7 +518,7 @@ export default function FieldSchemaPage() {
               />
             </div>
 
-            {/* Barter Type Filter */}
+            {/* Barter Type Filter - No "All" option, defaults to Goods */}
             <Select 
               value={selectedBarterType} 
               onValueChange={(value) => {
@@ -519,10 +528,9 @@ export default function FieldSchemaPage() {
               }}
             >
               <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Barter Type" />
+                <SelectValue placeholder="Select Type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Barter Types</SelectItem>
                 {barterTypes.map((bt) => (
                   <SelectItem key={bt.barterTypeId} value={bt.barterTypeId}>
                     {bt.name}
@@ -531,8 +539,8 @@ export default function FieldSchemaPage() {
               </SelectContent>
             </Select>
 
-            {/* Categories Multi-Select */}
-            <DropdownMenu>
+            {/* Categories Multi-Select - stays open until manually closed */}
+            <DropdownMenu open={categoryDropdownOpen} onOpenChange={setCategoryDropdownOpen}>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="gap-2">
                   <Filter className="h-4 w-4" />
@@ -545,8 +553,21 @@ export default function FieldSchemaPage() {
                   <ChevronDown className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-64" align="start">
-                <div className="p-2">
+              <DropdownMenuContent className="w-64" align="start" onCloseAutoFocus={(e) => e.preventDefault()}>
+                <div className="flex items-center justify-between p-2">
+                  <DropdownMenuLabel className="p-0 text-xs font-normal text-muted-foreground">
+                    Select categories
+                  </DropdownMenuLabel>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-xs"
+                    onClick={() => setCategoryDropdownOpen(false)}
+                  >
+                    Done
+                  </Button>
+                </div>
+                <div className="px-2 pb-2">
                   <Input
                     placeholder="Search categories..."
                     value={categorySearch}
@@ -556,21 +577,28 @@ export default function FieldSchemaPage() {
                 </div>
                 <DropdownMenuSeparator />
                 <ScrollArea className="h-[200px]">
-                  {filteredCategories.map((cat) => (
-                    <DropdownMenuCheckboxItem
-                      key={cat.categoryId}
-                      checked={selectedCategories.includes(cat.categoryId)}
-                      onCheckedChange={(checked) => {
-                        if (checked) {
-                          setSelectedCategories([...selectedCategories, cat.categoryId]);
-                        } else {
-                          setSelectedCategories(selectedCategories.filter(id => id !== cat.categoryId));
-                        }
-                      }}
-                    >
-                      {cat.name}
-                    </DropdownMenuCheckboxItem>
-                  ))}
+                  {filteredCategories.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      No categories found
+                    </p>
+                  ) : (
+                    filteredCategories.map((cat) => (
+                      <DropdownMenuCheckboxItem
+                        key={cat.categoryId}
+                        checked={selectedCategories.includes(cat.categoryId)}
+                        onSelect={(e) => e.preventDefault()} // Prevent closing on select
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedCategories([...selectedCategories, cat.categoryId]);
+                          } else {
+                            setSelectedCategories(selectedCategories.filter(id => id !== cat.categoryId));
+                          }
+                        }}
+                      >
+                        {cat.name}
+                      </DropdownMenuCheckboxItem>
+                    ))
+                  )}
                 </ScrollArea>
                 {selectedCategories.length > 0 && (
                   <>
@@ -579,10 +607,10 @@ export default function FieldSchemaPage() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="w-full"
+                        className="w-full text-destructive hover:text-destructive"
                         onClick={() => setSelectedCategories([])}
                       >
-                        Clear all
+                        Clear all ({selectedCategories.length})
                       </Button>
                     </div>
                   </>
@@ -599,14 +627,13 @@ export default function FieldSchemaPage() {
               No Fields
             </Button>
 
-            {/* Sort Toggle */}
+            {/* Sort - Newest first */}
             <Button
-              variant={sortNewest ? "default" : "outline"}
-              onClick={() => setSortNewest(!sortNewest)}
+              variant="outline"
               className="gap-2"
             >
               <SortDesc className="h-4 w-4" />
-              {sortNewest ? "Newest" : "A-Z"}
+              Newest
             </Button>
           </div>
         </div>
