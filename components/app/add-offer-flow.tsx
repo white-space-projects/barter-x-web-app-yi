@@ -55,6 +55,7 @@ import {
 import type { Product, Offer, OfferPickupAddress, OfferImage, OfferInfoFieldValue, ProductType } from "@/lib/types";
 import { OfferInfoSection } from "./offer-info-section";
 import { OfferCaptureQrModal } from "./offer-capture-qr-modal";
+import { ProductImage } from "./product-image";
 import { getOfferInfoFieldsForSubcategory, getProductInfo } from "@/lib/offer-info-fields";
 import { useNavigationGuard } from "@/lib/navigation-guard";
 import confetti from "canvas-confetti";
@@ -427,15 +428,9 @@ function ProductCardPreview({
   return (
     <div className="rounded-xl border border-border bg-card overflow-hidden w-full card-shadow-blue">
       <div className="p-4 min-h-[88px]">
-        <div className="flex gap-3">
-          {/* Product image - 64x64 to match products-tab */}
-          <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-lg bg-secondary overflow-hidden">
-            {product.imageUrl ? (
-              <img src={product.imageUrl} alt={product.title} className="h-full w-full object-cover" crossOrigin="anonymous" />
-            ) : (
-              <Package className="h-6 w-6 text-muted-foreground/40" />
-            )}
-          </div>
+                  <div className="flex gap-3">
+                  {/* Product image - 64x64 to match products-tab, white background */}
+                  <ProductImage src={product.imageUrl} alt={product.title} size="md" />
 
           {/* Product info */}
           <div className="flex-1 min-w-0 flex flex-col justify-center">

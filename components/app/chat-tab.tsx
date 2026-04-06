@@ -52,6 +52,7 @@ import {
 } from "lucide-react";
 import { useBarterStore } from "@/lib/store";
 import { generateGuid } from "@/lib/guid";
+import { ProductImage } from "./product-image";
 import type { Notification, Conversation, ChatMessage } from "@/lib/types";
 
 type ActiveView = "notifications" | "conversation";
@@ -574,18 +575,12 @@ const iconMap: Record<string, JSX.Element> = {
         {/* Offer preview if available */}
         {targetOffer && (
           <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50 mb-3">
-            <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-secondary overflow-hidden">
-              {product?.imageUrl ? (
-                <img
-                  src={product.imageUrl}
-                  alt={targetOffer.title}
-                  className="h-full w-full object-cover"
-                  crossOrigin="anonymous"
-                />
-              ) : (
-                <Package className="h-5 w-5 text-muted-foreground/40" />
-              )}
-            </div>
+            <ProductImage 
+              src={product?.imageUrl} 
+              alt={targetOffer.title} 
+              size="sm"
+              className="h-12 w-12"
+            />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-foreground truncate">{targetOffer.title}</p>
               <p className="text-xs text-muted-foreground">
@@ -649,18 +644,12 @@ function ConversationHeader({
       </div>
       
       <div className="flex items-center gap-3">
-        <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-secondary overflow-hidden">
-          {product?.imageUrl ? (
-            <img
-              src={product.imageUrl}
-              alt={targetOffer?.title}
-              className="h-full w-full object-cover"
-              crossOrigin="anonymous"
-            />
-          ) : (
-            <Package className="h-5 w-5 text-muted-foreground/40" />
-          )}
-        </div>
+        <ProductImage 
+          src={product?.imageUrl} 
+          alt={targetOffer?.title || "Product"} 
+          size="sm"
+          className="h-12 w-12"
+        />
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-foreground truncate">{targetOffer?.title}</p>
           <p className="text-xs text-muted-foreground">

@@ -63,6 +63,7 @@ import {
 } from "lucide-react";
 import { useBarterStore } from "@/lib/store";
 import { toast } from "sonner";
+import { ProductImage } from "./product-image";
 import type { Offer, Hook, HookStatus, Product } from "@/lib/types";
 
 // ============================================================================
@@ -368,19 +369,12 @@ export function OfferCard({
       {/* Main card content - 88px min height */}
       <div className="p-4 min-h-[88px]">
         <div className="flex gap-3">
-          {/* Product image (64x64) */}
-          <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-lg bg-secondary overflow-hidden">
-            {offerProduct?.imageUrl ? (
-              <img
-                src={offerProduct.imageUrl}
-                alt={offer.title}
-                className="h-full w-full object-cover"
-                crossOrigin="anonymous"
-              />
-            ) : (
-              <Package className="h-6 w-6 text-muted-foreground/40" />
-            )}
-          </div>
+          {/* Product image (64x64) - white background, consistent fallback */}
+          <ProductImage 
+            src={offerProduct?.imageUrl} 
+            alt={offer.title} 
+            size="md"
+          />
 
 {/* Offer info */}
             <div className="flex-1 min-w-0 flex flex-col justify-center">

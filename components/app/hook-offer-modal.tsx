@@ -3,6 +3,7 @@
 import { useState, useMemo, useCallback } from "react";
 import { X, Loader2, AlertTriangle, AlertCircle, Package, ChevronDown, ChevronUp, Link2Off } from "lucide-react";
 import { useBarterStore } from "@/lib/store";
+import { ProductImage } from "./product-image";
 import { generateGuid } from "@/lib/guid";
 import { toast } from "sonner";
 import { getProductTypeName } from "@/lib/product-types";
@@ -223,26 +224,23 @@ export function HookOfferModal({ targetOfferId, onClose }: Props) {
                       className={`flex gap-3 flex-1 min-w-0 ${canSelect ? "cursor-pointer" : "cursor-not-allowed"}`}
                       onClick={() => canSelect && setSelectedOfferId(offer.offerId)}
                     >
-                      {/* 64x64 Image */}
-                      <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-lg bg-secondary overflow-hidden">
-                        {offer.images && offer.images.length > 0 ? (
+                      {/* 64x64 Image - offer images shown as-is, product images on white background */}
+                      {offer.images && offer.images.length > 0 ? (
+                        <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-lg bg-secondary overflow-hidden">
                           <img
                             src={offer.images[0].url}
                             alt={offer.title}
                             className="h-full w-full object-cover"
                             crossOrigin="anonymous"
                           />
-                        ) : offerProduct?.imageUrl ? (
-                          <img
-                            src={offerProduct.imageUrl}
-                            alt={offer.title}
-                            className="h-full w-full object-cover"
-                            crossOrigin="anonymous"
-                          />
-                        ) : (
-                          <Package className="h-6 w-6 text-muted-foreground/40" />
-                        )}
-                      </div>
+                        </div>
+                      ) : (
+                        <ProductImage 
+                          src={offerProduct?.imageUrl} 
+                          alt={offer.title} 
+                          size="md"
+                        />
+                      )}
 
                       {/* Content */}
                       <div className="flex-1 min-w-0 flex flex-col justify-center">

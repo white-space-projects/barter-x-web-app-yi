@@ -30,6 +30,7 @@ import { HookOfferModal } from "./hook-offer-modal";
 import { AddOfferFlow } from "./add-offer-flow";
 import { PickupReadinessModal } from "./pickup-readiness-modal";
 import { ViewOfferDetails } from "./view-offer-details";
+import { ProductImage } from "./product-image";
 import { toast } from "sonner";
 import { getProductTypeName } from "@/lib/product-types";
 
@@ -263,15 +264,14 @@ const showConfirmPickup = isOwn && hasReservedHook(offer.offerId) && !offer.read
                   >
                     <div className="p-4 min-h-[88px]">
                       <div className="flex gap-3">
-                        <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-lg bg-secondary overflow-hidden">
-                          {offer.images && offer.images.length > 0 ? (
+                        {/* Image - offer images as-is, product images on white background */}
+                        {offer.images && offer.images.length > 0 ? (
+                          <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-lg bg-secondary overflow-hidden">
                             <img src={offer.images[0].url} alt={offer.title} className="h-full w-full object-cover" crossOrigin="anonymous" />
-                          ) : product.imageUrl ? (
-                            <img src={product.imageUrl} alt={offer.title} className="h-full w-full object-cover" crossOrigin="anonymous" />
-                          ) : (
-                            <Package className="h-6 w-6 text-muted-foreground/40" />
-                          )}
-                        </div>
+                          </div>
+                        ) : (
+                          <ProductImage src={product.imageUrl} alt={offer.title} size="md" />
+                        )}
 
                         <div className="flex-1 min-w-0 flex flex-col justify-center">
                           <p className="text-sm font-medium text-foreground truncate">{offer.title}</p>
@@ -392,26 +392,24 @@ const showConfirmPickup = isOwn && hasReservedHook(offer.offerId) && !offer.read
                                 <div key={hook.hookId} className="rounded-lg border border-border bg-card overflow-hidden">
                                   <div className="p-3">
                                     <div className="flex gap-2.5 items-center">
-                                      {/* 48x48 Image */}
-                                      <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-secondary overflow-hidden">
-                                        {targetOffer.images && targetOffer.images.length > 0 ? (
+                                      {/* 48x48 Image - offer images as-is, product images on white */}
+                                      {targetOffer.images && targetOffer.images.length > 0 ? (
+                                        <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-secondary overflow-hidden">
                                           <img
                                             src={targetOffer.images[0].url}
                                             alt={targetOffer.title}
                                             className="h-full w-full object-cover"
                                             crossOrigin="anonymous"
                                           />
-                                        ) : targetProduct?.imageUrl ? (
-                                          <img
-                                            src={targetProduct.imageUrl}
-                                            alt={targetOffer.title}
-                                            className="h-full w-full object-cover"
-                                            crossOrigin="anonymous"
-                                          />
-                                        ) : (
-                                          <Package className="h-5 w-5 text-muted-foreground/40" />
-                                        )}
-                                      </div>
+                                        </div>
+                                      ) : (
+                                        <ProductImage 
+                                          src={targetProduct?.imageUrl} 
+                                          alt={targetOffer.title} 
+                                          size="sm"
+                                          className="h-12 w-12"
+                                        />
+                                      )}
 
                                       {/* Offer info */}
                                       <div className="flex-1 min-w-0">

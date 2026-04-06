@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { useBarterStore } from "@/lib/store";
 import { HookOfferModal } from "./hook-offer-modal";
+import { ProductImage } from "./product-image";
 import type { Offer, Product, OfferImage, LockLevel, Hook } from "@/lib/types";
 import { LOCK_LEVEL_LABELS, LOCK_LEVEL_COLORS, LOCK_LEVEL_BG_COLORS } from "@/lib/types";
 import { toast } from "sonner";
@@ -274,26 +275,24 @@ function HookedOfferCard({
       <div className="rounded-lg border border-border bg-card overflow-hidden card-shadow-primary">
         <div className="p-3">
           <div className="flex gap-2.5 items-center">
-            {/* 48x48 Image */}
-            <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-secondary overflow-hidden">
-              {offer.images && offer.images.length > 0 ? (
+            {/* 48x48 Image - offer images kept as-is, product images on white */}
+            {offer.images && offer.images.length > 0 ? (
+              <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-secondary overflow-hidden">
                 <img
                   src={offer.images[0].url}
                   alt={offer.title}
                   className="h-full w-full object-cover"
                   crossOrigin="anonymous"
                 />
-              ) : product?.imageUrl ? (
-                <img
-                  src={product.imageUrl}
-                  alt={offer.title}
-                  className="h-full w-full object-cover"
-                  crossOrigin="anonymous"
-                />
-              ) : (
-                <Package className="h-5 w-5 text-muted-foreground/40" />
-              )}
-            </div>
+              </div>
+            ) : (
+              <ProductImage 
+                src={product?.imageUrl} 
+                alt={offer.title} 
+                size="sm"
+                className="h-12 w-12"
+              />
+            )}
 
             {/* Offer info */}
             <div className="flex-1 min-w-0">
@@ -385,19 +384,13 @@ function LinkedProductCard({
     <div className="rounded-lg border border-border bg-card overflow-hidden card-shadow-blue">
       <div className="p-3">
         <div className="flex gap-2.5 items-center">
-          {/* 48x48 Image */}
-          <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-secondary overflow-hidden">
-            {product.imageUrl ? (
-              <img
-                src={product.imageUrl}
-                alt={product.title}
-                className="h-full w-full object-cover"
-                crossOrigin="anonymous"
-              />
-            ) : (
-              <Package className="h-5 w-5 text-muted-foreground/40" />
-            )}
-          </div>
+          {/* 48x48 Product Image - white background */}
+          <ProductImage 
+            src={product.imageUrl} 
+            alt={product.title} 
+            size="sm"
+            className="h-12 w-12"
+          />
 
           {/* Product info */}
           <div className="flex-1 min-w-0">

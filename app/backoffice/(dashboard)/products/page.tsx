@@ -240,19 +240,22 @@ export default function ProductReviewPage() {
               className="rounded-lg border border-border bg-card overflow-hidden hover:border-primary/50 cursor-pointer transition-colors"
               onClick={() => openProductDetail(product)}
             >
-              {/* Image */}
-              <div className="aspect-square bg-muted relative">
+              {/* Image - white background for product images */}
+              <div className="aspect-square bg-white relative flex items-center justify-center">
                 {product.image_url ? (
                   <img
                     src={product.image_url}
                     alt={product.name}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-contain bg-white"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                      e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                    }}
                   />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <Package className="h-12 w-12 text-muted-foreground/50" />
-                  </div>
-                )}
+                ) : null}
+                <div className={`w-full h-full flex items-center justify-center ${product.image_url ? 'hidden' : ''}`}>
+                  <Package className="h-12 w-12 text-muted-foreground/50" />
+                </div>
                 <Badge 
                   variant="outline" 
                   className={`absolute top-2 right-2 ${reviewStatusColors[product.review_status]}`}
@@ -328,23 +331,23 @@ export default function ProductReviewPage() {
                   <TabsTrigger value="review">Review</TabsTrigger>
                 </TabsList>
 
-                {/* Image Tab */}
+                {/* Image Tab - white background for product images */}
                 <TabsContent value="image" className="space-y-4 mt-4">
-                  <div className="aspect-square rounded-lg border border-border bg-muted overflow-hidden relative">
+                  <div className="aspect-square rounded-lg border border-border bg-white overflow-hidden relative flex items-center justify-center">
                     {newImagePreview ? (
                       <img
                         src={newImagePreview}
                         alt="New image preview"
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-contain bg-white"
                       />
                     ) : selectedProduct.image_url ? (
                       <img
                         src={selectedProduct.image_url}
                         alt={selectedProduct.name}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-contain bg-white"
                       />
                     ) : (
-                      <div className="w-full h-full flex flex-col items-center justify-center gap-2">
+                      <div className="w-full h-full flex flex-col items-center justify-center gap-2 bg-white">
                         <ImageIcon className="h-12 w-12 text-muted-foreground/50" />
                         <span className="text-sm text-muted-foreground">No image</span>
                       </div>

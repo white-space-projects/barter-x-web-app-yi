@@ -15,6 +15,7 @@ import { PRODUCT_TYPES, getProductTypeCategories, getSubcategories as getTypeSub
 import type { Product, OfferPickupAddress, OfferImage, OfferInfoFieldValue, ProductType } from "@/lib/types";
 import { OfferImageSection } from "./offer-image-section";
 import { OfferInfoSection } from "./offer-info-section";
+import { ProductImage } from "./product-image";
 import { useNavigationGuard } from "@/lib/navigation-guard";
 import {
   AlertDialog,
@@ -745,13 +746,7 @@ export function AddOfferModal({ open, onClose, initialProductType }: Props) {
                     onClick={() => handleSelectProduct(product)}
                     className="flex items-center gap-3 rounded-lg border border-border bg-secondary/50 p-3 text-left transition-colors hover:border-primary/30"
                   >
-                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-md bg-secondary overflow-hidden">
-                      {product.imageUrl ? (
-                        <img src={product.imageUrl} alt={product.title} className="h-full w-full object-cover" crossOrigin="anonymous" />
-                      ) : (
-                        <Package className="h-4 w-4 text-muted-foreground/40" />
-                      )}
-                    </div>
+                    <ProductImage src={product.imageUrl} alt={product.title} size="sm" className="h-10 w-10" />
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium text-foreground truncate">{product.title}</p>
                       <p className="text-xs text-muted-foreground">

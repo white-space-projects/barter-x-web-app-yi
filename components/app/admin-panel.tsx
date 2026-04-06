@@ -6,6 +6,7 @@ import { useState, useRef } from "react";
 import { useBarterStore } from "@/lib/store";
 import { Package, Upload, Trash2, ImageIcon as ImageIconComponent, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { ProductImage } from "./product-image";
 import {useProducts } from '@/hooks/use-products'
 
 export function AdminPanel() {
@@ -96,14 +97,14 @@ export function AdminPanel() {
             key={product.productId}
             className="rounded-xl border border-border bg-card overflow-hidden"
           >
-            {/* Image area */}
-            <div className="relative aspect-square bg-secondary flex items-center justify-center">
+            {/* Image area - white background for product images */}
+            <div className="relative aspect-square bg-white flex items-center justify-center">
               {product.imageUrl ? (
                 <>
                   <img
                     src={product.imageUrl || "/placeholder.svg"}
                     alt={product.title}
-                    className="h-full w-full object-cover"
+                    className="h-full w-full object-contain bg-white"
                     crossOrigin="anonymous"
                   />
                   {/* Delete overlay */}
@@ -121,7 +122,7 @@ export function AdminPanel() {
                   </button>
                 </>
               ) : (
-                <div className="flex flex-col items-center text-muted-foreground/40">
+                <div className="flex flex-col items-center text-muted-foreground/40 bg-white w-full h-full justify-center">
                   <Package className="h-8 w-8" />
                   <span className="mt-1 text-xs">No image</span>
                 </div>
@@ -189,18 +190,7 @@ export function AdminPanel() {
                   </button>
                 </div>
               </div>
-              <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-lg bg-secondary overflow-hidden">
-                {product.imageUrl ? (
-                  <img
-                    src={product.imageUrl || "/placeholder.svg"}
-                    alt={product.title}
-                    className="h-full w-full object-cover"
-                    crossOrigin="anonymous"
-                  />
-                ) : (
-                  <Package className="h-6 w-6 text-muted-foreground/40" />
-                )}
-              </div>
+              <ProductImage src={product.imageUrl} alt={product.title} size="md" />
             </div>  
           </div>
         ))}

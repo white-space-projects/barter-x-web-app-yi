@@ -8,6 +8,7 @@ import { LOCK_LEVEL_LABELS, LOCK_LEVEL_COLORS, LOCK_LEVEL_BG_COLORS, LOCK_LEVEL_
 import { PickupReadinessModal } from "./pickup-readiness-modal";
 import { AddOfferFlow } from "./add-offer-flow";
 import { ViewOfferDetails } from "./view-offer-details";
+import { ProductImage } from "./product-image";
 import { SimulateControl } from "./simulate-control";
 import { toast } from "sonner";
 
@@ -282,25 +283,22 @@ export function MyOffersTab() {
                       onClick={() => setViewOffer(offer.offerId)}
                     >
                       {/* 64x64 Image - show offer's first image if available, else product image */}
-                      <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-lg bg-secondary overflow-hidden">
-                        {offer.images && offer.images.length > 0 ? (
+                      {offer.images && offer.images.length > 0 ? (
+                        <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-lg bg-secondary overflow-hidden">
                           <img
                             src={offer.images[0].url}
                             alt={offer.title}
                             className="h-full w-full object-cover"
                             crossOrigin="anonymous"
                           />
-                        ) : product?.imageUrl ? (
-                          <img
-                            src={product.imageUrl}
-                            alt={offer.title}
-                            className="h-full w-full object-cover"
-                            crossOrigin="anonymous"
-                          />
-                        ) : (
-                          <Package className="h-6 w-6 text-muted-foreground/40" />
-                        )}
-                      </div>
+                        </div>
+                      ) : (
+                        <ProductImage 
+                          src={product?.imageUrl} 
+                          alt={offer.title} 
+                          size="md"
+                        />
+                      )}
 
                       {/* Content */}
                       <div className="flex-1 min-w-0 flex flex-col justify-center">
