@@ -1,22 +1,47 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from "@/components/ui/sheet";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
-  Search, ChevronRight, Package, Layers, 
-  Plus, X, Save, Loader2, GripVertical, Trash2
+  Loader2, Plus, Pencil, Trash2, Package, FileText, 
+  ChevronRight, GripVertical, X, Search
 } from "lucide-react";
 import { toast } from "sonner";
 
-// Types matching the repository
+type FieldScope = "product" | "offer";
+
 interface FieldOption {
   optionId: string;
   optionValue: string;
@@ -31,6 +56,7 @@ interface FieldDefinition {
   fieldKey: string;
   fieldLabel: string;
   fieldType: "text" | "number" | "select" | "boolean" | "date" | "textarea";
+  fieldScope: FieldScope;
   placeholder?: string;
   helpText?: string;
   isRequired: boolean;
@@ -45,16 +71,16 @@ interface Subcategory {
   categoryId: string;
   name: string;
   slug: string;
-  productFields: FieldDefinition[];
   categoryName?: string;
   barterTypeName?: string;
-  barterTypeSlug?: string;
+  productFields: FieldDefinition[];
+  offerFields: FieldDefinition[];
 }
 
-const fieldTypes = [
-  { value: "text", label: "Text Input" },
+const FIELD_TYPES = [
+  { value: "text", label: "Text" },
   { value: "number", label: "Number" },
-  { value: "select", label: "Dropdown Select" },
+  { value: "select", label: "Dropdown" },
   { value: "boolean", label: "Yes/No Toggle" },
   { value: "date", label: "Date" },
   { value: "textarea", label: "Long Text" },
@@ -64,524 +90,599 @@ export default function FieldSchemaPage() {
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [barterTypeFilter, setBarterTypeFilter] = useState<string>("all");
-  
-  // Detail panel state
   const [selectedSubcategory, setSelectedSubcategory] = useState<Subcategory | null>(null);
-  const [detailOpen, setDetailOpen] = useState(false);
+  const [activeScope, setActiveScope] = useState<FieldScope>("product");
+  
+  // Sheet state for adding/editing fields
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [editingField, setEditingField] = useState<FieldDefinition | null>(null);
   const [saving, setSaving] = useState(false);
   
-  // Field editing state
-  const [fields, setFields] = useState<FieldDefinition[]>([]);
-  const [editingField, setEditingField] = useState<FieldDefinition | null>(null);
-  const [newOptionValue, setNewOptionValue] = useState("");
-  const [newOptionLabel, setNewOptionLabel] = useState("");
+  // Form state
+  const [fieldLabel, setFieldLabel] = useState("");
+  const [fieldType, setFieldType] = useState<string>("text");
+  const [placeholder, setPlaceholder] = useState("");
+  const [helpText, setHelpText] = useState("");
+  const [isRequired, setIsRequired] = useState(false);
+  const [isFilterable, setIsFilterable] = useState(false);
+  const [selectOptions, setSelectOptions] = useState<string[]>([""]);
+  
+  // Delete confirmation
+  const [deleteField, setDeleteField] = useState<FieldDefinition | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
-  // Unique barter types for filter
-  const barterTypes = Array.from(new Set(subcategories.map(s => s.barterTypeSlug).filter(Boolean)));
-
+  // Fetch subcategories with their fields
   useEffect(() => {
+    async function loadSubcategories() {
+      try {
+        const response = await fetch("/api/data/subcategories?includeFields=true");
+        if (response.ok) {
+          const data = await response.json();
+          setSubcategories(data.subcategories || []);
+        }
+      } catch (error) {
+        console.error("Failed to load subcategories:", error);
+        toast.error("Failed to load subcategories");
+      } finally {
+        setLoading(false);
+      }
+    }
     loadSubcategories();
   }, []);
 
-  async function loadSubcategories() {
-    setLoading(true);
-    try {
-      const response = await fetch("/api/data/subcategories?includeFields=true");
-      if (!response.ok) throw new Error("Failed to load subcategories");
-      const data = await response.json();
-      setSubcategories(data.subcategories || []);
-    } catch (error) {
-      console.error("Failed to load subcategories:", error);
-      toast.error("Failed to load subcategories");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function openDetail(subcategory: Subcategory) {
-    // Fetch full subcategory with fields
-    try {
-      const response = await fetch(`/api/data/subcategories/${subcategory.subcategoryId}`);
-      if (!response.ok) throw new Error("Failed to load subcategory");
-      const data = await response.json();
-      setSelectedSubcategory(data.subcategory);
-      setFields([...data.subcategory.productFields]);
+  // Reset form when sheet closes
+  useEffect(() => {
+    if (!sheetOpen) {
       setEditingField(null);
-      setDetailOpen(true);
-    } catch (error) {
-      console.error("Failed to load subcategory:", error);
-      toast.error("Failed to load subcategory details");
+      setFieldLabel("");
+      setFieldType("text");
+      setPlaceholder("");
+      setHelpText("");
+      setIsRequired(false);
+      setIsFilterable(false);
+      setSelectOptions([""]);
     }
-  }
+  }, [sheetOpen]);
 
-  async function handleAddField() {
+  // Populate form when editing
+  useEffect(() => {
+    if (editingField) {
+      setFieldLabel(editingField.fieldLabel);
+      setFieldType(editingField.fieldType);
+      setPlaceholder(editingField.placeholder || "");
+      setHelpText(editingField.helpText || "");
+      setIsRequired(editingField.isRequired);
+      setIsFilterable(editingField.isFilterable);
+      if (editingField.options && editingField.options.length > 0) {
+        setSelectOptions(editingField.options.map(o => o.optionLabel));
+      }
+    }
+  }, [editingField]);
+
+  const handleAddField = () => {
+    setEditingField(null);
+    setSheetOpen(true);
+  };
+
+  const handleEditField = (field: FieldDefinition) => {
+    setEditingField(field);
+    setSheetOpen(true);
+  };
+
+  const refreshSubcategoryData = async () => {
     if (!selectedSubcategory) return;
     
-    setSaving(true);
-    try {
-      const response = await fetch(`/api/data/subcategories/${selectedSubcategory.subcategoryId}/fields`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          fieldKey: `field_${Date.now()}`,
-          fieldLabel: "New Field",
-          fieldType: "text",
-          isRequired: false,
-          isFilterable: false,
-        }),
-      });
-
-      if (!response.ok) throw new Error("Failed to create field");
-      const data = await response.json();
-      
-      setFields(prev => [...prev, data.field]);
-      setEditingField(data.field);
-      toast.success("Field created");
-    } catch (error) {
-      console.error("Failed to create field:", error);
-      toast.error("Failed to create field");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function handleUpdateField(field: FieldDefinition) {
-    setSaving(true);
-    try {
-      const response = await fetch(
-        `/api/data/subcategories/${selectedSubcategory?.subcategoryId}/fields/${field.fieldId}`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            fieldKey: field.fieldKey,
-            fieldLabel: field.fieldLabel,
-            fieldType: field.fieldType,
-            placeholder: field.placeholder || null,
-            helpText: field.helpText || null,
-            isRequired: field.isRequired,
-            isFilterable: field.isFilterable,
-            isActive: field.isActive,
-            sortOrder: field.sortOrder,
-          }),
-        }
+    const refreshResponse = await fetch(
+      `/api/data/subcategories/${selectedSubcategory.subcategoryId}/fields`
+    );
+    if (refreshResponse.ok) {
+      const data = await refreshResponse.json();
+      const updated = {
+        ...selectedSubcategory,
+        productFields: data.productFields || [],
+        offerFields: data.offerFields || [],
+      };
+      setSelectedSubcategory(updated);
+      setSubcategories(prev => 
+        prev.map(sc => 
+          sc.subcategoryId === selectedSubcategory.subcategoryId ? updated : sc
+        )
       );
+    }
+  };
 
-      if (!response.ok) throw new Error("Failed to update field");
-      const data = await response.json();
-      
-      setFields(prev => prev.map(f => f.fieldId === field.fieldId ? data.field : f));
-      setEditingField(data.field);
-      toast.success("Field updated");
+  const handleSaveField = async () => {
+    if (!selectedSubcategory || !fieldLabel.trim()) {
+      toast.error("Please enter a field label");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      if (editingField) {
+        // Update existing field
+        const response = await fetch(
+          `/api/data/subcategories/${selectedSubcategory.subcategoryId}/fields/${editingField.fieldId}`,
+          {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              fieldLabel: fieldLabel.trim(),
+              fieldType,
+              placeholder: placeholder.trim() || null,
+              helpText: helpText.trim() || null,
+              isRequired,
+              isFilterable,
+            }),
+          }
+        );
+
+        if (!response.ok) throw new Error("Failed to update field");
+        toast.success("Field updated");
+      } else {
+        // Create new field
+        const response = await fetch(
+          `/api/data/subcategories/${selectedSubcategory.subcategoryId}/fields`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              fieldLabel: fieldLabel.trim(),
+              fieldType,
+              fieldScope: activeScope,
+              placeholder: placeholder.trim() || null,
+              helpText: helpText.trim() || null,
+              isRequired,
+              isFilterable,
+            }),
+          }
+        );
+
+        if (!response.ok) throw new Error("Failed to create field");
+        
+        // If it's a select field, add the options
+        if (fieldType === "select" && selectOptions.some(o => o.trim())) {
+          const fieldData = await response.json();
+          const fieldId = fieldData.field?.fieldId;
+          
+          if (fieldId) {
+            for (const option of selectOptions.filter(o => o.trim())) {
+              await fetch(
+                `/api/data/subcategories/${selectedSubcategory.subcategoryId}/fields/${fieldId}/options`,
+                {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    optionLabel: option.trim(),
+                    optionValue: option.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_"),
+                  }),
+                }
+              );
+            }
+          }
+        }
+        
+        toast.success("Field created");
+      }
+
+      await refreshSubcategoryData();
+      setSheetOpen(false);
     } catch (error) {
-      console.error("Failed to update field:", error);
-      toast.error("Failed to update field");
+      console.error("Save error:", error);
+      toast.error("Failed to save field");
     } finally {
       setSaving(false);
     }
-  }
+  };
 
-  async function handleDeleteField(fieldId: string) {
-    if (!confirm("Are you sure you want to delete this field?")) return;
-    
-    setSaving(true);
+  const handleDeleteField = async () => {
+    if (!selectedSubcategory || !deleteField) return;
+
+    setDeleting(true);
     try {
       const response = await fetch(
-        `/api/data/subcategories/${selectedSubcategory?.subcategoryId}/fields/${fieldId}`,
+        `/api/data/subcategories/${selectedSubcategory.subcategoryId}/fields/${deleteField.fieldId}`,
         { method: "DELETE" }
       );
 
       if (!response.ok) throw new Error("Failed to delete field");
-      
-      setFields(prev => prev.filter(f => f.fieldId !== fieldId));
-      if (editingField?.fieldId === fieldId) {
-        setEditingField(null);
-      }
       toast.success("Field deleted");
+      await refreshSubcategoryData();
     } catch (error) {
-      console.error("Failed to delete field:", error);
+      console.error("Delete error:", error);
       toast.error("Failed to delete field");
     } finally {
-      setSaving(false);
+      setDeleting(false);
+      setDeleteField(null);
     }
-  }
+  };
 
-  async function handleAddOption() {
-    if (!editingField || !newOptionValue.trim() || !newOptionLabel.trim()) return;
-    
-    setSaving(true);
-    try {
-      const response = await fetch(
-        `/api/data/subcategories/${selectedSubcategory?.subcategoryId}/fields/${editingField.fieldId}/options`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            optionValue: newOptionValue.trim(),
-            optionLabel: newOptionLabel.trim(),
-          }),
-        }
-      );
-
-      if (!response.ok) throw new Error("Failed to create option");
-      const data = await response.json();
-      
-      const updatedField = {
-        ...editingField,
-        options: [...(editingField.options || []), data.option],
-      };
-      setEditingField(updatedField);
-      setFields(prev => prev.map(f => f.fieldId === editingField.fieldId ? updatedField : f));
-      setNewOptionValue("");
-      setNewOptionLabel("");
-      toast.success("Option added");
-    } catch (error) {
-      console.error("Failed to add option:", error);
-      toast.error("Failed to add option");
-    } finally {
-      setSaving(false);
+  const addOption = () => setSelectOptions([...selectOptions, ""]);
+  const removeOption = (index: number) => {
+    if (selectOptions.length > 1) {
+      setSelectOptions(selectOptions.filter((_, i) => i !== index));
     }
+  };
+  const updateOption = (index: number, value: string) => {
+    const updated = [...selectOptions];
+    updated[index] = value;
+    setSelectOptions(updated);
+  };
+
+  const currentFields = selectedSubcategory 
+    ? (activeScope === "product" ? selectedSubcategory.productFields : selectedSubcategory.offerFields)
+    : [];
+
+  // Filter subcategories by search
+  const filteredSubcategories = subcategories.filter(sc =>
+    search === "" ||
+    sc.name.toLowerCase().includes(search.toLowerCase()) ||
+    sc.categoryName?.toLowerCase().includes(search.toLowerCase()) ||
+    sc.barterTypeName?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-[60vh]">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
   }
-
-  async function handleDeleteOption(optionId: string) {
-    if (!editingField) return;
-    
-    setSaving(true);
-    try {
-      const response = await fetch(
-        `/api/data/subcategories/${selectedSubcategory?.subcategoryId}/fields/${editingField.fieldId}/options/${optionId}`,
-        { method: "DELETE" }
-      );
-
-      if (!response.ok) throw new Error("Failed to delete option");
-      
-      const updatedField = {
-        ...editingField,
-        options: editingField.options?.filter(o => o.optionId !== optionId) || [],
-      };
-      setEditingField(updatedField);
-      setFields(prev => prev.map(f => f.fieldId === editingField.fieldId ? updatedField : f));
-      toast.success("Option deleted");
-    } catch (error) {
-      console.error("Failed to delete option:", error);
-      toast.error("Failed to delete option");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  // Filter subcategories
-  const filteredSubcategories = subcategories.filter(sc => {
-    const matchesSearch = search === "" || 
-      sc.name.toLowerCase().includes(search.toLowerCase()) ||
-      sc.categoryName?.toLowerCase().includes(search.toLowerCase());
-    const matchesBarterType = barterTypeFilter === "all" || sc.barterTypeSlug === barterTypeFilter;
-    return matchesSearch && matchesBarterType;
-  });
-
-  // Group by barter type
-  const groupedSubcategories = filteredSubcategories.reduce((acc, sc) => {
-    const key = sc.barterTypeName || "Other";
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(sc);
-    return acc;
-  }, {} as Record<string, Subcategory[]>);
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="flex-shrink-0 border-b border-border bg-background p-4">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="text-2xl font-semibold">Field Schema Builder</h1>
-            <p className="text-sm text-muted-foreground">
-              Define custom fields for product info by subcategory
-            </p>
-          </div>
-        </div>
-
-        {/* Filters */}
-        <div className="flex gap-3">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search subcategories..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-          <Select value={barterTypeFilter} onValueChange={setBarterTypeFilter}>
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder="Filter by type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Barter Types</SelectItem>
-              {barterTypes.map(bt => (
-                <SelectItem key={bt} value={bt!}>{bt}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-semibold text-foreground">Field Schema</h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          Define custom fields for product specifications and offer details per subcategory
+        </p>
       </div>
 
-      {/* Content */}
-      <ScrollArea className="flex-1">
-        <div className="p-4">
-          {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Subcategory List */}
+        <Card className="lg:col-span-1">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Subcategories</CardTitle>
+            <div className="relative mt-2">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9 h-9"
+              />
             </div>
-          ) : Object.keys(groupedSubcategories).length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <Layers className="h-12 w-12 mx-auto mb-3 opacity-50" />
-              <p>No subcategories found</p>
-            </div>
-          ) : (
-            <div className="space-y-6">
-              {Object.entries(groupedSubcategories).map(([barterType, subs]) => (
-                <div key={barterType}>
-                  <h2 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
-                    <Package className="h-4 w-4" />
-                    {barterType}
-                  </h2>
-                  <div className="grid gap-2">
-                    {subs.map(sc => (
-                      <button
-                        key={sc.subcategoryId}
-                        onClick={() => openDetail(sc)}
-                        className="flex items-center justify-between p-3 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors text-left w-full"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-md bg-secondary flex items-center justify-center">
-                            <Layers className="h-5 w-5 text-muted-foreground" />
-                          </div>
-                          <div>
-                            <p className="font-medium">{sc.name}</p>
-                            <p className="text-xs text-muted-foreground">{sc.categoryName}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="secondary">
-                            {sc.productFields.length} fields
-                          </Badge>
-                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </ScrollArea>
+          </CardHeader>
+          <CardContent className="p-0">
+            <ScrollArea className="h-[calc(100vh-320px)]">
+              <div className="space-y-1 p-2">
+                {filteredSubcategories.map((sc) => (
+                  <button
+                    key={sc.subcategoryId}
+                    onClick={() => setSelectedSubcategory(sc)}
+                    className={`w-full text-left p-3 rounded-lg transition-colors ${
+                      selectedSubcategory?.subcategoryId === sc.subcategoryId
+                        ? "bg-primary/10 border border-primary/20"
+                        : "hover:bg-muted"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium truncate">{sc.name}</p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {sc.barterTypeName} &gt; {sc.categoryName}
+                        </p>
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    </div>
+                    <div className="flex gap-2 mt-2">
+                      <Badge variant="secondary" className="text-xs">
+                        <Package className="h-3 w-3 mr-1" />
+                        {sc.productFields?.length || 0} product
+                      </Badge>
+                      <Badge variant="outline" className="text-xs">
+                        <FileText className="h-3 w-3 mr-1" />
+                        {sc.offerFields?.length || 0} offer
+                      </Badge>
+                    </div>
+                  </button>
+                ))}
+                {filteredSubcategories.length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-8">
+                    No subcategories found
+                  </p>
+                )}
+              </div>
+            </ScrollArea>
+          </CardContent>
+        </Card>
 
-      {/* Detail Sheet */}
-      <Sheet open={detailOpen} onOpenChange={setDetailOpen}>
-        <SheetContent className="w-full sm:max-w-2xl flex flex-col">
-          <SheetHeader>
-            <SheetTitle>{selectedSubcategory?.name}</SheetTitle>
+        {/* Field Editor */}
+        <Card className="lg:col-span-2">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">
+                {selectedSubcategory ? selectedSubcategory.name : "Select a Subcategory"}
+              </CardTitle>
+              {selectedSubcategory && (
+                <Button size="sm" onClick={handleAddField}>
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add Field
+                </Button>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent>
+            {selectedSubcategory ? (
+              <Tabs value={activeScope} onValueChange={(v) => setActiveScope(v as FieldScope)}>
+                <TabsList className="grid w-full grid-cols-2 mb-4">
+                  <TabsTrigger value="product" className="gap-2">
+                    <Package className="h-4 w-4" />
+                    Product Fields ({selectedSubcategory.productFields?.length || 0})
+                  </TabsTrigger>
+                  <TabsTrigger value="offer" className="gap-2">
+                    <FileText className="h-4 w-4" />
+                    Offer Fields ({selectedSubcategory.offerFields?.length || 0})
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value={activeScope} className="mt-0">
+                  <ScrollArea className="h-[calc(100vh-420px)]">
+                    {currentFields.length > 0 ? (
+                      <div className="space-y-2">
+                        {currentFields.map((field) => (
+                          <div
+                            key={field.fieldId}
+                            className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
+                          >
+                            <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium text-sm">{field.fieldLabel}</span>
+                                {field.isRequired && (
+                                  <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+                                    Required
+                                  </Badge>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                <Badge variant="secondary" className="text-[10px]">
+                                  {FIELD_TYPES.find(t => t.value === field.fieldType)?.label || field.fieldType}
+                                </Badge>
+                                <span className="text-xs text-muted-foreground">
+                                  {field.fieldKey}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => handleEditField(field)}
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-destructive hover:text-destructive"
+                                onClick={() => setDeleteField(field)}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-12 text-center">
+                        {activeScope === "product" ? (
+                          <Package className="h-12 w-12 text-muted-foreground/30 mb-3" />
+                        ) : (
+                          <FileText className="h-12 w-12 text-muted-foreground/30 mb-3" />
+                        )}
+                        <p className="text-sm text-muted-foreground">
+                          No {activeScope} fields defined yet
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Click &quot;Add Field&quot; to create your first {activeScope} field
+                        </p>
+                      </div>
+                    )}
+                  </ScrollArea>
+                </TabsContent>
+              </Tabs>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <FileText className="h-12 w-12 text-muted-foreground/30 mb-3" />
+                <p className="text-sm text-muted-foreground">
+                  Select a subcategory from the list to manage its fields
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Add/Edit Field Sheet */}
+      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+        <SheetContent className="sm:max-w-md flex flex-col h-full">
+          <SheetHeader className="flex-shrink-0">
+            <SheetTitle>
+              {editingField ? "Edit Field" : `Add ${activeScope === "product" ? "Product" : "Offer"} Field`}
+            </SheetTitle>
             <SheetDescription>
-              {selectedSubcategory?.categoryName} - {selectedSubcategory?.barterTypeName}
+              {editingField 
+                ? "Update the field configuration below" 
+                : `Create a new field for ${activeScope === "product" ? "product specifications" : "offer details"}`}
             </SheetDescription>
           </SheetHeader>
 
-          <div className="flex-1 overflow-hidden flex gap-4 mt-4">
-            {/* Fields list */}
-            <div className="w-1/2 flex flex-col">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-medium">Product Fields</h3>
-                <Button size="sm" variant="outline" onClick={handleAddField} disabled={saving}>
-                  <Plus className="h-3 w-3 mr-1" />
-                  Add
-                </Button>
+          <ScrollArea className="flex-1 -mx-6 px-6">
+            <div className="space-y-5 py-4">
+              {/* Field Label */}
+              <div className="space-y-2">
+                <Label htmlFor="fieldLabel">Field Label *</Label>
+                <Input
+                  id="fieldLabel"
+                  placeholder="e.g., RAM Size, Battery Health"
+                  value={fieldLabel}
+                  onChange={(e) => setFieldLabel(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  The display name shown to users. Field key will be auto-generated.
+                </p>
               </div>
-              <ScrollArea className="flex-1 border rounded-md">
-                <div className="p-2 space-y-1">
-                  {fields.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-4">
-                      No fields defined
-                    </p>
-                  ) : (
-                    fields.map(field => (
-                      <button
-                        key={field.fieldId}
-                        onClick={() => setEditingField(field)}
-                        className={`w-full flex items-center gap-2 p-2 rounded text-left text-sm hover:bg-accent/50 transition-colors ${
-                          editingField?.fieldId === field.fieldId ? "bg-accent" : ""
-                        }`}
-                      >
-                        <GripVertical className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium truncate">{field.fieldLabel}</p>
-                          <p className="text-xs text-muted-foreground">{field.fieldType}</p>
-                        </div>
-                        {field.isRequired && (
-                          <Badge variant="secondary" className="text-[10px]">Required</Badge>
-                        )}
-                      </button>
-                    ))
-                  )}
-                </div>
-              </ScrollArea>
-            </div>
 
-            {/* Field editor */}
-            <div className="w-1/2 flex flex-col">
-              {editingField ? (
-                <Card className="flex-1 flex flex-col">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-sm">Edit Field</CardTitle>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="text-destructive hover:text-destructive"
-                        onClick={() => handleDeleteField(editingField.fieldId)}
-                        disabled={saving}
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="flex-1 overflow-auto space-y-4">
-                    <div className="space-y-2">
-                      <Label>Field Key</Label>
-                      <Input
-                        value={editingField.fieldKey}
-                        onChange={(e) => setEditingField({ ...editingField, fieldKey: e.target.value })}
-                        placeholder="e.g., ram_size"
-                      />
-                    </div>
+              {/* Field Type */}
+              <div className="space-y-2">
+                <Label>Field Type *</Label>
+                <Select value={fieldType} onValueChange={setFieldType}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {FIELD_TYPES.map((type) => (
+                      <SelectItem key={type.value} value={type.value}>
+                        {type.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-                    <div className="space-y-2">
-                      <Label>Label</Label>
-                      <Input
-                        value={editingField.fieldLabel}
-                        onChange={(e) => setEditingField({ ...editingField, fieldLabel: e.target.value })}
-                        placeholder="e.g., RAM Size"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Type</Label>
-                      <Select
-                        value={editingField.fieldType}
-                        onValueChange={(v) => setEditingField({ ...editingField, fieldType: v as FieldDefinition["fieldType"] })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {fieldTypes.map(ft => (
-                            <SelectItem key={ft.value} value={ft.value}>{ft.label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Placeholder</Label>
-                      <Input
-                        value={editingField.placeholder || ""}
-                        onChange={(e) => setEditingField({ ...editingField, placeholder: e.target.value })}
-                        placeholder="Enter placeholder text"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Help Text</Label>
-                      <Input
-                        value={editingField.helpText || ""}
-                        onChange={(e) => setEditingField({ ...editingField, helpText: e.target.value })}
-                        placeholder="Enter help text"
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <Label>Required</Label>
-                      <Switch
-                        checked={editingField.isRequired}
-                        onCheckedChange={(v) => setEditingField({ ...editingField, isRequired: v })}
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <Label>Filterable</Label>
-                      <Switch
-                        checked={editingField.isFilterable}
-                        onCheckedChange={(v) => setEditingField({ ...editingField, isFilterable: v })}
-                      />
-                    </div>
-
-                    {/* Options for select type */}
-                    {editingField.fieldType === "select" && (
-                      <div className="space-y-2 pt-2 border-t">
-                        <Label>Options</Label>
-                        <div className="space-y-1">
-                          {editingField.options?.map(opt => (
-                            <div key={opt.optionId} className="flex items-center gap-2 text-sm">
-                              <span className="flex-1 truncate">{opt.optionLabel}</span>
-                              <span className="text-xs text-muted-foreground">({opt.optionValue})</span>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-6 w-6 p-0"
-                                onClick={() => handleDeleteOption(opt.optionId)}
-                                disabled={saving}
-                              >
-                                <X className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          ))}
-                        </div>
-                        <div className="flex gap-2">
-                          <Input
-                            placeholder="Value"
-                            value={newOptionValue}
-                            onChange={(e) => setNewOptionValue(e.target.value)}
-                            className="flex-1"
-                          />
-                          <Input
-                            placeholder="Label"
-                            value={newOptionLabel}
-                            onChange={(e) => setNewOptionLabel(e.target.value)}
-                            className="flex-1"
-                          />
-                          <Button size="sm" onClick={handleAddOption} disabled={saving || !newOptionValue || !newOptionLabel}>
-                            <Plus className="h-3 w-3" />
-                          </Button>
-                        </div>
+              {/* Select Options (only for select type) */}
+              {fieldType === "select" && (
+                <div className="space-y-2">
+                  <Label>Dropdown Options</Label>
+                  <div className="space-y-2">
+                    {selectOptions.map((option, index) => (
+                      <div key={index} className="flex gap-2">
+                        <Input
+                          placeholder={`Option ${index + 1}`}
+                          value={option}
+                          onChange={(e) => updateOption(index, e.target.value)}
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeOption(index)}
+                          disabled={selectOptions.length <= 1}
+                          className="flex-shrink-0"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
                       </div>
-                    )}
-
-                    <Button 
-                      onClick={() => handleUpdateField(editingField)} 
-                      disabled={saving}
-                      className="w-full"
-                    >
-                      {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-                      Save Field
-                    </Button>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="flex-1 flex items-center justify-center text-muted-foreground">
-                  <p className="text-sm">Select a field to edit</p>
+                    ))}
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addOption}
+                    className="w-full"
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add Option
+                  </Button>
                 </div>
               )}
-            </div>
-          </div>
 
-          <SheetFooter className="mt-4">
-            <Button variant="outline" onClick={() => setDetailOpen(false)}>
-              Close
+              {/* Placeholder */}
+              <div className="space-y-2">
+                <Label htmlFor="placeholder">Placeholder Text</Label>
+                <Input
+                  id="placeholder"
+                  placeholder="e.g., Enter RAM size..."
+                  value={placeholder}
+                  onChange={(e) => setPlaceholder(e.target.value)}
+                />
+              </div>
+
+              {/* Help Text */}
+              <div className="space-y-2">
+                <Label htmlFor="helpText">Help Text</Label>
+                <Textarea
+                  id="helpText"
+                  placeholder="Additional instructions for users"
+                  value={helpText}
+                  onChange={(e) => setHelpText(e.target.value)}
+                  rows={2}
+                />
+              </div>
+
+              {/* Toggles */}
+              <div className="space-y-4 pt-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label htmlFor="isRequired">Required Field</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Users must fill this field
+                    </p>
+                  </div>
+                  <Switch
+                    id="isRequired"
+                    checked={isRequired}
+                    onCheckedChange={setIsRequired}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label htmlFor="isFilterable">Filterable</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Show in search filters
+                    </p>
+                  </div>
+                  <Switch
+                    id="isFilterable"
+                    checked={isFilterable}
+                    onCheckedChange={setIsFilterable}
+                  />
+                </div>
+              </div>
+            </div>
+          </ScrollArea>
+
+          {/* Save Button - Fixed at bottom */}
+          <div className="flex-shrink-0 pt-4 border-t mt-auto">
+            <Button
+              onClick={handleSaveField}
+              disabled={saving || !fieldLabel.trim()}
+              className="w-full"
+            >
+              {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              {editingField ? "Update Field" : "Create Field"}
             </Button>
-          </SheetFooter>
+          </div>
         </SheetContent>
       </Sheet>
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deleteField} onOpenChange={() => setDeleteField(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Field</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete &quot;{deleteField?.fieldLabel}&quot;? 
+              This action cannot be undone and may affect existing data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteField}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
