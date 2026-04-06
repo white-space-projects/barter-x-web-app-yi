@@ -99,7 +99,8 @@ export async function POST(request: NextRequest) {
           if (locationData.length > 0) {
             userCountry = locationData[0].country_name;
             userCountryCode = locationData[0].country_code;
-            userCity = locationData[0].city_name || city || "";
+            // Only use saved city if it exists - don't mix detected city with profile country
+            userCity = locationData[0].city_name || "";
             console.log("[v0] Login API: Set location to:", { userCountry, userCountryCode, userCity });
           }
         }
