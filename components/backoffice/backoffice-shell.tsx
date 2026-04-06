@@ -26,6 +26,7 @@ import {
   X,
   ChevronDown,
   Users,
+  FileText,
 } from "lucide-react";
 import { useBackOfficeAuth } from "@/lib/backoffice/auth-store";
 
@@ -97,6 +98,12 @@ const navItems: NavItem[] = [
     label: "Product Review",
     icon: Package,
     href: "/backoffice/product-review",
+  },
+  {
+    id: "field-schema",
+    label: "Field Schema",
+    icon: FileText,
+    href: "/backoffice/field-schema",
   },
   {
     id: "allowed-emails",
