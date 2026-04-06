@@ -45,7 +45,8 @@ export interface Subcategory {
   description?: string;
   sortOrder: number;
   isActive: boolean;
-  productFields: FieldDefinition[]; // From normalized table
+  productFields: FieldDefinition[]; // Fields with scope "product"
+  offerFields: FieldDefinition[]; // Fields with scope "offer"
   // Joined data
   categoryName?: string;
   barterTypeId?: string;
@@ -123,6 +124,10 @@ function mapToFieldDefinition(row: DbField, options: FieldOption[] = []): FieldD
 }
 
 function mapToSubcategory(row: DbSubcategory, fields: FieldDefinition[] = []): Subcategory {
+  // Split fields by scope
+  const productFields = fields.filter(f => f.fieldScope === "product");
+  const offerFields = fields.filter(f => f.fieldScope === "offer");
+  
   return {
     subcategoryId: row.subcategory_id,
     categoryId: row.category_id,
@@ -131,7 +136,8 @@ function mapToSubcategory(row: DbSubcategory, fields: FieldDefinition[] = []): S
     description: row.description || undefined,
     sortOrder: row.sort_order,
     isActive: row.is_active,
-    productFields: fields,
+    productFields,
+    offerFields,
     categoryName: row.category_name,
     barterTypeId: row.barter_type_id,
     barterTypeName: row.barter_type_name,

@@ -143,7 +143,7 @@ export default function FieldSchemaPage() {
   const [selectedBarterType, setSelectedBarterType] = useState<string>("all");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [showNoFields, setShowNoFields] = useState(false);
-  const [sortNewest, setSortNewest] = useState(false);
+  const [sortNewest, setSortNewest] = useState(true); // Default to newest first
   const [categorySearch, setCategorySearch] = useState("");
   
   // ---------------------------------------------------------------------------
@@ -259,9 +259,17 @@ export default function FieldSchemaPage() {
     return a.name.localeCompare(b.name);
   });
 
-  const filteredCategories = categories.filter((cat) => 
-    categorySearch === "" || cat.name.toLowerCase().includes(categorySearch.toLowerCase())
-  );
+  const filteredCategories = categories.filter((cat) => {
+    // Filter by search
+    if (categorySearch && !cat.name.toLowerCase().includes(categorySearch.toLowerCase())) {
+      return false;
+    }
+    // Filter by selected barter type
+    if (selectedBarterType !== "all" && cat.barterTypeId !== selectedBarterType) {
+      return false;
+    }
+    return true;
+  });
 
   // Get current fields based on active scope
   const currentFields = selectedSubcategory 
@@ -502,7 +510,14 @@ export default function FieldSchemaPage() {
             </div>
 
             {/* Barter Type Filter */}
-            <Select value={selectedBarterType} onValueChange={setSelectedBarterType}>
+            <Select 
+              value={selectedBarterType} 
+              onValueChange={(value) => {
+                setSelectedBarterType(value);
+                // Clear category selection when barter type changes
+                setSelectedCategories([]);
+              }}
+            >
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Barter Type" />
               </SelectTrigger>
@@ -586,12 +601,12 @@ export default function FieldSchemaPage() {
 
             {/* Sort Toggle */}
             <Button
-              variant="outline"
+              variant={sortNewest ? "default" : "outline"}
               onClick={() => setSortNewest(!sortNewest)}
               className="gap-2"
             >
               <SortDesc className="h-4 w-4" />
-              {sortNewest ? "Newest First" : "A-Z"}
+              {sortNewest ? "Newest" : "A-Z"}
             </Button>
           </div>
         </div>
@@ -747,51 +762,76 @@ export default function FieldSchemaPage() {
               {!editingField && !showCreateForm && (
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label>Search existing fields</Label>
+                    <Label>Search or create a field</Label>
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
-                        placeholder="Type to search..."
+                        placeholder="Type field name..."
                         value={fieldSearchQuery}
                         onChange={(e) => setFieldSearchQuery(e.target.value)}
                         className="pl-9"
+                        autoFocus
                       />
                     </div>
                   </div>
 
+                  {/* Show existing fields that match search */}
                   {fieldSearchQuery && existingFieldMatches.length > 0 && (
                     <div className="space-y-2">
-                      <p className="text-sm text-muted-foreground">Existing fields:</p>
-                      {existingFieldMatches.map((field) => (
-                        <div
-                          key={field.fieldId}
-                          className="p-3 rounded-lg border bg-muted/50"
-                        >
-                          <div className="flex items-center justify-between">
-                            <span className="font-medium">{field.fieldLabel}</span>
-                            <Badge variant="secondary">{field.fieldType}</Badge>
+                      <p className="text-xs text-muted-foreground">Existing fields matching &quot;{fieldSearchQuery}&quot;:</p>
+                      <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                        {existingFieldMatches.map((field) => (
+                          <div
+                            key={field.fieldId}
+                            className="p-3 rounded-lg border bg-muted/30 flex items-center justify-between"
+                          >
+                            <div>
+                              <span className="font-medium text-sm">{field.fieldLabel}</span>
+                              <p className="text-xs text-muted-foreground mt-0.5">
+                                Key: {field.fieldKey}
+                              </p>
+                            </div>
+                            <Badge variant="secondary" className="text-xs">
+                              {FIELD_TYPES.find(t => t.value === field.fieldType)?.label || field.fieldType}
+                            </Badge>
                           </div>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            This field already exists
-                          </p>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
                   )}
 
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => {
-                      setShowCreateForm(true);
-                      if (fieldSearchQuery) {
-                        setFieldLabel(fieldSearchQuery);
-                      }
-                    }}
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create New Field
-                  </Button>
+                  {/* Show "Create new" button only when:
+                      1. User has typed something
+                      2. No exact match exists (case-insensitive) */}
+                  {fieldSearchQuery.trim() && !currentFields.some(
+                    f => f.fieldLabel.toLowerCase() === fieldSearchQuery.trim().toLowerCase()
+                  ) && (
+                    <Button
+                      variant="outline"
+                      className="w-full border-dashed border-primary text-primary hover:bg-primary/5"
+                      onClick={() => {
+                        setShowCreateForm(true);
+                        setFieldLabel(fieldSearchQuery.trim());
+                      }}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create &quot;{fieldSearchQuery.trim()}&quot;
+                    </Button>
+                  )}
+
+                  {/* Empty state when no search query */}
+                  {!fieldSearchQuery && (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      Start typing to search existing fields or create a new one
+                    </p>
+                  )}
+
+                  {/* No results message when search has no matches */}
+                  {fieldSearchQuery && existingFieldMatches.length === 0 && currentFields.length > 0 && (
+                    <p className="text-xs text-muted-foreground text-center">
+                      No existing fields match &quot;{fieldSearchQuery}&quot;
+                    </p>
+                  )}
                 </div>
               )}
 
