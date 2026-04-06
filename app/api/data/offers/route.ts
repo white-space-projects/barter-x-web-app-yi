@@ -49,9 +49,24 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { productId, tempProductId, userId, title, description, condition, exchangePreferences } = body;
+    const { 
+      productId, 
+      tempProductId, 
+      userId, 
+      title, 
+      description, 
+      condition, 
+      exchangePreferences,
+      offerInfo, // NEW: Dynamic offer info fields as JSONB object { field_key: value }
+    } = body;
 
-    console.log("[v0] Offers API POST: Creating offer", { productId, tempProductId, userId, title });
+    console.log("[v0] Offers API POST: Creating offer", { 
+      productId, 
+      tempProductId, 
+      userId, 
+      title,
+      hasOfferInfo: !!offerInfo && Object.keys(offerInfo).length > 0,
+    });
 
     // Either productId or tempProductId is required, but not both required
     if (!userId || (!productId && !tempProductId)) {
@@ -69,6 +84,7 @@ export async function POST(request: NextRequest) {
       description,
       condition,
       exchangePreferences,
+      offerInfo, // Pass offer_info JSONB to repository
     });
 
     console.log("[v0] Offers API POST: Offer created successfully", offer.offerId);
