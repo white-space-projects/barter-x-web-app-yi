@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -35,7 +36,6 @@ import {
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuCheckboxItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
   DropdownMenuLabel,
@@ -582,22 +582,26 @@ export default function FieldSchemaPage() {
                       No categories found
                     </p>
                   ) : (
-                    filteredCategories.map((cat) => (
-                      <DropdownMenuCheckboxItem
-                        key={cat.categoryId}
-                        checked={selectedCategories.includes(cat.categoryId)}
-                        onSelect={(e) => e.preventDefault()} // Prevent closing on select
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setSelectedCategories([...selectedCategories, cat.categoryId]);
-                          } else {
-                            setSelectedCategories(selectedCategories.filter(id => id !== cat.categoryId));
-                          }
-                        }}
-                      >
-                        {cat.name}
-                      </DropdownMenuCheckboxItem>
-                    ))
+                    <div className="px-2 space-y-1">
+                      {filteredCategories.map((cat) => (
+                        <label
+                          key={cat.categoryId}
+                          className="flex items-center gap-3 px-2 py-2 rounded-md hover:bg-muted cursor-pointer"
+                        >
+                          <Checkbox
+                            checked={selectedCategories.includes(cat.categoryId)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedCategories([...selectedCategories, cat.categoryId]);
+                              } else {
+                                setSelectedCategories(selectedCategories.filter(id => id !== cat.categoryId));
+                              }
+                            }}
+                          />
+                          <span className="text-sm">{cat.name}</span>
+                        </label>
+                      ))}
+                    </div>
                   )}
                 </ScrollArea>
                 {selectedCategories.length > 0 && (
@@ -627,9 +631,9 @@ export default function FieldSchemaPage() {
               No Fields
             </Button>
 
-            {/* Sort - Newest first */}
+            {/* Sort - Newest first (always selected) */}
             <Button
-              variant="outline"
+              variant="default"
               className="gap-2"
             >
               <SortDesc className="h-4 w-4" />
