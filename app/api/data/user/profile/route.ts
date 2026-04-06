@@ -92,6 +92,13 @@ export async function GET(request: NextRequest) {
     );
 
     const user = users[0];
+    
+    console.log("[v0] Profile GET: User data from DB:", user ? {
+      display_name: user.display_name,
+      profile_country_name: user.profile_country_name,
+      profile_city_name: user.profile_city_name,
+      detected_country_name: user.detected_country_name,
+    } : "not found");
 
     // If user doesn't exist in our DB yet, return session data
     if (!user) {

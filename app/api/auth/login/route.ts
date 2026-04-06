@@ -76,6 +76,8 @@ export async function POST(request: NextRequest) {
         console.log("[v0] Login API: Found existing user:", userId);
 
         // Get location data if available
+        console.log("[v0] Login API: User profile_country_id:", existingUser.profile_country_id);
+        
         if (existingUser.profile_country_id) {
           const locationData = await query<{
             country_name: string;
@@ -91,10 +93,14 @@ export async function POST(request: NextRequest) {
              WHERE c.country_id = $1`,
             [existingUser.profile_country_id, existingUser.profile_city_id]
           );
+          
+          console.log("[v0] Login API: Location query result:", locationData);
+          
           if (locationData.length > 0) {
             userCountry = locationData[0].country_name;
             userCountryCode = locationData[0].country_code;
             userCity = locationData[0].city_name || city || "";
+            console.log("[v0] Login API: Set location to:", { userCountry, userCountryCode, userCity });
           }
         }
 
