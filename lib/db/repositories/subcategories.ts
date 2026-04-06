@@ -274,28 +274,30 @@ export async function createField(data: {
   fieldKey: string;
   fieldLabel: string;
   fieldType: string;
+  fieldScope: FieldScope;
   placeholder?: string;
   helpText?: string;
+  dateMode?: DateMode;
   isRequired?: boolean;
   isFilterable?: boolean;
   sortOrder?: number;
 }): Promise<FieldDefinition> {
-  // Get max sort_order if not provided
+  // Get max sort_order if not provided (scoped by field_scope)
   let sortOrder = data.sortOrder;
   if (sortOrder === undefined) {
     const maxResult = await query<{ max_order: number }>(
-      `SELECT COALESCE(MAX(sort_order), 0) as max_order FROM application.subcategory_product_fields WHERE subcategory_id = $1`,
-      [data.subcategoryId]
+      `SELECT COALESCE(MAX(sort_order), 0) as max_order FROM application.subcategory_product_fields WHERE subcategory_id = $1 AND field_scope = $2`,
+      [data.subcategoryId, data.fieldScope]
     );
     sortOrder = (maxResult[0]?.max_order || 0) + 1;
   }
 
   const sql = `
     INSERT INTO application.subcategory_product_fields (
-      field_id, subcategory_id, field_key, field_label, field_type,
-      placeholder, help_text, is_required, is_filterable, is_active, sort_order
+      field_id, subcategory_id, field_key, field_label, field_type, field_scope,
+      placeholder, help_text, date_mode, is_required, is_filterable, is_active, sort_order
     ) VALUES (
-      gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, true, $9
+      gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, true, $11
     )
     RETURNING *
   `;
@@ -305,8 +307,10 @@ export async function createField(data: {
     data.fieldKey,
     data.fieldLabel,
     data.fieldType,
+    data.fieldScope,
     data.placeholder || null,
     data.helpText || null,
+    data.dateMode || null,
     data.isRequired ?? false,
     data.isFilterable ?? false,
     sortOrder,
@@ -326,6 +330,7 @@ export async function updateField(
     fieldType: string;
     placeholder: string | null;
     helpText: string | null;
+    dateMode: string | null;
     isRequired: boolean;
     isFilterable: boolean;
     isActive: boolean;
@@ -355,6 +360,10 @@ export async function updateField(
   if (data.helpText !== undefined) {
     updates.push(`help_text = $${paramIndex++}`);
     params.push(data.helpText);
+  }
+  if (data.dateMode !== undefined) {
+    updates.push(`date_mode = $${paramIndex++}`);
+    params.push(data.dateMode);
   }
   if (data.isRequired !== undefined) {
     updates.push(`is_required = $${paramIndex++}`);
