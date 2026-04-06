@@ -102,6 +102,7 @@ const NAV_ITEMS: NavItem[] = [
     type: "product-type",
     productType: "ownership",
     color: "text-amber-500",
+    isInactive: true, // Hidden from nav
     isOfferCreationEnabled: false,
     availabilityNote: "Launching soon",
   },

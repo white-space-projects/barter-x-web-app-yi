@@ -15,7 +15,6 @@ import {
   User,
   Building2,
   Briefcase,
-  Key,
 } from "lucide-react";
 import type { ProductType } from "@/lib/types";
 
@@ -72,16 +71,8 @@ export function BottomNav({
   ];
 
   // Secondary items (in more menu) - includes profile as utility tab
+  // Note: Ownership is hidden from UI
   const secondaryItems = [
-    // Coming soon barter type
-    {
-      id: "ownership",
-      label: "Ownership",
-      icon: Key,
-      type: "product-type" as const,
-      color: "text-amber-500",
-      isComingSoon: true,
-    },
     {
       id: "my-offers",
       label: "My Offers",
