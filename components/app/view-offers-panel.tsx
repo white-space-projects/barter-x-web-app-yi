@@ -14,8 +14,10 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { AlertCircle, Package, ArrowRightLeft, Plus, ChevronDown, ChevronUp, Link2Off, AlertTriangle, Loader2, Pencil } from "lucide-react";
 import { useBarterStore } from "@/lib/store";
+import { useBarterData } from "@/lib/data-provider";
 import type { Product, HookStatus, Hook, Offer } from "@/lib/types";
 import { LOCK_LEVEL_LABELS, LOCK_LEVEL_COLORS, LOCK_LEVEL_BG_COLORS } from "@/lib/types";
+import { OfferCardShimmer } from "./offer-card-shimmer";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -75,6 +77,7 @@ type Props = {
 // Shows different actions based on ownership (owner vs other users)
 export function ViewOffersPanel({ product, onAddOffer, onViewModeChange }: Props) {
   const { getOffersByProduct, auth, products, hooks, getOfferById, getProductById, addNotification, getHooksByFromOffer, getMyOffers, removeHook } = useBarterStore();
+  const { offersLoading } = useBarterData();
   const offers = getOffersByProduct(product.productId);
   
   const [hookTargetOfferId, setHookTargetOfferId] = useState<string | null>(null);
@@ -262,7 +265,9 @@ export function ViewOffersPanel({ product, onAddOffer, onViewModeChange }: Props
             initialProduct={product}
           />
 
-          {offers.length === 0 && !showInlineAdd ? (
+          {offersLoading ? (
+            <OfferCardShimmer count={3} variant="offers-panel" />
+          ) : offers.length === 0 && !showInlineAdd ? (
             <div className="flex flex-col items-center py-12 text-muted-foreground">
               <AlertCircle className="mb-2 h-8 w-8 opacity-40" />
               <p className="text-sm">No offers yet for this product.</p>
