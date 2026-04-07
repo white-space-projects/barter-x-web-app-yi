@@ -11,7 +11,7 @@
  * 2. Viewing another user's offer - shows linked products, add offer action
  */
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { 
   X, Package, MapPin, ChevronLeft, ChevronRight, ChevronDown, ChevronUp,
   Pencil, Trash2, Plus, Link2Off, AlertTriangle, Loader2, Info, ArrowRightLeft
@@ -22,7 +22,6 @@ import { ProductImage } from "./product-image";
 import type { Offer, Product, OfferImage, LockLevel, Hook } from "@/lib/types";
 import { LOCK_LEVEL_LABELS, LOCK_LEVEL_COLORS, LOCK_LEVEL_BG_COLORS } from "@/lib/types";
 import { toast } from "sonner";
-import { getProductInfo } from "@/lib/offer-info-fields";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -440,6 +439,51 @@ export function ViewOfferDetails({ offerId, onClose, onEdit, onAddOfferToProduct
   const [deleting, setDeleting] = useState(false);
   const [unhookingId, setUnhookingId] = useState<string | null>(null);
   const [showHookModal, setShowHookModal] = useState(false);
+  const [productSpecs, setProductSpecs] = useState<{ fieldName: string; value: string }[]>([]);
+  
+  // Fetch and resolve product specifications from database
+  useEffect(() => {
+    async function loadProductSpecs() {
+      if (!product?.productInfo || product.productInfo.length === 0) {
+        setProductSpecs([]);
+        return;
+      }
+      
+      // Get field IDs from productInfo (fieldName might be UUID if not resolved)
+      const fieldIds = product.productInfo.map(f => f.fieldName);
+      
+      // Check if fieldNames look like UUIDs (need to resolve labels)
+      const looksLikeUUIDs = fieldIds.some(id => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id));
+      
+      if (looksLikeUUIDs) {
+        try {
+          // Fetch field labels from database
+          const response = await fetch(`/api/data/fields/labels?fieldIds=${fieldIds.join(',')}`);
+          if (response.ok) {
+            const data = await response.json();
+            const labelMap: Record<string, string> = data.labels || {};
+            
+            // Map product info with resolved labels
+            const mapped = product.productInfo.map(f => ({
+              fieldName: labelMap[f.fieldName] || f.fieldName,
+              value: f.value,
+            }));
+            setProductSpecs(mapped);
+          } else {
+            // Fallback to original fieldNames
+            setProductSpecs(product.productInfo);
+          }
+        } catch {
+          // Fallback to original fieldNames
+          setProductSpecs(product.productInfo);
+        }
+      } else {
+        // fieldNames are already human-readable
+        setProductSpecs(product.productInfo);
+      }
+    }
+    loadProductSpecs();
+  }, [product?.productInfo]);
   
   // Determine if this is my offer
   const isMyOffer = auth.user?.userId === offer?.ownerUserId;
@@ -511,7 +555,6 @@ export function ViewOfferDetails({ offerId, onClose, onEdit, onAddOfferToProduct
 
   const address = offer.pickupAddress;
   const offerInfo = offer.offerInfo?.filter((info) => info.value && (Array.isArray(info.value) ? info.value.length > 0 : info.value.trim() !== ""));
-  const productSpecs = getProductInfo(product.productId);
 
   return (
     <>
