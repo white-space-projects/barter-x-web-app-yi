@@ -56,6 +56,9 @@ export function MyOffersTab() {
   const { getMyOffers, getHooksByFromOffer, getOfferById, removeHook, updateHook, updateOffer, products, addNotification, getOrCreateConversation } =
     useBarterStore();
   
+  // Get loading state from data provider
+  const { offersLoading } = useBarterData();
+  
   // Memoize my offers to prevent recalculation on every render
   const myOffers = useMemo(() => getMyOffers(), [getMyOffers]);
 
