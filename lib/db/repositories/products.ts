@@ -10,6 +10,22 @@
 import { query } from "../postgres";
 import type { Product, ProductType } from "@/lib/types";
 
+/**
+ * Safely parse JSONB - handles both string and already-parsed object
+ * PostgreSQL driver may return JSONB as string depending on configuration
+ */
+function parseJsonb<T>(value: unknown): T | null {
+  if (!value) return null;
+  if (typeof value === 'string') {
+    try {
+      return JSON.parse(value) as T;
+    } catch {
+      return null;
+    }
+  }
+  return value as T;
+}
+
 interface DbProduct {
   product_id: string;
   title: string;
@@ -39,6 +55,9 @@ interface DbProduct {
  * Note: Maps to existing Product type, using productType (not barterType)
  */
 function mapToProduct(row: DbProduct): Product {
+  // Parse product_info JSONB - may come as string from driver
+  const productInfoObj = parseJsonb<Record<string, unknown>>(row.product_info);
+  
   return {
     productId: row.product_id,
     productType: (row.barter_type_slug || "goods") as ProductType,
@@ -51,8 +70,8 @@ function mapToProduct(row: DbProduct): Product {
       ? `https://mdytcwlxlwvmioizaidu.supabase.co/storage/v1/object/public/product-images/${row.image_key}`
       : undefined,
     offerCount: 0, // TODO: Add offer count query
-    productInfo: row.product_info 
-      ? Object.entries(row.product_info).map(([key, value]) => ({ 
+    productInfo: productInfoObj 
+      ? Object.entries(productInfoObj).map(([key, value]) => ({ 
           fieldName: key, 
           value: String(value) 
         }))
@@ -307,7 +326,7 @@ export async function fetchProductsForCatalog(
       imageKey: row.image_key || undefined,
       subcategoryId: row.subcategory_id,
       brandId: row.brand_id || undefined,
-      productInfo: row.product_info || undefined,
+      productInfo: parseJsonb<Record<string, unknown>>(row.product_info) || undefined,
       isActive: row.is_active,
       createdAt: row.created_at,
       updatedAt: row.updated_at,

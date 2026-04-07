@@ -62,13 +62,50 @@ export function OfferDetailsModal({ offerId, onClose, onNavigateToProduct }: Pro
   const [expandedSection, setExpandedSection] = useState<"offer" | "product" | null>(null);
 
   // Get product info from DB (products.product_info JSONB)
-  // Convert Record<string, unknown> to array format for display
-  const productInfo = useMemo(() => {
-    if (!dbOffer?.productInfo) return [];
-    return Object.entries(dbOffer.productInfo).map(([key, value]) => ({
-      fieldName: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-      value: String(value),
-    }));
+  // Fetch field labels from database to display human-readable names
+  const [productInfo, setProductInfo] = useState<{ fieldName: string; value: string }[]>([]);
+  
+  useEffect(() => {
+    async function resolveProductInfo() {
+      if (!dbOffer?.productInfo || Object.keys(dbOffer.productInfo).length === 0) {
+        setProductInfo([]);
+        return;
+      }
+      
+      // Get field IDs from product info
+      const fieldIds = Object.keys(dbOffer.productInfo);
+      
+      try {
+        // Fetch field labels from subcategory_product_fields table
+        const response = await fetch(`/api/data/fields/labels?fieldIds=${fieldIds.join(',')}`);
+        if (response.ok) {
+          const data = await response.json();
+          const labelMap: Record<string, string> = data.labels || {};
+          
+          // Map product info with resolved labels
+          const mapped = Object.entries(dbOffer.productInfo).map(([fieldId, value]) => ({
+            fieldName: labelMap[fieldId] || fieldId.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+            value: String(value),
+          }));
+          setProductInfo(mapped);
+        } else {
+          // Fallback to simple string formatting
+          const mapped = Object.entries(dbOffer.productInfo).map(([key, value]) => ({
+            fieldName: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+            value: String(value),
+          }));
+          setProductInfo(mapped);
+        }
+      } catch {
+        // Fallback to simple string formatting
+        const mapped = Object.entries(dbOffer.productInfo).map(([key, value]) => ({
+          fieldName: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+          value: String(value),
+        }));
+        setProductInfo(mapped);
+      }
+    }
+    resolveProductInfo();
   }, [dbOffer?.productInfo]);
 
   // Get hooked products
