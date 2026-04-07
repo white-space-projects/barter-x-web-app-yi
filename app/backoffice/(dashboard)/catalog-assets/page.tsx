@@ -879,9 +879,12 @@ export default function CatalogAssetsPage() {
   }, []);
   
   const loadProductDetail = useCallback(async (productId: string) => {
+    console.log("[v0] loadProductDetail called with productId:", productId);
     setLoadingDetail(true);
     try {
+      console.log("[v0] Fetching /api/data/products/" + productId);
       const response = await fetch(`/api/data/products/${productId}`);
+      console.log("[v0] Fetch response status:", response.status);
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error || "Failed to fetch product");
@@ -930,7 +933,9 @@ export default function CatalogAssetsPage() {
   
   // Load product detail when selectedProductId changes
   useEffect(() => {
+    console.log("[v0] useEffect triggered - selectedProductId:", selectedProductId);
     if (selectedProductId) {
+      console.log("[v0] Calling loadProductDetail with:", selectedProductId);
       loadProductDetail(selectedProductId);
     } else {
       setProductDetail(null);
@@ -1456,7 +1461,7 @@ export default function CatalogAssetsPage() {
             <div
               key={product.productId}
               className="rounded-xl border border-border bg-card overflow-hidden cursor-pointer transition-colors hover:border-primary/30 w-full"
-              onClick={() => setSelectedProductId(product.productId)}
+              onClick={() => { console.log("[v0] Product card clicked:", product.productId); setSelectedProductId(product.productId); }}
             >
               <div className="p-4 min-h-[88px]">
                 <div className="flex gap-3">
