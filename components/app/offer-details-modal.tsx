@@ -67,7 +67,7 @@ export function OfferDetailsModal({ offerId, onClose, onNavigateToProduct }: Pro
   
   useEffect(() => {
     async function resolveProductInfo() {
-      if (!dbOffer?.productInfo || Object.keys(dbOffer.productInfo).length === 0) {
+      if (!dbOffer?.productInfo || typeof dbOffer.productInfo !== 'object' || Object.keys(dbOffer.productInfo).length === 0) {
         setProductInfo([]);
         return;
       }
