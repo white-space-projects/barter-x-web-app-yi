@@ -44,7 +44,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Loader2, Plus, Pencil, Trash2, Package, FileText, 
   ArrowLeft, GripVertical, Search, Filter, SortDesc,
-  Layers, X, ChevronDown, ImageIcon
+  Layers, X, ChevronDown, ImageIcon, Loader2
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -176,7 +176,18 @@ export default function FieldSchemaPage() {
   const [placeholder, setPlaceholder] = useState("");
   const [dateMode, setDateMode] = useState<DateMode>("day_month_year");
   const [isRequired, setIsRequired] = useState(false);
-  const [fieldOptions, setFieldOptions] = useState<string[]>([""]);
+  const [fieldOptions, setFieldOptions] = useState<string[]>([]);
+  
+  // Option search state (for select/multiselect field types)
+  const [optionSearchQuery, setOptionSearchQuery] = useState("");
+  const [searchingOptions, setSearchingOptions] = useState(false);
+  const [existingOptions, setExistingOptions] = useState<Array<{
+    optionId: string;
+    optionLabel: string;
+    optionValue: string;
+    fieldLabel: string;
+    subcategoryName: string;
+  }>>([]);
   
   // Delete confirmation
   const [deleteField, setDeleteField] = useState<FieldDefinition | null>(null);
@@ -303,7 +314,9 @@ export default function FieldSchemaPage() {
     setPlaceholder("");
     setDateMode("day_month_year");
     setIsRequired(false);
-    setFieldOptions([""]);
+    setFieldOptions([]);
+    setOptionSearchQuery("");
+    setExistingOptions([]);
     setShowFieldDialog(true);
   };
 
@@ -316,13 +329,54 @@ export default function FieldSchemaPage() {
     setPlaceholder(field.placeholder || "");
     setDateMode(field.dateMode || "day_month_year");
     setIsRequired(field.isRequired);
-    setFieldOptions(field.options?.map(o => o.optionLabel) || [""]);
+    setFieldOptions(field.options?.map(o => o.optionLabel) || []);
+    setOptionSearchQuery("");
+    setExistingOptions([]);
     setShowFieldDialog(true);
   };
+  
+  // Search existing options (debounced)
+  const searchOptions = useCallback(async (query: string) => {
+    if (!query.trim()) {
+      setExistingOptions([]);
+      return;
+    }
+    
+    setSearchingOptions(true);
+    try {
+      const response = await fetch(`/api/data/field-options/search?q=${encodeURIComponent(query)}&limit=15`);
+      if (!response.ok) throw new Error("Failed to search options");
+      const data = await response.json();
+      setExistingOptions(data.options || []);
+    } catch (error) {
+      console.error("Failed to search options:", error);
+      setExistingOptions([]);
+    } finally {
+      setSearchingOptions(false);
+    }
+  }, []);
+  
+  // Debounce option search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (optionSearchQuery.trim()) {
+        searchOptions(optionSearchQuery);
+      } else {
+        setExistingOptions([]);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [optionSearchQuery, searchOptions]);
 
   const handleSaveField = async () => {
     if (!selectedSubcategory || !fieldLabel.trim()) {
       toast.error("Field label is required");
+      return;
+    }
+    
+    // Validate options for select types
+    if ((fieldType === "select" || fieldType === "multiselect") && fieldOptions.length === 0) {
+      toast.error("At least one option is required for select fields");
       return;
     }
 
@@ -897,43 +951,126 @@ export default function FieldSchemaPage() {
                     </Select>
                   </div>
 
-                  {/* Options for Select Types */}
+                  {/* Options for Select Types - Search first, create if not found */}
                   {(fieldType === "select" || fieldType === "multiselect") && (
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       <Label>Options</Label>
-                      <div className="space-y-2">
-                        {fieldOptions.map((option, index) => (
-                          <div key={index} className="flex items-center gap-2">
-                            <Input
-                              placeholder={`Option ${index + 1}`}
-                              value={option}
-                              onChange={(e) => {
-                                const newOptions = [...fieldOptions];
-                                newOptions[index] = e.target.value;
-                                setFieldOptions(newOptions);
-                              }}
-                            />
-                            {fieldOptions.length > 1 && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => {
-                                  setFieldOptions(fieldOptions.filter((_, i) => i !== index));
-                                }}
+                      
+                      {/* Selected options list */}
+                      {fieldOptions.length > 0 && (
+                        <div className="space-y-1.5">
+                          <p className="text-xs text-muted-foreground">Selected options ({fieldOptions.length}):</p>
+                          <div className="flex flex-wrap gap-2">
+                            {fieldOptions.map((option, index) => (
+                              <div
+                                key={index}
+                                className="flex items-center gap-1.5 px-2.5 py-1 bg-primary/10 text-primary rounded-full text-sm"
                               >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            )}
+                                <span>{option}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => setFieldOptions(fieldOptions.filter((_, i) => i !== index))}
+                                  className="hover:bg-primary/20 rounded-full p-0.5"
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </div>
+                            ))}
                           </div>
-                        ))}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setFieldOptions([...fieldOptions, ""])}
-                        >
-                          <Plus className="h-4 w-4 mr-2" />
-                          Add Option
-                        </Button>
+                        </div>
+                      )}
+                      
+                      {/* Search/Add option input */}
+                      <div className="space-y-2">
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            placeholder="Search or type new option..."
+                            value={optionSearchQuery}
+                            onChange={(e) => setOptionSearchQuery(e.target.value)}
+                            className="pl-9"
+                          />
+                          {searchingOptions && (
+                            <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+                          )}
+                        </div>
+                        
+                        {/* Existing options matching search */}
+                        {optionSearchQuery && existingOptions.length > 0 && (
+                          <div className="border rounded-lg overflow-hidden">
+                            <p className="text-xs text-muted-foreground px-3 py-2 bg-muted/50">
+                              Existing options matching &quot;{optionSearchQuery}&quot;:
+                            </p>
+                            <div className="max-h-[150px] overflow-y-auto">
+                              {existingOptions
+                                .filter(opt => !fieldOptions.some(
+                                  fo => fo.toLowerCase() === opt.optionLabel.toLowerCase()
+                                ))
+                                .map((opt) => (
+                                  <button
+                                    key={opt.optionId}
+                                    type="button"
+                                    className="w-full flex items-center justify-between px-3 py-2 hover:bg-muted/50 text-left text-sm border-t first:border-t-0"
+                                    onClick={() => {
+                                      // Add existing option (case-insensitive duplicate check)
+                                      if (!fieldOptions.some(fo => fo.toLowerCase() === opt.optionLabel.toLowerCase())) {
+                                        setFieldOptions([...fieldOptions, opt.optionLabel]);
+                                        setOptionSearchQuery("");
+                                        setExistingOptions([]);
+                                      }
+                                    }}
+                                  >
+                                    <span className="font-medium">{opt.optionLabel}</span>
+                                    <span className="text-xs text-muted-foreground">
+                                      Used in: {opt.subcategoryName}
+                                    </span>
+                                  </button>
+                                ))}
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* Create new option button - only show if:
+                            1. User has typed something
+                            2. No exact match exists in selected options (case-insensitive)
+                            3. Trimmed and not empty */}
+                        {optionSearchQuery.trim() && !fieldOptions.some(
+                          fo => fo.toLowerCase() === optionSearchQuery.trim().toLowerCase()
+                        ) && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="w-full border-dashed border-primary text-primary hover:bg-primary/5"
+                            onClick={() => {
+                              const trimmed = optionSearchQuery.trim();
+                              if (trimmed && !fieldOptions.some(fo => fo.toLowerCase() === trimmed.toLowerCase())) {
+                                setFieldOptions([...fieldOptions, trimmed]);
+                                setOptionSearchQuery("");
+                                setExistingOptions([]);
+                              }
+                            }}
+                          >
+                            <Plus className="h-4 w-4 mr-2" />
+                            Create &quot;{optionSearchQuery.trim()}&quot;
+                          </Button>
+                        )}
+                        
+                        {/* Already added message */}
+                        {optionSearchQuery.trim() && fieldOptions.some(
+                          fo => fo.toLowerCase() === optionSearchQuery.trim().toLowerCase()
+                        ) && (
+                          <p className="text-xs text-muted-foreground text-center py-2">
+                            &quot;{optionSearchQuery.trim()}&quot; is already added
+                          </p>
+                        )}
+                        
+                        {/* Empty state */}
+                        {!optionSearchQuery && fieldOptions.length === 0 && (
+                          <p className="text-xs text-muted-foreground text-center py-2">
+                            Type to search existing options or create new ones
+                          </p>
+                        )}
                       </div>
                     </div>
                   )}
