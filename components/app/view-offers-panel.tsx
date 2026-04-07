@@ -89,6 +89,33 @@ export function ViewOffersPanel({ product, onAddOffer, onViewModeChange }: Props
   const [showUnhookDialog, setShowUnhookDialog] = useState<{ hookId: string; offerTitle: string } | null>(null);
   const myOffers = useMemo(() => getMyOffers(), [getMyOffers]);
   const hasOffers = myOffers.length > 0;
+  
+  // Fetch offer from API when editing (DB is single source of truth)
+  // MUST be declared here before any conditional returns to follow Rules of Hooks
+  const [offerToEdit, setOfferToEdit] = useState<Offer | null>(null);
+  const [loadingEditOffer, setLoadingEditOffer] = useState(false);
+  
+  useEffect(() => {
+    if (editOfferId) {
+      setLoadingEditOffer(true);
+      fetch(`/api/data/offers/${editOfferId}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.offer) {
+            // Merge with store data for images (not yet in DB)
+            const storeOffer = getOfferById(editOfferId);
+            setOfferToEdit({
+              ...data.offer,
+              images: storeOffer?.images || data.offer.images,
+            });
+          }
+        })
+        .catch(err => console.error("[v0] Failed to fetch offer for edit:", err))
+        .finally(() => setLoadingEditOffer(false));
+    } else {
+      setOfferToEdit(null);
+    }
+  }, [editOfferId, getOfferById]);
 
   // Notify parent of view mode changes
   useEffect(() => {
@@ -181,32 +208,6 @@ export function ViewOffersPanel({ product, onAddOffer, onViewModeChange }: Props
       </div>
     );
   }
-
-  // Fetch offer from API when editing (DB is single source of truth)
-  const [offerToEdit, setOfferToEdit] = useState<Offer | null>(null);
-  const [loadingEditOffer, setLoadingEditOffer] = useState(false);
-  
-  useEffect(() => {
-    if (editOfferId) {
-      setLoadingEditOffer(true);
-      fetch(`/api/data/offers/${editOfferId}`)
-        .then(res => res.json())
-        .then(data => {
-          if (data.offer) {
-            // Merge with store data for images (not yet in DB)
-            const storeOffer = getOfferById(editOfferId);
-            setOfferToEdit({
-              ...data.offer,
-              images: storeOffer?.images || data.offer.images,
-            });
-          }
-        })
-        .catch(err => console.error("[v0] Failed to fetch offer for edit:", err))
-        .finally(() => setLoadingEditOffer(false));
-    } else {
-      setOfferToEdit(null);
-    }
-  }, [editOfferId, getOfferById]);
 
   // If editing an offer, show embedded AddOfferFlow
   if (editOfferId && offerToEdit) {

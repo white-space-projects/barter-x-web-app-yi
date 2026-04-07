@@ -68,6 +68,33 @@ export function MyOffersTab() {
   const [mobileMenuOffer, setMobileMenuOffer] = useState<string | null>(null);
   // For adding an offer to a linked product from ViewOfferDetails
   const [addOfferToProduct, setAddOfferToProduct] = useState<Product | null>(null);
+  
+  // Fetch offer from API when editing (DB is single source of truth)
+  // MUST be declared here before any conditional returns to follow Rules of Hooks
+  const [offerToEdit, setOfferToEdit] = useState<Offer | null>(null);
+  const [loadingEditOffer, setLoadingEditOffer] = useState(false);
+  
+  useEffect(() => {
+    if (editOffer) {
+      setLoadingEditOffer(true);
+      fetch(`/api/data/offers/${editOffer}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.offer) {
+            // Merge with store data for images (not yet in DB)
+            const storeOffer = getOfferById(editOffer);
+            setOfferToEdit({
+              ...data.offer,
+              images: storeOffer?.images || data.offer.images,
+            });
+          }
+        })
+        .catch(err => console.error("[v0] Failed to fetch offer for edit:", err))
+        .finally(() => setLoadingEditOffer(false));
+    } else {
+      setOfferToEdit(null);
+    }
+  }, [editOffer, getOfferById]);
 
   // Helper: Get product for an offer
   function getProductForOffer(offer: { productId: string }) {
@@ -199,32 +226,6 @@ export function MyOffersTab() {
       </div>
     );
   }
-
-  // Fetch offer from API when editing (DB is single source of truth)
-  const [offerToEdit, setOfferToEdit] = useState<Offer | null>(null);
-  const [loadingEditOffer, setLoadingEditOffer] = useState(false);
-  
-  useEffect(() => {
-    if (editOffer) {
-      setLoadingEditOffer(true);
-      fetch(`/api/data/offers/${editOffer}`)
-        .then(res => res.json())
-        .then(data => {
-          if (data.offer) {
-            // Merge with store data for images (not yet in DB)
-            const storeOffer = getOfferById(editOffer);
-            setOfferToEdit({
-              ...data.offer,
-              images: storeOffer?.images || data.offer.images,
-            });
-          }
-        })
-        .catch(err => console.error("[v0] Failed to fetch offer for edit:", err))
-        .finally(() => setLoadingEditOffer(false));
-    } else {
-      setOfferToEdit(null);
-    }
-  }, [editOffer, getOfferById]);
 
   // If editing an offer, show embedded AddOfferFlow with editOffer prop
   if (editOffer && offerToEdit) {
