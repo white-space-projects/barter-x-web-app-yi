@@ -44,7 +44,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Loader2, Plus, Pencil, Trash2, Package, FileText, 
   ArrowLeft, GripVertical, Search, Filter, SortDesc,
-  Layers, X, ChevronDown, ImageIcon, Loader2
+  Layers, X, ChevronDown, ImageIcon
 } from "lucide-react";
 import { toast } from "sonner";
 
