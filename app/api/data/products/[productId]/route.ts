@@ -66,3 +66,29 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     );
   }
 }
+
+/**
+ * PUT /api/data/products/[productId]
+ * Update product fields (same as PATCH, for compatibility)
+ */
+export async function PUT(request: NextRequest, { params }: RouteParams) {
+  try {
+    const { productId } = await params;
+    const body = await request.json();
+    
+    const product = await updateProduct(productId, {
+      title: body.title,
+      description: body.description,
+      productInfo: body.productInfo,
+      imageKey: body.imageKey,
+    });
+    
+    return NextResponse.json({ product });
+  } catch (error) {
+    console.error("[API] Product update error:", error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Failed to update product" },
+      { status: 500 }
+    );
+  }
+}

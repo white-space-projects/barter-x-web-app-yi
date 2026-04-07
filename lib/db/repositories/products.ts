@@ -63,6 +63,10 @@ function mapToProduct(row: DbProduct): Product {
 export interface FetchProductsOptions {
   barterTypeSlug?: string;
   categorySlug?: string;
+  subcategoryId?: string;
+  brandId?: string;
+  search?: string;
+  includeInactive?: boolean;
   limit?: number;
   offset?: number;
 }
@@ -73,16 +77,39 @@ export interface FetchProductsOptions {
 export async function fetchProducts(
   options: FetchProductsOptions = {}
 ): Promise<{ products: Product[]; total: number }> {
-  const { barterTypeSlug, limit = 100, offset = 0 } = options;
+  const { barterTypeSlug, subcategoryId, brandId, search, includeInactive, limit = 100, offset = 0 } = options;
 
   // Build WHERE clause
-  const conditions: string[] = ["p.is_active = true"];
+  const conditions: string[] = [];
   const params: unknown[] = [];
   let paramIndex = 1;
+
+  // Only filter by is_active if not including inactive
+  if (!includeInactive) {
+    conditions.push("p.is_active = true");
+  }
 
   if (barterTypeSlug) {
     conditions.push(`bt.slug = $${paramIndex}`);
     params.push(barterTypeSlug);
+    paramIndex++;
+  }
+  
+  if (subcategoryId) {
+    conditions.push(`p.subcategory_id = $${paramIndex}`);
+    params.push(subcategoryId);
+    paramIndex++;
+  }
+  
+  if (brandId) {
+    conditions.push(`p.brand_id = $${paramIndex}`);
+    params.push(brandId);
+    paramIndex++;
+  }
+  
+  if (search) {
+    conditions.push(`(p.title ILIKE $${paramIndex} OR p.description ILIKE $${paramIndex})`);
+    params.push(`%${search}%`);
     paramIndex++;
   }
 
@@ -145,6 +172,149 @@ export async function fetchProducts(
 
   return {
     products: products.map(mapToProduct),
+    total,
+  };
+}
+
+/**
+ * Catalog product type with extended fields
+ */
+export interface CatalogProduct {
+  productId: string;
+  title: string;
+  description?: string;
+  imageUrl?: string;
+  imageKey?: string;
+  subcategoryId: string;
+  brandId?: string;
+  productInfo?: Record<string, unknown>;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  subcategoryName?: string;
+  categoryName?: string;
+  brandName?: string;
+}
+
+/**
+ * Fetch products for catalog with extended fields
+ */
+export async function fetchProductsForCatalog(
+  options: FetchProductsOptions = {}
+): Promise<{ products: CatalogProduct[]; total: number }> {
+  const { barterTypeSlug, subcategoryId, brandId, search, includeInactive, limit = 100, offset = 0 } = options;
+
+  const conditions: string[] = [];
+  const params: unknown[] = [];
+  let paramIndex = 1;
+
+  if (!includeInactive) {
+    conditions.push("p.is_active = true");
+  }
+
+  if (barterTypeSlug) {
+    conditions.push(`bt.slug = $${paramIndex}`);
+    params.push(barterTypeSlug);
+    paramIndex++;
+  }
+  
+  if (subcategoryId) {
+    conditions.push(`p.subcategory_id = $${paramIndex}`);
+    params.push(subcategoryId);
+    paramIndex++;
+  }
+  
+  if (brandId) {
+    conditions.push(`p.brand_id = $${paramIndex}`);
+    params.push(brandId);
+    paramIndex++;
+  }
+  
+  if (search) {
+    conditions.push(`(p.title ILIKE $${paramIndex} OR p.description ILIKE $${paramIndex})`);
+    params.push(`%${search}%`);
+    paramIndex++;
+  }
+
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+
+  // Count query
+  const countSql = `
+    SELECT COUNT(*) as total
+    FROM application.products p
+    LEFT JOIN application.barter_types bt ON p.barter_type_id = bt.barter_type_id
+    ${whereClause}
+  `;
+
+  // Data query with all needed fields
+  const dataSql = `
+    SELECT 
+      p.product_id,
+      p.title,
+      p.description,
+      p.image_key,
+      p.subcategory_id,
+      p.brand_id,
+      p.product_info,
+      p.is_active,
+      p.created_at,
+      p.updated_at,
+      c.name as category_name,
+      sc.name as subcategory_name,
+      b.name as brand_name
+    FROM application.products p
+    LEFT JOIN application.barter_types bt ON p.barter_type_id = bt.barter_type_id
+    LEFT JOIN application.categories c ON p.category_id = c.category_id
+    LEFT JOIN application.subcategories sc ON p.subcategory_id = sc.subcategory_id
+    LEFT JOIN application.brands b ON p.brand_id = b.brand_id
+    ${whereClause}
+    ORDER BY p.created_at DESC
+    LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+  `;
+
+  params.push(limit, offset);
+
+  const countParams = params.slice(0, -2); // Exclude limit and offset for count
+  const [countResult, products] = await Promise.all([
+    query<{ total: string }>(countSql, countParams),
+    query<{
+      product_id: string;
+      title: string;
+      description: string | null;
+      image_key: string | null;
+      subcategory_id: string;
+      brand_id: string | null;
+      product_info: Record<string, unknown> | null;
+      is_active: boolean;
+      created_at: string;
+      updated_at: string;
+      category_name: string | null;
+      subcategory_name: string | null;
+      brand_name: string | null;
+    }>(dataSql, params),
+  ]);
+
+  const total = parseInt(countResult[0]?.total || "0", 10);
+
+  return {
+    products: products.map(row => ({
+      productId: row.product_id,
+      title: row.title,
+      description: row.description || undefined,
+      imageUrl: row.image_key
+        ? `https://mdytcwlxlwvmioizaidu.supabase.co/storage/v1/object/public/product-images/${row.image_key}`
+        : undefined,
+      imageKey: row.image_key || undefined,
+      subcategoryId: row.subcategory_id,
+      brandId: row.brand_id || undefined,
+      productInfo: row.product_info || undefined,
+      isActive: row.is_active,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      categoryName: row.category_name || undefined,
+      subcategoryName: row.subcategory_name || undefined,
+      brandName: row.brand_name || undefined,
+    })),
     total,
   };
 }

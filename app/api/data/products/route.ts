@@ -8,7 +8,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { fetchProducts, createProduct } from "@/lib/db/repositories/products";
+import { fetchProducts, fetchProductsForCatalog, createProduct } from "@/lib/db/repositories/products";
 import type { ProductType } from "@/lib/types";
 
 export async function GET(request: NextRequest) {
@@ -16,11 +16,21 @@ export async function GET(request: NextRequest) {
     // Get query params
     const searchParams = request.nextUrl.searchParams;
     const barterType = searchParams.get("barterType") as ProductType | null;
+    const subcategoryId = searchParams.get("subcategoryId");
+    const brandId = searchParams.get("brandId");
+    const search = searchParams.get("search");
+    const includeInactive = searchParams.get("includeInactive") === "true";
+    const page = parseInt(searchParams.get("page") || "1", 10);
     const limit = parseInt(searchParams.get("limit") || "100", 10);
-    const offset = parseInt(searchParams.get("offset") || "0", 10);
+    const offset = (page - 1) * limit;
 
-    const { products, total } = await fetchProducts({
+    // Use catalog function to get extended fields (includes IDs, imageUrl, brandName, etc.)
+    const { products, total } = await fetchProductsForCatalog({
       barterTypeSlug: barterType || undefined,
+      subcategoryId: subcategoryId || undefined,
+      brandId: brandId || undefined,
+      search: search || undefined,
+      includeInactive,
       limit,
       offset,
     });
@@ -28,6 +38,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ 
       products, 
       total,
+      page,
       limit,
       offset,
     });
