@@ -880,16 +880,23 @@ export default function CatalogAssetsPage() {
   
   const loadProductDetail = useCallback(async (productId: string) => {
     console.log("[v0] loadProductDetail called with productId:", productId);
+    console.log("[v0] productId type:", typeof productId);
+    console.log("[v0] productId value check:", productId ? "truthy" : "falsy", "length:", productId?.length);
     setLoadingDetail(true);
     try {
-      console.log("[v0] Fetching /api/data/products/" + productId);
-      const response = await fetch(`/api/data/products/${productId}`);
-      console.log("[v0] Fetch response status:", response.status);
+      const url = `/api/data/products/${productId}`;
+      console.log("[v0] Fetching URL:", url);
+      const response = await fetch(url);
+      console.log("[v0] Fetch response status:", response.status, response.statusText);
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
+        const errorText = await response.text();
+        console.log("[v0] Error response body:", errorText);
+        let errorData;
+        try { errorData = JSON.parse(errorText); } catch { errorData = { error: errorText }; }
         throw new Error(errorData.error || "Failed to fetch product");
       }
       const data = await response.json();
+      console.log("[v0] Success! Product data:", data.product?.title);
       setProductDetail(data.product);
       
       // Load existing product info values
@@ -1461,7 +1468,11 @@ export default function CatalogAssetsPage() {
             <div
               key={product.productId}
               className="rounded-xl border border-border bg-card overflow-hidden cursor-pointer transition-colors hover:border-primary/30 w-full"
-              onClick={() => { console.log("[v0] Product card clicked:", product.productId); setSelectedProductId(product.productId); }}
+              onClick={() => { 
+                          console.log("[v0] Product card clicked:", product.productId); 
+                          setLoadingDetail(true); // Set loading BEFORE setting selectedProductId to prevent flash of error state
+                          setSelectedProductId(product.productId); 
+                        }}
             >
               <div className="p-4 min-h-[88px]">
                 <div className="flex gap-3">

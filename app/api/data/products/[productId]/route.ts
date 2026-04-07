@@ -17,17 +17,23 @@ type RouteParams = {
  * Fetch product with all details including entity IDs
  */
 export async function GET(request: NextRequest, { params }: RouteParams) {
+  console.log("[v0] Product detail API: Starting GET");
   try {
     const { productId } = await params;
+    console.log("[v0] Product detail API: productId =", productId);
+    
     const product = await fetchProductWithIds(productId);
+    console.log("[v0] Product detail API: fetchProductWithIds returned", product ? "product" : "null");
     
     if (!product) {
+      console.log("[v0] Product detail API: Product not found for ID:", productId);
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
     }
     
+    console.log("[v0] Product detail API: Success, returning product:", product.title);
     return NextResponse.json({ product });
   } catch (error) {
-    console.error("[API] Product fetch error:", error);
+    console.error("[v0] Product detail API: Error:", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Failed to fetch product" },
       { status: 500 }
