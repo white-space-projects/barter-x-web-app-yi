@@ -20,12 +20,36 @@ export async function GET(request: NextRequest) {
     const brandId = searchParams.get("brandId");
     const search = searchParams.get("search");
     const includeInactive = searchParams.get("includeInactive") === "true";
+    const format = searchParams.get("format"); // "catalog" for back office
     const page = parseInt(searchParams.get("page") || "1", 10);
     const limit = parseInt(searchParams.get("limit") || "100", 10);
     const offset = (page - 1) * limit;
 
-    // Use catalog function to get extended fields (includes IDs, imageUrl, brandName, etc.)
-    const { products, total } = await fetchProductsForCatalog({
+    // Use catalog function for back office (extended fields), regular function for app
+    if (format === "catalog") {
+      const { products, total } = await fetchProductsForCatalog({
+        barterTypeSlug: barterType || undefined,
+        subcategoryId: subcategoryId || undefined,
+        brandId: brandId || undefined,
+        search: search || undefined,
+        includeInactive,
+        limit,
+        offset,
+      });
+      
+      console.log("[v0] Products API (catalog): Fetched", products.length, "products, total:", total);
+      
+      return NextResponse.json({ 
+        products, 
+        total,
+        page,
+        limit,
+        offset,
+      });
+    }
+    
+    // Default: use regular fetchProducts for app (returns Product type)
+    const { products, total } = await fetchProducts({
       barterTypeSlug: barterType || undefined,
       subcategoryId: subcategoryId || undefined,
       brandId: brandId || undefined,
@@ -34,6 +58,8 @@ export async function GET(request: NextRequest) {
       limit,
       offset,
     });
+    
+    console.log("[v0] Products API: Fetched", products.length, "products, total:", total);
     
     return NextResponse.json({ 
       products, 
