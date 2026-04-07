@@ -28,7 +28,7 @@ import {
   Car, Bike, Bus, Truck, Container, Caravan,
   Building2, Home, BedDouble, ParkingSquare, Warehouse, ShoppingBag, Briefcase, Key,
   // Subcategory icons
-  Smartphone, Laptop, Tablet, Headphones, Gamepad2, Watch,
+  Smartphone, Laptop, Tablet, Headphones, Gamepad2, Watch, Camera,
   Table, Armchair, Archive, Lamp, WashingMachine, Microwave, AirVent, CookingPot,
   Footprints, Gem, BedSingle, ToyBrick, CarFront,
   Tent, Trophy, Drill, Shovel, Hammer, Book, Dice5, Film, Star, Table2, Printer, Guitar,
@@ -136,7 +136,7 @@ const TYPE_ICONS: Record<ProductType, React.ComponentType<{ className?: string }
 // Icon map for dynamic rendering
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   ShoppingBag, Car, Home, Cpu, Sofa, Shirt, Baby, Dumbbell, Wrench, BookOpen, Monitor, Paintbrush,
-  Smartphone, Laptop, Tablet, Headphones, Gamepad2, Watch, BedDouble, Table2, Armchair,
+  Smartphone, Laptop, Tablet, Headphones, Gamepad2, Watch, Camera, BedDouble, Table, Table2, Armchair,
   Archive, Lamp, WashingMachine, Microwave, AirVent, CookingPot, Footprints,
   Gem, ToyBrick, Bike, Tent, Trophy, Drill, Shovel, Hammer, Book, Dice5, Film, Star,
   Printer, Guitar, Box, Building2, Building, ParkingSquare, Warehouse, Lock,
@@ -507,16 +507,6 @@ function DynamicFieldRenderer({
     case "text":
       return (
         <Input
-          value={(value as string) || ""}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={`Enter ${field.fieldName.toLowerCase()}`}
-        />
-      );
-      
-    case "number":
-      return (
-        <Input
-          type="number"
           value={(value as string) || ""}
           onChange={(e) => onChange(e.target.value)}
           placeholder={`Enter ${field.fieldName.toLowerCase()}`}
@@ -912,14 +902,14 @@ export default function CatalogAssetsPage() {
     }
   }, []);
   
-  // Map database field types
-  function mapDbFieldType(dbType: string): "text" | "number" | "date_select" | "single_select" | "multi_select" | "attachment" {
+  // Map database field types to OfferInfoFieldType
+  // Note: "number" is mapped to "text" since OfferInfoFieldType doesn't have a number type
+  function mapDbFieldType(dbType: string): "text" | "date_select" | "single_select" | "multi_select" | "attachment" {
     switch (dbType) {
       case "text":
       case "textarea":
+      case "number": // Map number to text input (handled specially in renderer)
         return "text";
-      case "number":
-        return "number";
       case "date":
         return "date_select";
       case "select":
