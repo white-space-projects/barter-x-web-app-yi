@@ -16,14 +16,6 @@ export function OfferInfoSection({ subcategoryId, fieldDefinitions, values = [],
   const [isExpanded, setIsExpanded] = useState(false);
   const [expandedFieldId, setExpandedFieldId] = useState<string | null>(null);
   
-  // Debug log - confirm source is database
-  console.log("[v0] OfferInfoSection - subcategoryId:", subcategoryId, "offer fields count:", fieldDefinitions.length, "field_scope: offer");
-  
-  // Debug log each field with its type and options
-  fieldDefinitions.forEach(field => {
-    console.log("[v0] Field:", field.fieldName, "type:", field.fieldType, "options:", field.options);
-  });
-  
   // Ensure values is always an array
   const safeValues = values || [];
   

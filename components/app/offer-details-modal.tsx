@@ -1,11 +1,10 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { X, Package, Loader2, ArrowRightLeft, ChevronRight, ChevronLeft, Info, Calendar, Shield, Wrench, AlertTriangle, FileText } from "lucide-react";
+import { useState, useMemo, useEffect } from "react";
+import { X, Package, Loader2, ArrowRightLeft, ChevronRight, Info, Shield, Wrench, FileText } from "lucide-react";
 import { useBarterStore } from "@/lib/store";
 import { toast } from "sonner";
-import type { Offer, Product, OfferInfoFieldValue, ProductInfoField } from "@/lib/types";
-import { getProductInfo } from "@/lib/offer-info-fields";
+import type { Offer, Product, OfferInfoFieldValue } from "@/lib/types";
 
 type Props = {
   offerId: string;
@@ -23,21 +22,58 @@ export function OfferDetailsModal({ offerId, onClose, onNavigateToProduct }: Pro
     addNotification,
   } = useBarterStore();
 
-  const offer = getOfferById(offerId);
-  const product = offer ? products.find((p) => p.productId === offer.productId) : null;
+  // Fetch offer from API (single source of truth = DB)
+  const [dbOffer, setDbOffer] = useState<Offer | null>(null);
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    async function fetchOffer() {
+      try {
+        const response = await fetch(`/api/data/offers/${offerId}`);
+        if (response.ok) {
+          const data = await response.json();
+          setDbOffer(data.offer);
+        }
+      } catch (error) {
+        console.error("[v0] Failed to fetch offer:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchOffer();
+  }, [offerId]);
+  
+  // Use DB offer if available, fallback to store for images (not yet in DB)
+  const storeOffer = getOfferById(offerId);
+  const offer = dbOffer || storeOffer;
+  
+  // Merge images from store (since images aren't yet stored in DB)
+  const mergedOffer = offer ? {
+    ...offer,
+    images: storeOffer?.images || offer.images,
+  } : null;
+  
+  const product = mergedOffer ? products.find((p) => p.productId === mergedOffer.productId) : null;
   const myOffers = getMyOffers();
-  const isOwnOffer = offer?.ownerUserId === auth.user?.userId;
+  const isOwnOffer = mergedOffer?.ownerUserId === auth.user?.userId;
 
   const [requestingExchange, setRequestingExchange] = useState<string | null>(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [expandedSection, setExpandedSection] = useState<"offer" | "product" | null>(null);
 
-  // Get product info (static)
-  const productInfo = product ? getProductInfo(product.productId) : [];
+  // Get product info from DB (products.product_info JSONB)
+  // Convert Record<string, unknown> to array format for display
+  const productInfo = useMemo(() => {
+    if (!dbOffer?.productInfo) return [];
+    return Object.entries(dbOffer.productInfo).map(([key, value]) => ({
+      fieldName: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+      value: String(value),
+    }));
+  }, [dbOffer?.productInfo]);
 
   // Get hooked products
   const hookedProducts = useMemo(() => {
-    if (!offer) return [];
+    if (!mergedOffer) return [];
     const offerHooks = hooks.filter((h) => h.fromOfferId === offerId);
     const productIds = new Set<string>();
     const productsList: Product[] = [];
@@ -50,22 +86,37 @@ export function OfferDetailsModal({ offerId, onClose, onNavigateToProduct }: Pro
       }
     });
     return productsList;
-  }, [offer, hooks, offerId, getOfferById, products]);
+  }, [mergedOffer, hooks, offerId, getOfferById, products]);
 
   // Check for direct exchange opportunities
   const myOffersInHookedProducts = useMemo(() => {
-    if (!offer || isOwnOffer) return [];
+    if (!mergedOffer || isOwnOffer) return [];
     const matches: { myOffer: Offer; product: Product }[] = [];
     hookedProducts.forEach((prod) => {
       const myOfferInProduct = myOffers.find((o) => o.productId === prod.productId);
       if (myOfferInProduct) matches.push({ myOffer: myOfferInProduct, product: prod });
     });
     return matches;
-  }, [hookedProducts, myOffers, offer, isOwnOffer]);
+  }, [hookedProducts, myOffers, mergedOffer, isOwnOffer]);
 
-  if (!offer || !product) return null;
+  // Show loading state
+  if (loading) {
+    return (
+      <>
+        <div className="fixed inset-0 lg:left-56 z-[60] bg-background/80 backdrop-blur-sm" onClick={onClose} />
+        <div className="fixed inset-0 lg:left-56 z-[70] flex items-center justify-center">
+          <div className="bg-card rounded-2xl border border-border p-8">
+            <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
+            <p className="text-sm text-muted-foreground mt-4">Loading offer details...</p>
+          </div>
+        </div>
+      </>
+    );
+  }
 
-  const images = offer.images || [];
+  if (!mergedOffer || !product) return null;
+
+  const images = mergedOffer.images || [];
   const hasImages = images.length > 0;
 
   async function handleRequestDirectExchange(myOffer: Offer) {
@@ -73,9 +124,9 @@ export function OfferDetailsModal({ offerId, onClose, onNavigateToProduct }: Pro
     await new Promise((r) => setTimeout(r, 800));
     addNotification({
       type: "direct_exchange_req",
-      offerId: offer!.offerId,
+      offerId: mergedOffer!.offerId,
       title: "Direct Exchange Request",
-      message: `Someone wants to directly exchange their "${myOffer.title}" for your "${offer!.title}".`,
+      message: `Someone wants to directly exchange their "${myOffer.title}" for your "${mergedOffer!.title}".`,
       actionType: "view_status",
       actionLabel: "View Request",
     });
@@ -100,12 +151,12 @@ export function OfferDetailsModal({ offerId, onClose, onNavigateToProduct }: Pro
 
   // Group offer info fields by category
   const offerInfoGroups = useMemo(() => {
-    if (!offer.offerInfo || offer.offerInfo.length === 0) return null;
+    if (!mergedOffer.offerInfo || mergedOffer.offerInfo.length === 0) return null;
     
     const groups: { title: string; icon: React.ReactNode; fields: OfferInfoFieldValue[] }[] = [];
     
     // Basic info (condition, color, purchase date, usage)
-    const basicFields = offer.offerInfo.filter(f => 
+    const basicFields = mergedOffer.offerInfo.filter(f => 
       ["condition", "color", "purchase_date", "usage_level", "size"].includes(f.fieldId)
     );
     if (basicFields.length > 0) {
@@ -113,7 +164,7 @@ export function OfferDetailsModal({ offerId, onClose, onNavigateToProduct }: Pro
     }
 
     // Warranty & Documents
-    const warrantyFields = offer.offerInfo.filter(f => 
+    const warrantyFields = mergedOffer.offerInfo.filter(f => 
       ["warranty_status", "invoice_available", "documents"].includes(f.fieldId)
     );
     if (warrantyFields.length > 0) {
@@ -121,7 +172,7 @@ export function OfferDetailsModal({ offerId, onClose, onNavigateToProduct }: Pro
     }
 
     // Condition & Issues
-    const conditionFields = offer.offerInfo.filter(f => 
+    const conditionFields = mergedOffer.offerInfo.filter(f => 
       ["functional_issues", "visible_damages", "repairs_done", "repaired_components"].includes(f.fieldId)
     );
     if (conditionFields.length > 0) {
@@ -129,7 +180,7 @@ export function OfferDetailsModal({ offerId, onClose, onNavigateToProduct }: Pro
     }
 
     // Included items
-    const includedFields = offer.offerInfo.filter(f => 
+    const includedFields = mergedOffer.offerInfo.filter(f => 
       ["included_items"].includes(f.fieldId)
     );
     if (includedFields.length > 0) {
@@ -137,7 +188,7 @@ export function OfferDetailsModal({ offerId, onClose, onNavigateToProduct }: Pro
     }
 
     // Additional notes
-    const noteFields = offer.offerInfo.filter(f => 
+    const noteFields = mergedOffer.offerInfo.filter(f => 
       ["additional_notes"].includes(f.fieldId)
     );
     if (noteFields.length > 0) {
@@ -145,7 +196,7 @@ export function OfferDetailsModal({ offerId, onClose, onNavigateToProduct }: Pro
     }
 
     return groups.length > 0 ? groups : null;
-  }, [offer.offerInfo]);
+  }, [mergedOffer.offerInfo]);
 
   return (
     <>
@@ -181,14 +232,14 @@ export function OfferDetailsModal({ offerId, onClose, onNavigateToProduct }: Pro
                   {hasImages ? (
                     <img
                       src={images[0].url}
-                      alt={offer.title}
+                      alt={mergedOffer.title}
                       className="w-full h-full object-cover"
                       crossOrigin="anonymous"
                     />
                   ) : product.imageUrl ? (
                     <img
                       src={product.imageUrl}
-                      alt={offer.title}
+                      alt={mergedOffer.title}
                       className="w-full h-full object-cover"
                       crossOrigin="anonymous"
                     />
@@ -202,13 +253,13 @@ export function OfferDetailsModal({ offerId, onClose, onNavigateToProduct }: Pro
                 {/* Title and description */}
                 <div className="flex-1 min-w-0">
                   <h2 className="text-lg lg:text-xl font-semibold text-foreground mb-1 text-balance">
-                    {offer.title}
+                    {mergedOffer.title}
                   </h2>
                   <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2">
-                    {offer.description}
+                    {mergedOffer.description}
                   </p>
                   <p className="text-xs text-muted-foreground/60 mt-1">
-                    {offer.hookedCount} {offer.hookedCount === 1 ? "person" : "people"} interested
+                    {mergedOffer.hookedCount} {mergedOffer.hookedCount === 1 ? "person" : "people"} interested
                   </p>
                 </div>
               </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Package, ChevronDown, ChevronUp, MapPin, MessageSquare, Pencil, MoreHorizontal, X, Link2Off, Eye } from "lucide-react";
 import { useBarterStore } from "@/lib/store";
 import type { HookStatus, LockLevel, Offer, Product } from "@/lib/types";
@@ -200,22 +200,57 @@ export function MyOffersTab() {
     );
   }
 
-  // If editing an offer, show embedded AddOfferFlow with editOffer prop
-  if (editOffer) {
-    const offerToEdit = getOfferById(editOffer);
-    if (offerToEdit) {
-      return (
-        <div className="w-full">
-          <AddOfferFlow
-            open={true}
-            onClose={() => setEditOffer(null)}
-            onSuccess={() => setEditOffer(null)}
-            editOffer={offerToEdit}
-            embedded={true}
-          />
-        </div>
-      );
+  // Fetch offer from API when editing (DB is single source of truth)
+  const [offerToEdit, setOfferToEdit] = useState<Offer | null>(null);
+  const [loadingEditOffer, setLoadingEditOffer] = useState(false);
+  
+  useEffect(() => {
+    if (editOffer) {
+      setLoadingEditOffer(true);
+      fetch(`/api/data/offers/${editOffer}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.offer) {
+            // Merge with store data for images (not yet in DB)
+            const storeOffer = getOfferById(editOffer);
+            setOfferToEdit({
+              ...data.offer,
+              images: storeOffer?.images || data.offer.images,
+            });
+          }
+        })
+        .catch(err => console.error("[v0] Failed to fetch offer for edit:", err))
+        .finally(() => setLoadingEditOffer(false));
+    } else {
+      setOfferToEdit(null);
     }
+  }, [editOffer, getOfferById]);
+
+  // If editing an offer, show embedded AddOfferFlow with editOffer prop
+  if (editOffer && offerToEdit) {
+    return (
+      <div className="w-full">
+        <AddOfferFlow
+          open={true}
+          onClose={() => setEditOffer(null)}
+          onSuccess={() => setEditOffer(null)}
+          editOffer={offerToEdit}
+          embedded={true}
+        />
+      </div>
+    );
+  }
+  
+  // Show loading state while fetching offer for edit
+  if (editOffer && loadingEditOffer) {
+    return (
+      <div className="w-full flex items-center justify-center py-12">
+        <div className="text-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent mx-auto" />
+          <p className="text-sm text-muted-foreground mt-4">Loading offer...</p>
+        </div>
+      </div>
+    );
   }
 
   return (

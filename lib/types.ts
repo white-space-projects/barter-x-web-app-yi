@@ -76,6 +76,7 @@ export type OfferPickupAddress = {
   city: string;
   state?: string;
   zip?: string;
+  postalCode?: string;  // DB uses postalCode, UI uses zip - support both
   addressLine1?: string;
   addressLine2?: string;
   phone?: string; // Required when confirming pickup - verified via OTP
@@ -109,6 +110,8 @@ export type Offer = {
   images?: OfferImage[];
   // Offer info fields (user-provided, varies by subcategory)
   offerInfo?: OfferInfoFieldValue[];
+  // Product info from products.product_info JSONB (read-only, fetched from DB)
+  productInfo?: Record<string, unknown>;
   
   // === WORKFLOW FIELDS ===
   // Readiness confirmation

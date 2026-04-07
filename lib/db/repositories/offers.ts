@@ -20,10 +20,11 @@ interface DbOffer {
   condition: string | null;
   pickup_country_id: string | null;
   pickup_city_id: string | null;
-  pickup_address: string | null;
+  pickup_address: Record<string, unknown> | null;  // JSONB - full address object
   pickup_notes: string | null;
   status: string | null;
   exchange_preferences: Record<string, unknown> | null;
+  offer_info: Record<string, unknown> | null;  // JSONB - dynamic offer fields
   hook_status: string | null;
   expires_at: string | null;
   ready_state: boolean;
@@ -39,6 +40,7 @@ interface DbOffer {
   // Joined fields
   product_title?: string;
   product_image_key?: string;
+  product_info?: Record<string, unknown> | null;  // JSONB from products table
   user_display_name?: string;
 }
 
@@ -65,6 +67,19 @@ function parseNotificationState(value: unknown): NotificationState {
  * Note: Maps to existing Offer type from lib/types.ts
  */
 function mapToOffer(row: DbOffer): Offer {
+  // Parse pickup_address from JSONB
+  const pickupAddr = row.pickup_address as Record<string, string> | null;
+  
+  // Parse offer_info from JSONB - convert { field_key: value } to OfferInfoFieldValue[]
+  const offerInfoValues: OfferInfoFieldValue[] = row.offer_info 
+    ? Object.entries(row.offer_info).map(([key, value]) => ({
+        fieldId: key,
+        fieldName: key, // Will be replaced with actual label when displaying
+        fieldType: "text" as const,
+        value: value as string | string[],
+      }))
+    : [];
+
   return {
     offerId: row.offer_id,
     productId: row.product_id || "",
@@ -76,19 +91,19 @@ function mapToOffer(row: DbOffer): Offer {
     hookedCount: 0, // Not in current schema, would need to compute from hooks table
     outgoingHookCount: 0, // Not in current schema, would need to compute from hooks table
     readyForCommit: row.ready_state,
-    // Pickup address
-    pickupAddress: row.pickup_address ? {
-      country: "", // Would need to join with countries table
-      city: "",    // Would need to join with cities table
-      addressLine1: row.pickup_address,
+    // Pickup address from JSONB
+    pickupAddress: pickupAddr ? {
+      country: pickupAddr.country || "",
+      city: pickupAddr.city || "",
+      state: pickupAddr.state || "",
+      postalCode: pickupAddr.postalCode || "",
+      addressLine1: pickupAddr.addressLine1 || "",
+      addressLine2: pickupAddr.addressLine2 || "",
     } : undefined,
-    // Offer info from exchange_preferences
-    offerInfo: row.exchange_preferences 
-      ? Object.entries(row.exchange_preferences).map(([key, value]) => ({
-          fieldName: key,
-          value: String(value)
-        }))
-      : undefined,
+    // Offer info from offer_info JSONB column
+    offerInfo: offerInfoValues.length > 0 ? offerInfoValues : undefined,
+    // Product info from joined products.product_info
+    productInfo: row.product_info || undefined,
     // Workflow fields
     readyState: row.ready_state,
     escrowPaid: false, // Not in current schema
@@ -100,6 +115,7 @@ function mapToOffer(row: DbOffer): Offer {
 
 /**
  * Fetch a single offer by ID
+ * Includes offer_info, pickup_address, and product_info from joined products table
  */
 export async function fetchOfferById(offerId: string): Promise<Offer | null> {
   const sql = `
@@ -107,6 +123,7 @@ export async function fetchOfferById(offerId: string): Promise<Offer | null> {
       o.*,
       p.title as product_title,
       p.image_key as product_image_key,
+      p.product_info as product_info,
       u.display_name as user_display_name
     FROM application.offers o
     LEFT JOIN application.products p ON o.product_id = p.product_id
@@ -164,12 +181,13 @@ export async function fetchOffers(
     ${whereClause}
   `;
 
-  // Data query
+  // Data query - includes offer_info, pickup_address, and product_info
   const dataSql = `
     SELECT 
       o.*,
       p.title as product_title,
       p.image_key as product_image_key,
+      p.product_info as product_info,
       u.display_name as user_display_name
     FROM application.offers o
     LEFT JOIN application.products p ON o.product_id = p.product_id
@@ -203,6 +221,7 @@ export async function fetchOffers(
  * Create a new offer
  * Note: offer_id must be explicitly generated as there's no default
  * Supports both regular products (productId) and temp products (tempProductId)
+ * Saves offer_info and pickup_address as JSONB
  */
 export async function createOffer(data: {
   productId: string | null;
@@ -212,8 +231,16 @@ export async function createOffer(data: {
   description?: string;
   condition?: string;
   exchangePreferences?: Record<string, unknown>;
+  offerInfo?: Record<string, unknown>;  // Dynamic offer fields { field_key: value }
+  pickupAddress?: Record<string, unknown>;  // Full address object
 }): Promise<Offer> {
-  console.log("[v0] Creating offer with data:", { productId: data.productId, tempProductId: data.tempProductId, userId: data.userId });
+  console.log("[v0] Creating offer with data:", { 
+    productId: data.productId, 
+    tempProductId: data.tempProductId, 
+    userId: data.userId,
+    hasOfferInfo: !!data.offerInfo,
+    hasPickupAddress: !!data.pickupAddress,
+  });
   
   const result = await query<DbOffer>(
     `INSERT INTO application.offers (
@@ -225,6 +252,8 @@ export async function createOffer(data: {
       description, 
       condition,
       exchange_preferences,
+      offer_info,
+      pickup_address,
       status,
       ready_state, 
       lock_level, 
@@ -234,7 +263,7 @@ export async function createOffer(data: {
       updated_at
     ) VALUES (
       gen_random_uuid(),
-      $1, $2, $3, $4, $5, $6, $7,
+      $1, $2, $3, $4, $5, $6, $7, $8, $9,
       'active',
       false, 0, 0, true, NOW(), NOW()
     ) RETURNING *`,
@@ -246,6 +275,8 @@ export async function createOffer(data: {
       data.description || null,
       data.condition || 'good',
       data.exchangePreferences ? JSON.stringify(data.exchangePreferences) : null,
+      data.offerInfo ? JSON.stringify(data.offerInfo) : null,
+      data.pickupAddress ? JSON.stringify(data.pickupAddress) : null,
     ]
   );
 
@@ -259,6 +290,7 @@ export async function createOffer(data: {
 
 /**
  * Update an offer
+ * Supports updating offer_info and pickup_address JSONB fields
  */
 export async function updateOffer(
   offerId: string,
@@ -267,6 +299,8 @@ export async function updateOffer(
     description: string;
     condition: string;
     exchangePreferences: Record<string, unknown>;
+    offerInfo: Record<string, unknown>;  // Dynamic offer fields { field_key: value }
+    pickupAddress: Record<string, unknown>;  // Full address object
     readyState: boolean;
     lockLevel: LockLevel;
     notificationState: NotificationState;
@@ -292,6 +326,14 @@ export async function updateOffer(
   if (data.exchangePreferences !== undefined) {
     updates.push(`exchange_preferences = $${paramIndex++}`);
     values.push(JSON.stringify(data.exchangePreferences));
+  }
+  if (data.offerInfo !== undefined) {
+    updates.push(`offer_info = $${paramIndex++}`);
+    values.push(JSON.stringify(data.offerInfo));
+  }
+  if (data.pickupAddress !== undefined) {
+    updates.push(`pickup_address = $${paramIndex++}`);
+    values.push(JSON.stringify(data.pickupAddress));
   }
   if (data.readyState !== undefined) {
     updates.push(`ready_state = $${paramIndex++}, ready_updated_at = NOW()`);

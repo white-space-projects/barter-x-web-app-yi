@@ -57,7 +57,8 @@ export async function POST(request: NextRequest) {
       description, 
       condition, 
       exchangePreferences,
-      offerInfo, // NEW: Dynamic offer info fields as JSONB object { field_key: value }
+      offerInfo,      // Dynamic offer info fields as JSONB object { field_key: value }
+      pickupAddress,  // Full address object as JSONB
     } = body;
 
     console.log("[v0] Offers API POST: Creating offer", { 
@@ -66,6 +67,7 @@ export async function POST(request: NextRequest) {
       userId, 
       title,
       hasOfferInfo: !!offerInfo && Object.keys(offerInfo).length > 0,
+      hasPickupAddress: !!pickupAddress,
     });
 
     // Either productId or tempProductId is required, but not both required
@@ -84,7 +86,8 @@ export async function POST(request: NextRequest) {
       description,
       condition,
       exchangePreferences,
-      offerInfo, // Pass offer_info JSONB to repository
+      offerInfo,       // Pass offer_info JSONB to repository
+      pickupAddress,   // Pass pickup_address JSONB to repository
     });
 
     console.log("[v0] Offers API POST: Offer created successfully", offer.offerId);

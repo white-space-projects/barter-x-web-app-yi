@@ -1242,15 +1242,17 @@ export function AddOfferFlow({
         setOfferInfo(editOffer.offerInfo || []);
         setShowOfferInfo((editOffer.offerInfo?.length || 0) > 0);
         
-        // Set Step 4 data (address)
-        if (editOffer.pickupAddress) {
-          setPickupCountry(editOffer.pickupAddress.country || "");
-          setPickupCity(editOffer.pickupAddress.city || "");
-          setPickupState(editOffer.pickupAddress.state || "");
-          setPickupZip(editOffer.pickupAddress.zip || "");
-          setPickupAddressLine1(editOffer.pickupAddress.addressLine1 || "");
-          setPickupAddressLine2(editOffer.pickupAddress.addressLine2 || "");
-        }
+  // Set Step 4 data (address)
+  // DB stores as postalCode, but type uses zip - handle both
+  if (editOffer.pickupAddress) {
+  const addr = editOffer.pickupAddress as { country?: string; city?: string; state?: string; zip?: string; postalCode?: string; addressLine1?: string; addressLine2?: string };
+  setPickupCountry(addr.country || "");
+  setPickupCity(addr.city || "");
+  setPickupState(addr.state || "");
+  setPickupZip(addr.postalCode || addr.zip || "");
+  setPickupAddressLine1(addr.addressLine1 || "");
+  setPickupAddressLine2(addr.addressLine2 || "");
+  }
         
         // Start at Step 2 (Step 1 is locked in edit mode)
         setCurrentStep(2);
@@ -1369,6 +1371,26 @@ export function AddOfferFlow({
     if (isEditMode && editOffer) {
       // UPDATE existing offer via API
       try {
+        // Convert offerInfo array to JSONB object { field_key: value }
+        const offerInfoJsonb: Record<string, unknown> = {};
+        offerInfo.forEach(field => {
+          if (field.fieldId && field.value !== null && field.value !== undefined) {
+            offerInfoJsonb[field.fieldId] = field.value;
+          }
+        });
+        
+        // Build pickup address for DB
+        const pickupAddressJsonb = {
+          country: pickupCountry,
+          city: pickupCity,
+          state: pickupState,
+          postalCode: pickupZip,
+          addressLine1: pickupAddressLine1,
+          addressLine2: pickupAddressLine2 || "",
+        };
+        
+        console.log("[v0] Updating offer with offerInfo:", offerInfoJsonb, "pickupAddress:", pickupAddressJsonb);
+        
         const response = await fetch(`/api/data/offers/${editOffer.offerId}`, {
           method: "PUT",
           headers: { 
@@ -1379,6 +1401,8 @@ export function AddOfferFlow({
           body: JSON.stringify({
             title: offerTitle.trim(),
             description: offerDescription.trim(),
+            offerInfo: Object.keys(offerInfoJsonb).length > 0 ? offerInfoJsonb : undefined,
+            pickupAddress: pickupAddressJsonb,
           }),
         });
         
@@ -1452,6 +1476,24 @@ export function AddOfferFlow({
           // Also add to local store for immediate display
           addProduct(selectedProduct);
           
+          // Convert offerInfo array to JSONB object { field_key: value }
+          const offerInfoJsonbTemp: Record<string, unknown> = {};
+          offerInfo.forEach(field => {
+            if (field.fieldId && field.value !== null && field.value !== undefined) {
+              offerInfoJsonbTemp[field.fieldId] = field.value;
+            }
+          });
+          
+          // Build pickup address for DB
+          const pickupAddressJsonbTemp = {
+            country: pickupCountry,
+            city: pickupCity,
+            state: pickupState,
+            postalCode: pickupZip,
+            addressLine1: pickupAddressLine1,
+            addressLine2: pickupAddressLine2 || "",
+          };
+          
           // Create offer linked to temp product
           const offerResponse = await fetch("/api/data/offers", {
             method: "POST",
@@ -1466,6 +1508,8 @@ export function AddOfferFlow({
               title: offerTitle.trim(),
               description: offerDescription.trim(),
               condition: "good",
+              offerInfo: Object.keys(offerInfoJsonbTemp).length > 0 ? offerInfoJsonbTemp : undefined,
+              pickupAddress: pickupAddressJsonbTemp,
             }),
           });
           
@@ -1480,6 +1524,27 @@ export function AddOfferFlow({
         } else {
           // Create offer for existing catalog product
           console.log("[v0] Calling POST /api/data/offers");
+          
+          // Convert offerInfo array to JSONB object { field_key: value }
+          const offerInfoJsonb: Record<string, unknown> = {};
+          offerInfo.forEach(field => {
+            if (field.fieldId && field.value !== null && field.value !== undefined) {
+              offerInfoJsonb[field.fieldId] = field.value;
+            }
+          });
+          
+          // Build pickup address for DB
+          const pickupAddressJsonb = {
+            country: pickupCountry,
+            city: pickupCity,
+            state: pickupState,
+            postalCode: pickupZip,
+            addressLine1: pickupAddressLine1,
+            addressLine2: pickupAddressLine2 || "",
+          };
+          
+          console.log("[v0] Creating offer with offerInfo:", offerInfoJsonb, "pickupAddress:", pickupAddressJsonb);
+          
           const response = await fetch("/api/data/offers", {
             method: "POST",
             headers: { 
@@ -1493,6 +1558,8 @@ export function AddOfferFlow({
               title: offerTitle.trim(),
               description: offerDescription.trim(),
               condition: "good",
+              offerInfo: Object.keys(offerInfoJsonb).length > 0 ? offerInfoJsonb : undefined,
+              pickupAddress: pickupAddressJsonb,
             }),
           });
 

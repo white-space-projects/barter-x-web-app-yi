@@ -182,22 +182,57 @@ export function ViewOffersPanel({ product, onAddOffer, onViewModeChange }: Props
     );
   }
 
-  // If editing an offer, show embedded AddOfferFlow
-  if (editOfferId) {
-    const offerToEdit = getOfferById(editOfferId);
-    if (offerToEdit) {
-      return (
-        <div className="w-full">
-          <AddOfferFlow
-            open={true}
-            onClose={() => setEditOfferId(null)}
-            onSuccess={() => setEditOfferId(null)}
-            editOffer={offerToEdit}
-            embedded={true}
-          />
-        </div>
-      );
+  // Fetch offer from API when editing (DB is single source of truth)
+  const [offerToEdit, setOfferToEdit] = useState<Offer | null>(null);
+  const [loadingEditOffer, setLoadingEditOffer] = useState(false);
+  
+  useEffect(() => {
+    if (editOfferId) {
+      setLoadingEditOffer(true);
+      fetch(`/api/data/offers/${editOfferId}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.offer) {
+            // Merge with store data for images (not yet in DB)
+            const storeOffer = getOfferById(editOfferId);
+            setOfferToEdit({
+              ...data.offer,
+              images: storeOffer?.images || data.offer.images,
+            });
+          }
+        })
+        .catch(err => console.error("[v0] Failed to fetch offer for edit:", err))
+        .finally(() => setLoadingEditOffer(false));
+    } else {
+      setOfferToEdit(null);
     }
+  }, [editOfferId, getOfferById]);
+
+  // If editing an offer, show embedded AddOfferFlow
+  if (editOfferId && offerToEdit) {
+    return (
+      <div className="w-full">
+        <AddOfferFlow
+          open={true}
+          onClose={() => setEditOfferId(null)}
+          onSuccess={() => setEditOfferId(null)}
+          editOffer={offerToEdit}
+          embedded={true}
+        />
+      </div>
+    );
+  }
+  
+  // Show loading state while fetching offer for edit
+  if (editOfferId && loadingEditOffer) {
+    return (
+      <div className="w-full flex items-center justify-center py-12">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
+          <p className="text-sm text-muted-foreground mt-4">Loading offer...</p>
+        </div>
+      </div>
+    );
   }
 
   // If adding offer to a linked product, show embedded AddOfferFlow
