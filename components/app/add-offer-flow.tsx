@@ -1371,11 +1371,14 @@ export function AddOfferFlow({
     if (isEditMode && editOffer) {
       // UPDATE existing offer via API
       try {
-        // Convert offerInfo array to JSONB object { field_key: value }
-        const offerInfoJsonb: Record<string, unknown> = {};
+        // Convert offerInfo array to JSONB object { field_id: { value, label } }
+        const offerInfoJsonb: Record<string, { value: unknown; label: string }> = {};
         offerInfo.forEach(field => {
           if (field.fieldId && field.value !== null && field.value !== undefined) {
-            offerInfoJsonb[field.fieldId] = field.value;
+            offerInfoJsonb[field.fieldId] = {
+              value: field.value,
+              label: field.fieldName,
+            };
           }
         });
         
@@ -1476,11 +1479,14 @@ export function AddOfferFlow({
           // Also add to local store for immediate display
           addProduct(selectedProduct);
           
-          // Convert offerInfo array to JSONB object { field_key: value }
-          const offerInfoJsonbTemp: Record<string, unknown> = {};
+          // Convert offerInfo array to JSONB object { field_id: { value, label } }
+          const offerInfoJsonbTemp: Record<string, { value: unknown; label: string }> = {};
           offerInfo.forEach(field => {
             if (field.fieldId && field.value !== null && field.value !== undefined) {
-              offerInfoJsonbTemp[field.fieldId] = field.value;
+              offerInfoJsonbTemp[field.fieldId] = {
+                value: field.value,
+                label: field.fieldName,
+              };
             }
           });
           
@@ -1525,11 +1531,14 @@ export function AddOfferFlow({
           // Create offer for existing catalog product
           console.log("[v0] Calling POST /api/data/offers");
           
-          // Convert offerInfo array to JSONB object { field_key: value }
-          const offerInfoJsonb: Record<string, unknown> = {};
+          // Convert offerInfo array to JSONB object { field_id: { value, label } }
+          const offerInfoJsonb: Record<string, { value: unknown; label: string }> = {};
           offerInfo.forEach(field => {
             if (field.fieldId && field.value !== null && field.value !== undefined) {
-              offerInfoJsonb[field.fieldId] = field.value;
+              offerInfoJsonb[field.fieldId] = {
+                value: field.value,
+                label: field.fieldName,
+              };
             }
           });
           
@@ -1542,8 +1551,6 @@ export function AddOfferFlow({
             addressLine1: pickupAddressLine1,
             addressLine2: pickupAddressLine2 || "",
           };
-          
-          console.log("[v0] Creating offer with offerInfo:", offerInfoJsonb, "pickupAddress:", pickupAddressJsonb);
           
           const response = await fetch("/api/data/offers", {
             method: "POST",

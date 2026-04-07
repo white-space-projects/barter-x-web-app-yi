@@ -85,15 +85,30 @@ function mapToOffer(row: DbOffer): Offer {
   // Parse pickup_address from JSONB (may be string or object depending on driver)
   const pickupAddr = parseJsonb<Record<string, string>>(row.pickup_address);
   
-  // Parse offer_info from JSONB - convert { field_key: value } to OfferInfoFieldValue[]
+  // Parse offer_info from JSONB - supports both old { field_id: value } and new { field_id: { value, label } } format
   const offerInfoObj = parseJsonb<Record<string, unknown>>(row.offer_info);
   const offerInfoValues: OfferInfoFieldValue[] = offerInfoObj 
-    ? Object.entries(offerInfoObj).map(([key, value]) => ({
-        fieldId: key,
-        fieldName: key, // Will be replaced with actual label when displaying
-        fieldType: "text" as const,
-        value: value as string | string[],
-      }))
+    ? Object.entries(offerInfoObj).map(([fieldId, fieldData]) => {
+        // Check if new format { value, label } or old format (just value)
+        const isNewFormat = fieldData && typeof fieldData === 'object' && 'value' in fieldData && 'label' in fieldData;
+        if (isNewFormat) {
+          const { value, label } = fieldData as { value: unknown; label: string };
+          return {
+            fieldId,
+            fieldName: label,
+            fieldType: "text" as const,
+            value: value as string | string[],
+          };
+        } else {
+          // Old format - use fieldId as fieldName (backward compatibility)
+          return {
+            fieldId,
+            fieldName: fieldId,
+            fieldType: "text" as const,
+            value: fieldData as string | string[],
+          };
+        }
+      })
     : [];
   
   // Parse product_info from JSONB
