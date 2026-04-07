@@ -264,7 +264,7 @@ export async function createProduct(input: CreateProductInput): Promise<Product>
     input.brandId || null,
     input.model || null,
     input.description || null,
-    input.productInfo ? JSON.stringify(input.productInfo) : null,
+    JSON.stringify(input.productInfo || {}), // product_info has NOT NULL constraint, default to empty object
     input.imageKey || null,
   ]);
   
