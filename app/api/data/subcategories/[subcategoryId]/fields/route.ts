@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   createField,
+  createFieldOption,
   fetchSubcategoryById,
 } from "@/lib/db/repositories/subcategories";
 
@@ -106,6 +107,21 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       isFilterable,
       sortOrder,
     });
+
+    // Create options for select/multiselect fields
+    const { options } = body;
+    if ((fieldType === "select" || fieldType === "multiselect") && Array.isArray(options) && options.length > 0) {
+      console.log("[v0] Creating", options.length, "options for field:", field.fieldId);
+      for (const opt of options) {
+        await createFieldOption({
+          fieldId: field.fieldId,
+          optionValue: opt.optionValue,
+          optionLabel: opt.optionLabel,
+          sortOrder: opt.sortOrder ?? 0,
+        });
+      }
+      console.log("[v0] Options created successfully");
+    }
 
     return NextResponse.json({ field }, { status: 201 });
   } catch (error) {

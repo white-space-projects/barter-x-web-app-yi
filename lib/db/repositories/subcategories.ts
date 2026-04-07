@@ -527,6 +527,17 @@ export async function deleteFieldOption(optionId: string): Promise<boolean> {
 }
 
 /**
+ * Delete all options for a field
+ */
+export async function deleteFieldOptions(fieldId: string): Promise<number> {
+  const result = await query(
+    `DELETE FROM application.subcategory_product_field_options WHERE field_id = $1 RETURNING option_id`,
+    [fieldId]
+  );
+  return result.length;
+}
+
+/**
  * Get field schema for a specific subcategory
  * Used by frontend to render dynamic forms
  */

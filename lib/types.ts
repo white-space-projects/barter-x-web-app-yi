@@ -311,6 +311,7 @@ export type ImageCaptureSession = {
 // Field types for offer info fields
 export type OfferInfoFieldType = 
   | "text"
+  | "number"           // Numeric input
   | "date_select"      // MM/YYYY picker
   | "single_select"    // Dropdown with one selection
   | "multi_select"     // Dropdown with multiple selections

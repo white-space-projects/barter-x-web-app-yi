@@ -1146,14 +1146,17 @@ export function AddOfferFlow({
       
       console.log("[v0] loadOfferFields - loaded", fields.length, "offer fields for subcategory:", subcategoryName);
       
-      // Map database fields to OfferInfoFieldDefinition format
-      const mappedFields: OfferInfoFieldDefinition[] = fields.map((f: { fieldId: string; fieldLabel: string; fieldType: string; isRequired: boolean; options?: { optionValue: string }[] }) => ({
-        fieldId: f.fieldId,
-        fieldName: f.fieldLabel,
-        fieldType: mapDbFieldType(f.fieldType),
-        options: f.options?.map((o: { optionValue: string }) => o.optionValue),
-        required: f.isRequired,
-      }));
+  // Map database fields to OfferInfoFieldDefinition format
+  // Use optionLabel for display (human-readable), which is what the user sees
+  const mappedFields: OfferInfoFieldDefinition[] = fields.map((f: { fieldId: string; fieldLabel: string; fieldType: string; isRequired: boolean; options?: { optionValue: string; optionLabel: string }[] }) => ({
+  fieldId: f.fieldId,
+  fieldName: f.fieldLabel,
+  fieldType: mapDbFieldType(f.fieldType),
+  options: f.options?.map((o: { optionValue: string; optionLabel: string }) => o.optionLabel),
+  required: f.isRequired,
+  }));
+  
+  console.log("[v0] loadOfferFields - mapped fields:", mappedFields.map(f => ({ name: f.fieldName, type: f.fieldType, options: f.options })));
       
       setOfferFieldDefinitions(mappedFields);
     } catch (error) {
@@ -1165,6 +1168,8 @@ export function AddOfferFlow({
   }, []);
   
   // Map database field types to OfferInfoFieldType
+  // DB types: text, number, select, multiselect, boolean, date, textarea
+  // Frontend types: text, number, date_select, single_select, multi_select, attachment
   function mapDbFieldType(dbType: string): "text" | "number" | "date_select" | "single_select" | "multi_select" | "attachment" {
     switch (dbType) {
       case "text":
@@ -1181,6 +1186,7 @@ export function AddOfferFlow({
       case "boolean":
         return "single_select"; // Boolean rendered as Yes/No single select
       default:
+        console.log("[v0] Unknown field type:", dbType, "- defaulting to text");
         return "text";
     }
   }

@@ -19,6 +19,11 @@ export function OfferInfoSection({ subcategoryId, fieldDefinitions, values = [],
   // Debug log - confirm source is database
   console.log("[v0] OfferInfoSection - subcategoryId:", subcategoryId, "offer fields count:", fieldDefinitions.length, "field_scope: offer");
   
+  // Debug log each field with its type and options
+  fieldDefinitions.forEach(field => {
+    console.log("[v0] Field:", field.fieldName, "type:", field.fieldType, "options:", field.options);
+  });
+  
   // Ensure values is always an array
   const safeValues = values || [];
   
@@ -109,6 +114,16 @@ export function OfferInfoSection({ subcategoryId, fieldDefinitions, values = [],
             {field.fieldType === "text" && (
               <input
                 type="text"
+                value={(currentValue?.value as string) || ""}
+                onChange={(e) => updateFieldValue(field, e.target.value)}
+                placeholder={`Enter ${field.fieldName.toLowerCase()}...`}
+                className="w-full rounded-lg border border-input bg-secondary px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+            )}
+            
+            {field.fieldType === "number" && (
+              <input
+                type="number"
                 value={(currentValue?.value as string) || ""}
                 onChange={(e) => updateFieldValue(field, e.target.value)}
                 placeholder={`Enter ${field.fieldName.toLowerCase()}...`}
