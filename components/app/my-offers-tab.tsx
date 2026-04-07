@@ -3,7 +3,9 @@
 import { useState, useMemo, useEffect } from "react";
 import { Package, ChevronDown, ChevronUp, MapPin, MessageSquare, Pencil, MoreHorizontal, X, Link2Off, Eye } from "lucide-react";
 import { useBarterStore } from "@/lib/store";
+import { useBarterData } from "@/lib/data-provider";
 import type { HookStatus, LockLevel, Offer, Product } from "@/lib/types";
+import { OfferCardShimmer } from "./offer-card-shimmer";
 import { LOCK_LEVEL_LABELS, LOCK_LEVEL_COLORS, LOCK_LEVEL_BG_COLORS, LOCK_LEVEL_HELPER_TEXT } from "@/lib/types";
 import { PickupReadinessModal } from "./pickup-readiness-modal";
 import { AddOfferFlow } from "./add-offer-flow";
