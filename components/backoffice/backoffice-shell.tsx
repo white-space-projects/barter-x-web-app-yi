@@ -11,7 +11,7 @@
 import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
-import { FileText, LogOut, Menu, X } from "lucide-react";
+import { FileText, LogOut, Menu, X, Package } from "lucide-react";
 import { useBackOfficeAuth } from "@/lib/backoffice/auth-store";
 
 interface NavItem {
@@ -21,13 +21,19 @@ interface NavItem {
   href: string;
 }
 
-// Only Field Schema is preserved
+// Back Office navigation tabs
 const navItems: NavItem[] = [
   {
     id: "field-schema",
     label: "Field Schema",
     icon: FileText,
     href: "/backoffice/field-schema",
+  },
+  {
+    id: "product-catalog",
+    label: "Product Catalog",
+    icon: Package,
+    href: "/backoffice/product-catalog",
   },
 ];
 
