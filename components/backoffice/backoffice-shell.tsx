@@ -2,33 +2,16 @@
 
 /**
  * ============================================================================
- * BACK OFFICE SHELL
+ * BACK OFFICE SHELL (Minimal)
  * ============================================================================
- * Main layout shell for Back Office with sidebar navigation.
- * Uses the same design language as the main app.
+ * Minimal layout shell for Back Office - only contains Field Schema.
+ * This is a preserved module for future Backoffice rebuild.
  */
 
 import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
-import {
-  LayoutDashboard,
-  FlaskConical,
-  Database,
-  Settings,
-  FileCode,
-  BookOpen,
-  MessageSquare,
-  Ticket,
-  Package,
-  LogOut,
-  Menu,
-  X,
-  ChevronDown,
-  Users,
-  FileText,
-  FolderOpen,
-} from "lucide-react";
+import { FileText, LogOut, Menu, X } from "lucide-react";
 import { useBackOfficeAuth } from "@/lib/backoffice/auth-store";
 
 interface NavItem {
@@ -36,87 +19,15 @@ interface NavItem {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   href: string;
-  children?: { label: string; href: string }[];
 }
 
+// Only Field Schema is preserved
 const navItems: NavItem[] = [
-  {
-    id: "dashboard",
-    label: "Dashboard",
-    icon: LayoutDashboard,
-    href: "/backoffice",
-  },
-  {
-    id: "simulate",
-    label: "Simulate",
-    icon: FlaskConical,
-    href: "/backoffice/simulate",
-  },
-  {
-    id: "engine-tables",
-    label: "Engine Tables",
-    icon: Database,
-    href: "/backoffice/engine-tables",
-    children: [
-      { label: "Nodes", href: "/backoffice/engine-tables/nodes" },
-      { label: "Edges", href: "/backoffice/engine-tables/edges" },
-      { label: "Snapshots", href: "/backoffice/engine-tables/snapshots" },
-      { label: "Reservations", href: "/backoffice/engine-tables/reservations" },
-    ],
-  },
-  {
-    id: "config",
-    label: "Config",
-    icon: Settings,
-    href: "/backoffice/config",
-  },
-  {
-    id: "api-docs",
-    label: "API Docs",
-    icon: FileCode,
-    href: "/backoffice/api-docs",
-  },
-  {
-    id: "schema",
-    label: "Schema Reference",
-    icon: BookOpen,
-    href: "/backoffice/schema",
-  },
-  {
-    id: "ai-query",
-    label: "AI Query",
-    icon: MessageSquare,
-    href: "/backoffice/ai-query",
-  },
-  {
-    id: "tickets",
-    label: "Tickets",
-    icon: Ticket,
-    href: "/backoffice/tickets",
-  },
-  {
-    id: "product-review",
-    label: "Product Review",
-    icon: Package,
-    href: "/backoffice/product-review",
-  },
   {
     id: "field-schema",
     label: "Field Schema",
     icon: FileText,
     href: "/backoffice/field-schema",
-  },
-  {
-    id: "allowed-emails",
-    label: "Allowed Emails",
-    icon: Users,
-    href: "/backoffice/allowed-emails",
-  },
-  {
-    id: "catalog-assets",
-    label: "Catalog Assets",
-    icon: FolderOpen,
-    href: "/backoffice/catalog-assets",
   },
 ];
 
@@ -125,7 +36,6 @@ export function BackOfficeShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { user, isAuthenticated, logout } = useBackOfficeAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [expandedItems, setExpandedItems] = useState<string[]>(["engine-tables"]);
   const [hydrated, setHydrated] = useState(false);
 
   // Wait for hydration before checking auth
@@ -158,16 +68,7 @@ export function BackOfficeShell({ children }: { children: React.ReactNode }) {
     router.push("/backoffice/login");
   }
 
-  function toggleExpanded(id: string) {
-    setExpandedItems((prev) =>
-      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
-    );
-  }
-
   function isActive(href: string): boolean {
-    if (href === "/backoffice") {
-      return pathname === "/backoffice";
-    }
     return pathname.startsWith(href);
   }
 
@@ -175,7 +76,7 @@ export function BackOfficeShell({ children }: { children: React.ReactNode }) {
     <nav className="flex flex-col h-full">
       {/* Logo */}
       <div className="p-4 border-b border-border">
-        <Link href="/backoffice" className="flex items-center gap-2">
+        <Link href="/backoffice/field-schema" className="flex items-center gap-2">
           <span className="text-lg font-bold text-primary tracking-tight">
             BARTER-X
           </span>
@@ -189,66 +90,21 @@ export function BackOfficeShell({ children }: { children: React.ReactNode }) {
           {navItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.href);
-            const hasChildren = item.children && item.children.length > 0;
-            const expanded = expandedItems.includes(item.id);
 
             return (
               <li key={item.id}>
-                {hasChildren ? (
-                  <>
-                    <button
-                      onClick={() => toggleExpanded(item.id)}
-                      className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
-                        active
-                          ? "bg-primary/10 text-primary"
-                          : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-                      }`}
-                    >
-                      <Icon className="h-4 w-4 flex-shrink-0" />
-                      <span className="flex-1 text-left">{item.label}</span>
-                      <ChevronDown
-                        className={`h-4 w-4 transition-transform ${
-                          expanded ? "rotate-180" : ""
-                        }`}
-                      />
-                    </button>
-                    {expanded && (
-                      <ul className="mt-1 ml-4 space-y-1 border-l border-border pl-4">
-                        {item.children.map((child) => {
-                          const childActive = pathname === child.href;
-                          return (
-                            <li key={child.href}>
-                              <Link
-                                href={child.href}
-                                onClick={() => setMobileMenuOpen(false)}
-                                className={`block rounded-lg px-3 py-2 text-sm transition-colors ${
-                                  childActive
-                                    ? "bg-primary/10 text-primary"
-                                    : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-                                }`}
-                              >
-                                {child.label}
-                              </Link>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    )}
-                  </>
-                ) : (
-                  <Link
-                    href={item.href}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
-                      active
-                        ? "bg-primary/10 text-primary"
-                        : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-                    }`}
-                  >
-                    <Icon className="h-4 w-4 flex-shrink-0" />
-                    <span>{item.label}</span>
-                  </Link>
-                )}
+                <Link
+                  href={item.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
+                    active
+                      ? "bg-primary/10 text-primary"
+                      : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                  }`}
+                >
+                  <Icon className="h-4 w-4 flex-shrink-0" />
+                  <span>{item.label}</span>
+                </Link>
               </li>
             );
           })}
@@ -287,7 +143,7 @@ export function BackOfficeShell({ children }: { children: React.ReactNode }) {
 
       {/* Mobile Header */}
       <header className="fixed left-0 right-0 top-0 z-50 flex h-14 items-center justify-between border-b border-border bg-card px-4 lg:hidden">
-        <Link href="/backoffice" className="flex items-center gap-2">
+        <Link href="/backoffice/field-schema" className="flex items-center gap-2">
           <span className="text-lg font-bold text-primary tracking-tight">
             BARTER-X
           </span>
