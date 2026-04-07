@@ -7,7 +7,6 @@ import {
   Home,
   Package,
   MessageSquare,
-  ShieldCheck,
   FlaskConical,
   ChevronLeft,
   ChevronRight,
@@ -120,13 +119,7 @@ const NAV_ITEMS: NavItem[] = [
     icon: MessageSquare,
     type: "utility",
   },
-  {
-    id: "admin",
-    label: "Admin",
-    icon: ShieldCheck,
-    type: "utility",
-    adminOnly: true,
-  },
+  // Admin tab removed - product image management moved to Back Office
   {
     id: "simulate",
     label: "Simulate",

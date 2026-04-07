@@ -25,7 +25,7 @@ import { MyOffersTab } from "@/components/app/my-offers-tab";
 import { TabContentWrapper } from "@/components/app/tab-content-wrapper";
 import { ChatTab } from "@/components/app/chat-tab";
 import { AddOfferFlow } from "@/components/app/add-offer-flow";
-import { AdminPanel } from "@/components/app/admin-panel";
+// AdminPanel removed - product image management moved to Back Office Catalog Assets
 import { SimulateTab } from "@/components/app/simulate-tab";
 import { ProfileTab } from "@/components/app/profile-tab";
 import { PickupReadinessModal } from "@/components/app/pickup-readiness-modal";
@@ -323,7 +323,7 @@ function WorkspaceContent() {
               {/* Utility tabs - hidden when Add Offer is open */}
               {!addOfferOpen && activeUtilityTab === "my-offers" && <MyOffersTab />}
               {!addOfferOpen && activeUtilityTab === "chat" && <ChatTab onOpenPickupModal={setPickupModalOfferId} />}
-              {!addOfferOpen && activeUtilityTab === "admin" && isAdmin && <AdminPanel />}
+              {/* Admin Panel removed - product image management moved to Back Office Catalog Assets */}
               {!addOfferOpen && activeUtilityTab === "simulate" && isAdmin && <SimulateTab />}
               {!addOfferOpen && activeUtilityTab === "profile" && (
                 <ProfileTab 

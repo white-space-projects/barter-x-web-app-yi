@@ -27,6 +27,7 @@ import {
   ChevronDown,
   Users,
   FileText,
+  FolderOpen,
 } from "lucide-react";
 import { useBackOfficeAuth } from "@/lib/backoffice/auth-store";
 
@@ -110,6 +111,12 @@ const navItems: NavItem[] = [
     label: "Allowed Emails",
     icon: Users,
     href: "/backoffice/allowed-emails",
+  },
+  {
+    id: "catalog-assets",
+    label: "Catalog Assets",
+    icon: FolderOpen,
+    href: "/backoffice/catalog-assets",
   },
 ];
 

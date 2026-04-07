@@ -7,7 +7,6 @@ import {
   Home,
   Package,
   MessageSquare,
-  ShieldCheck,
   FlaskConical,
   Plus,
   MoreHorizontal,
@@ -92,14 +91,9 @@ export function BottomNav({
       icon: User,
       type: "utility" as const,
     },
+    // Admin tab removed - product image management moved to Back Office
     ...(isAdmin
       ? [
-          {
-            id: "admin",
-            label: "Admin",
-            icon: ShieldCheck,
-            type: "utility" as const,
-          },
           {
             id: "simulate",
             label: "Simulate",
