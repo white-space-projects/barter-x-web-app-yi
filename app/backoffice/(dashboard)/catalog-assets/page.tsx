@@ -902,6 +902,17 @@ export default function CatalogAssetsPage() {
     }
   }, []);
   
+  // Load product detail when selectedProductId changes
+  useEffect(() => {
+    if (selectedProductId) {
+      loadProductDetail(selectedProductId);
+    } else {
+      setProductDetail(null);
+      setProductInfoFields([]);
+      setProductInfoValues({});
+    }
+  }, [selectedProductId, loadProductDetail]);
+  
   // Map database field types to OfferInfoFieldType
   // Note: "number" is mapped to "text" since OfferInfoFieldType doesn't have a number type
   function mapDbFieldType(dbType: string): "text" | "date_select" | "single_select" | "multi_select" | "attachment" {
