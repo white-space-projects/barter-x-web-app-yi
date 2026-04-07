@@ -879,18 +879,14 @@ export default function CatalogAssetsPage() {
   }, []);
   
   const loadProductDetail = useCallback(async (productId: string) => {
-    console.log("[v0] loadProductDetail called with productId:", productId);
     setLoadingDetail(true);
     try {
       const response = await fetch(`/api/data/products/${productId}`);
-      console.log("[v0] loadProductDetail response status:", response.status);
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        console.log("[v0] loadProductDetail error response:", errorData);
         throw new Error(errorData.error || "Failed to fetch product");
       }
       const data = await response.json();
-      console.log("[v0] loadProductDetail success, product:", data.product?.title);
       setProductDetail(data.product);
       
       // Load existing product info values
@@ -942,6 +938,55 @@ export default function CatalogAssetsPage() {
       setProductInfoValues({});
     }
   }, [selectedProductId, loadProductDetail]);
+  
+  // ---------------------------------------------------------------------------
+  // RENDER - Product Detail Loading State
+  // ---------------------------------------------------------------------------
+  if (selectedProductId && loadingDetail) {
+    return (
+      <div className="space-y-6">
+        {/* Back Button */}
+        <button
+          onClick={() => setSelectedProductId(null)}
+          className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          <span className="text-sm">Back to products</span>
+        </button>
+        
+        {/* Loading */}
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </div>
+    );
+  }
+  
+  // ---------------------------------------------------------------------------
+  // RENDER - Product Detail Error State
+  // ---------------------------------------------------------------------------
+  if (selectedProductId && !loadingDetail && !productDetail) {
+    return (
+      <div className="space-y-6">
+        {/* Back Button */}
+        <button
+          onClick={() => setSelectedProductId(null)}
+          className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          <span className="text-sm">Back to products</span>
+        </button>
+        
+        {/* Error */}
+        <div className="flex flex-col items-center justify-center py-20 gap-4">
+          <p className="text-muted-foreground">Failed to load product details</p>
+          <Button variant="outline" onClick={() => loadProductDetail(selectedProductId)}>
+            Try Again
+          </Button>
+        </div>
+      </div>
+    );
+  }
   
   // ---------------------------------------------------------------------------
   // RENDER - Product Detail View
