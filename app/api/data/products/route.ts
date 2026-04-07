@@ -37,8 +37,6 @@ export async function GET(request: NextRequest) {
         offset,
       });
       
-      console.log("[v0] Products API (catalog): Fetched", products.length, "products, total:", total);
-      
       return NextResponse.json({ 
         products, 
         total,
@@ -58,8 +56,6 @@ export async function GET(request: NextRequest) {
       limit,
       offset,
     });
-    
-    console.log("[v0] Products API: Fetched", products.length, "products, total:", total);
     
     return NextResponse.json({ 
       products, 

@@ -150,13 +150,6 @@ export function ProductsTab({ productType = "goods", onAddOfferWithProduct }: Pr
   
   // Debug output
   useEffect(() => {
-    console.log("[v0] ProductsTab: productType =", productType);
-    console.log("[v0] ProductsTab: products count =", products.length);
-    console.log("[v0] ProductsTab: isLoading =", isLoading);
-    console.log("[v0] ProductsTab: error =", error);
-    if (products.length > 0) {
-      console.log("[v0] ProductsTab: first product =", products[0]);
-    }
   }, [productType, products, isLoading, error]);
   
   // Get categories for the current product type

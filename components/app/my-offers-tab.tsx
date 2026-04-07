@@ -280,8 +280,10 @@ export function MyOffersTab() {
         </button>
       </div>
 
-      {/* Offers list */}
-      {displayedOffers.length === 0 ? (
+      {/* Offers list - show shimmer while loading */}
+      {offersLoading ? (
+        <OfferCardShimmer count={4} variant="my-offers" />
+      ) : displayedOffers.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
           <Package className="mb-3 h-10 w-10 opacity-40" />
           <p className="text-sm">

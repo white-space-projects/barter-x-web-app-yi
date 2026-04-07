@@ -37,31 +37,31 @@ export function OfferCardShimmer({ count = 4, variant = "my-offers" }: Props) {
 
 function OfferCardShimmerCard() {
   return (
-    <div className="relative overflow-hidden rounded-xl border border-border bg-card w-full card-shadow-primary">
+    <div className="relative overflow-hidden rounded-xl border border-border bg-card w-full card-shadow-primary min-h-[88px]">
       {/* Shimmer overlay */}
       <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite]">
         <div className="h-full w-1/2 bg-gradient-to-r from-transparent via-primary/10 to-transparent" />
       </div>
 
-      {/* Card content - matches offer card structure */}
-      <div className="py-3 px-4">
+      {/* Card content - matches offer card: p-4, min-h-[88px], flex gap-3 */}
+      <div className="p-4 min-h-[88px]">
         <div className="flex gap-3">
-          {/* 64x64 Image placeholder */}
-          <div className="h-16 w-16 flex-shrink-0 rounded-lg bg-secondary/50" />
+          {/* 64x64 Image placeholder - dark to match theme */}
+          <div className="h-16 w-16 flex-shrink-0 rounded-lg bg-secondary/60" />
 
-          {/* Text content */}
-          <div className="flex-1 min-w-0 flex flex-col justify-center gap-1.5">
+          {/* Text content - centered vertically */}
+          <div className="flex-1 min-w-0 flex flex-col justify-center gap-2">
             {/* Title placeholder */}
-            <div className="h-4 w-3/4 rounded bg-secondary/50" />
+            <div className="h-4 w-3/4 rounded bg-secondary/60" />
             {/* Subtitle placeholder */}
-            <div className="h-3 w-1/2 rounded bg-secondary/50" />
+            <div className="h-3 w-1/2 rounded bg-secondary/60" />
             {/* Hooks count placeholder */}
-            <div className="h-3 w-16 rounded bg-secondary/50" />
+            <div className="h-3 w-20 rounded bg-secondary/60" />
           </div>
 
-          {/* Right side: status badge placeholder */}
-          <div className="flex-shrink-0 flex flex-col items-end justify-end h-16">
-            <div className="h-5 w-20 rounded-full bg-secondary/50" />
+          {/* Right side: edit icon placeholder */}
+          <div className="flex-shrink-0 flex flex-col items-end justify-center">
+            <div className="h-4 w-4 rounded bg-secondary/60" />
           </div>
         </div>
       </div>
