@@ -226,3 +226,236 @@ export async function fetchBrands(): Promise<{ brandId: string; slug: string; na
     name: r.name,
   }));
 }
+
+// =============================================================================
+// CREATE / UPDATE FUNCTIONS
+// =============================================================================
+
+interface CreateProductInput {
+  title: string;
+  barterTypeId: string;
+  categoryId?: string;
+  subcategoryId?: string;
+  brandId?: string;
+  model?: string;
+  description?: string;
+  productInfo?: Record<string, unknown>;
+  imageKey?: string;
+}
+
+/**
+ * Create a new product
+ */
+export async function createProduct(input: CreateProductInput): Promise<Product> {
+  const sql = `
+    INSERT INTO application.products (
+      title, barter_type_id, category_id, subcategory_id, brand_id, model, 
+      description, product_info, image_key, is_active, created_at, updated_at
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, true, NOW(), NOW())
+    RETURNING product_id
+  `;
+  
+  const result = await query<{ product_id: string }>(sql, [
+    input.title,
+    input.barterTypeId,
+    input.categoryId || null,
+    input.subcategoryId || null,
+    input.brandId || null,
+    input.model || null,
+    input.description || null,
+    input.productInfo ? JSON.stringify(input.productInfo) : null,
+    input.imageKey || null,
+  ]);
+  
+  if (!result[0]) {
+    throw new Error("Failed to create product");
+  }
+  
+  // Fetch and return the created product
+  const product = await fetchProductById(result[0].product_id);
+  if (!product) {
+    throw new Error("Failed to fetch created product");
+  }
+  
+  return product;
+}
+
+interface UpdateProductInput {
+  title?: string;
+  description?: string;
+  productInfo?: Record<string, unknown>;
+  imageKey?: string;
+}
+
+/**
+ * Update an existing product
+ */
+export async function updateProduct(productId: string, input: UpdateProductInput): Promise<Product> {
+  const updates: string[] = [];
+  const params: unknown[] = [];
+  let paramIndex = 1;
+  
+  if (input.title !== undefined) {
+    updates.push(`title = $${paramIndex++}`);
+    params.push(input.title);
+  }
+  if (input.description !== undefined) {
+    updates.push(`description = $${paramIndex++}`);
+    params.push(input.description);
+  }
+  if (input.productInfo !== undefined) {
+    updates.push(`product_info = $${paramIndex++}`);
+    params.push(JSON.stringify(input.productInfo));
+  }
+  if (input.imageKey !== undefined) {
+    updates.push(`image_key = $${paramIndex++}`);
+    params.push(input.imageKey);
+  }
+  
+  if (updates.length === 0) {
+    const product = await fetchProductById(productId);
+    if (!product) throw new Error("Product not found");
+    return product;
+  }
+  
+  updates.push(`updated_at = NOW()`);
+  params.push(productId);
+  
+  const sql = `
+    UPDATE application.products
+    SET ${updates.join(", ")}
+    WHERE product_id = $${paramIndex}
+    RETURNING product_id
+  `;
+  
+  const result = await query<{ product_id: string }>(sql, params);
+  
+  if (!result[0]) {
+    throw new Error("Failed to update product");
+  }
+  
+  const product = await fetchProductById(result[0].product_id);
+  if (!product) {
+    throw new Error("Failed to fetch updated product");
+  }
+  
+  return product;
+}
+
+/**
+ * Update category icon
+ */
+export async function updateCategoryIcon(categoryId: string, iconKey: string): Promise<void> {
+  const sql = `UPDATE application.categories SET icon_key = $1, updated_at = NOW() WHERE category_id = $2`;
+  await query(sql, [iconKey, categoryId]);
+}
+
+/**
+ * Update subcategory icon
+ */
+export async function updateSubcategoryIcon(subcategoryId: string, iconKey: string): Promise<void> {
+  const sql = `UPDATE application.subcategories SET icon_key = $1, updated_at = NOW() WHERE subcategory_id = $2`;
+  await query(sql, [iconKey, subcategoryId]);
+}
+
+/**
+ * Update brand logo
+ */
+export async function updateBrandLogo(brandId: string, logoKey: string): Promise<void> {
+  const sql = `UPDATE application.brands SET logo_key = $1, updated_at = NOW() WHERE brand_id = $2`;
+  await query(sql, [logoKey, brandId]);
+}
+
+/**
+ * Fetch product with full details for catalog assets (includes IDs)
+ */
+export async function fetchProductWithIds(productId: string): Promise<{
+  productId: string;
+  title: string;
+  barterTypeId: string;
+  barterTypeName: string;
+  barterTypeSlug: string;
+  categoryId: string | null;
+  categoryName: string | null;
+  categoryIconKey: string | null;
+  subcategoryId: string | null;
+  subcategoryName: string | null;
+  subcategoryIconKey: string | null;
+  brandId: string | null;
+  brandName: string | null;
+  brandLogoKey: string | null;
+  model: string | null;
+  imageKey: string | null;
+  productInfo: Record<string, unknown> | null;
+} | null> {
+  const sql = `
+    SELECT 
+      p.product_id,
+      p.title,
+      p.barter_type_id,
+      bt.name as barter_type_name,
+      bt.slug as barter_type_slug,
+      p.category_id,
+      c.name as category_name,
+      c.icon_key as category_icon_key,
+      p.subcategory_id,
+      sc.name as subcategory_name,
+      sc.icon_key as subcategory_icon_key,
+      p.brand_id,
+      b.name as brand_name,
+      b.logo_key as brand_logo_key,
+      p.model,
+      p.image_key,
+      p.product_info
+    FROM application.products p
+    LEFT JOIN application.barter_types bt ON p.barter_type_id = bt.barter_type_id
+    LEFT JOIN application.categories c ON p.category_id = c.category_id
+    LEFT JOIN application.subcategories sc ON p.subcategory_id = sc.subcategory_id
+    LEFT JOIN application.brands b ON p.brand_id = b.brand_id
+    WHERE p.product_id = $1
+  `;
+  
+  const result = await query<{
+    product_id: string;
+    title: string;
+    barter_type_id: string;
+    barter_type_name: string;
+    barter_type_slug: string;
+    category_id: string | null;
+    category_name: string | null;
+    category_icon_key: string | null;
+    subcategory_id: string | null;
+    subcategory_name: string | null;
+    subcategory_icon_key: string | null;
+    brand_id: string | null;
+    brand_name: string | null;
+    brand_logo_key: string | null;
+    model: string | null;
+    image_key: string | null;
+    product_info: Record<string, unknown> | null;
+  }>(sql, [productId]);
+  
+  if (!result[0]) return null;
+  
+  const r = result[0];
+  return {
+    productId: r.product_id,
+    title: r.title,
+    barterTypeId: r.barter_type_id,
+    barterTypeName: r.barter_type_name,
+    barterTypeSlug: r.barter_type_slug,
+    categoryId: r.category_id,
+    categoryName: r.category_name,
+    categoryIconKey: r.category_icon_key,
+    subcategoryId: r.subcategory_id,
+    subcategoryName: r.subcategory_name,
+    subcategoryIconKey: r.subcategory_icon_key,
+    brandId: r.brand_id,
+    brandName: r.brand_name,
+    brandLogoKey: r.brand_logo_key,
+    model: r.model,
+    imageKey: r.image_key,
+    productInfo: r.product_info,
+  };
+}
