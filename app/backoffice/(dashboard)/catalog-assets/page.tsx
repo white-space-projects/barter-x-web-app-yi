@@ -855,12 +855,42 @@ export default function CatalogAssetsPage() {
   // ---------------------------------------------------------------------------
   // PRODUCT DETAIL HANDLERS
   // ---------------------------------------------------------------------------
+  
+  // Map database field types to OfferInfoFieldType
+  // Note: "number" is mapped to "text" since OfferInfoFieldType doesn't have a number type
+  // This must be defined before loadProductDetail which uses it
+  const mapDbFieldType = useCallback((dbType: string): "text" | "date_select" | "single_select" | "multi_select" | "attachment" => {
+    switch (dbType) {
+      case "text":
+      case "textarea":
+      case "number": // Map number to text input (handled specially in renderer)
+        return "text";
+      case "date":
+        return "date_select";
+      case "select":
+        return "single_select";
+      case "multiselect":
+        return "multi_select";
+      case "boolean":
+        return "single_select";
+      default:
+        return "text";
+    }
+  }, []);
+  
   const loadProductDetail = useCallback(async (productId: string) => {
+    console.log("[v0] loadProductDetail called with productId:", productId);
     setLoadingDetail(true);
     try {
       const response = await fetch(`/api/data/products/${productId}`);
-      if (!response.ok) throw new Error("Failed to fetch product");
+      console.log("[v0] loadProductDetail response status:", response.status);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.log("[v0] loadProductDetail error response:", errorData);
+        throw new Error(errorData.error || "Failed to fetch product");
+      }
       const data = await response.json();
+      console.log("[v0] loadProductDetail success, product:", data.product?.title);
       setProductDetail(data.product);
       
       // Load existing product info values
@@ -900,7 +930,7 @@ export default function CatalogAssetsPage() {
     } finally {
       setLoadingDetail(false);
     }
-  }, []);
+  }, [mapDbFieldType]);
   
   // Load product detail when selectedProductId changes
   useEffect(() => {
@@ -913,89 +943,6 @@ export default function CatalogAssetsPage() {
     }
   }, [selectedProductId, loadProductDetail]);
   
-  // Map database field types to OfferInfoFieldType
-  // Note: "number" is mapped to "text" since OfferInfoFieldType doesn't have a number type
-  function mapDbFieldType(dbType: string): "text" | "date_select" | "single_select" | "multi_select" | "attachment" {
-    switch (dbType) {
-      case "text":
-      case "textarea":
-      case "number": // Map number to text input (handled specially in renderer)
-        return "text";
-      case "date":
-        return "date_select";
-      case "select":
-        return "single_select";
-      case "multiselect":
-        return "multi_select";
-      case "boolean":
-        return "single_select";
-      default:
-        return "text";
-    }
-  }
-  
-  // Load product detail when selected
-  useEffect(() => {
-    if (selectedProductId) {
-      loadProductDetail(selectedProductId);
-    } else {
-      setProductDetail(null);
-      setProductInfoFields([]);
-      setProductInfoValues({});
-    }
-  }, [selectedProductId, loadProductDetail]);
-  
-  // Upload asset handler
-  const handleUploadAsset = useCallback(async (
-    file: File,
-    assetType: "product" | "category" | "subcategory" | "brand",
-    entityId: string
-  ): Promise<string | null> => {
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("assetType", assetType);
-    formData.append("entityId", entityId);
-    
-    const response = await fetch("/api/backoffice/catalog-assets/upload", {
-      method: "POST",
-      body: formData,
-    });
-    
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || "Upload failed");
-    }
-    
-    const data = await response.json();
-    return data.fileKey;
-  }, []);
-  
-  // Save product info
-  const handleSaveProductInfo = useCallback(async () => {
-    if (!productDetail) return;
-    
-    setSavingDetail(true);
-    try {
-      const response = await fetch(`/api/data/products/${productDetail.productId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          productInfo: productInfoValues,
-        }),
-      });
-      
-      if (!response.ok) throw new Error("Failed to save product info");
-      
-      toast.success("Product info saved successfully");
-      mutate();
-    } catch (error) {
-      console.error("Save error:", error);
-      toast.error("Failed to save product info");
-    } finally {
-      setSavingDetail(false);
-    }
-  }, [productDetail, productInfoValues, mutate]);
-
   // ---------------------------------------------------------------------------
   // RENDER - Product Detail View
   // ---------------------------------------------------------------------------
