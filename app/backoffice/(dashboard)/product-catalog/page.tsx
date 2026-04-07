@@ -117,6 +117,8 @@ export default function ProductCatalogPage() {
       setLoading(true);
       try {
         const params = new URLSearchParams();
+        params.set("format", "catalog"); // Use catalog format for back office
+        params.set("includeInactive", "true"); // Show all products in back office
         params.set("page", String(page));
         params.set("limit", String(pageSize));
         if (selectedSubcategory) params.set("subcategoryId", selectedSubcategory);
