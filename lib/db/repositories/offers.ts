@@ -63,22 +63,41 @@ function parseNotificationState(value: unknown): NotificationState {
 }
 
 /**
+ * Safely parse JSONB - handles both string and already-parsed object
+ */
+function parseJsonb<T>(value: unknown): T | null {
+  if (!value) return null;
+  if (typeof value === 'string') {
+    try {
+      return JSON.parse(value) as T;
+    } catch {
+      return null;
+    }
+  }
+  return value as T;
+}
+
+/**
  * Map database row to Offer type
  * Note: Maps to existing Offer type from lib/types.ts
  */
 function mapToOffer(row: DbOffer): Offer {
-  // Parse pickup_address from JSONB
-  const pickupAddr = row.pickup_address as Record<string, string> | null;
+  // Parse pickup_address from JSONB (may be string or object depending on driver)
+  const pickupAddr = parseJsonb<Record<string, string>>(row.pickup_address);
   
   // Parse offer_info from JSONB - convert { field_key: value } to OfferInfoFieldValue[]
-  const offerInfoValues: OfferInfoFieldValue[] = row.offer_info 
-    ? Object.entries(row.offer_info).map(([key, value]) => ({
+  const offerInfoObj = parseJsonb<Record<string, unknown>>(row.offer_info);
+  const offerInfoValues: OfferInfoFieldValue[] = offerInfoObj 
+    ? Object.entries(offerInfoObj).map(([key, value]) => ({
         fieldId: key,
         fieldName: key, // Will be replaced with actual label when displaying
         fieldType: "text" as const,
         value: value as string | string[],
       }))
     : [];
+  
+  // Parse product_info from JSONB
+  const productInfoObj = parseJsonb<Record<string, unknown>>(row.product_info);
 
   return {
     offerId: row.offer_id,
@@ -103,7 +122,7 @@ function mapToOffer(row: DbOffer): Offer {
     // Offer info from offer_info JSONB column
     offerInfo: offerInfoValues.length > 0 ? offerInfoValues : undefined,
     // Product info from joined products.product_info
-    productInfo: row.product_info || undefined,
+    productInfo: productInfoObj || undefined,
     // Workflow fields
     readyState: row.ready_state,
     escrowPaid: false, // Not in current schema
