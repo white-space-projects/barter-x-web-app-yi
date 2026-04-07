@@ -148,8 +148,34 @@ function mapToOffer(row: DbOffer): Offer {
 }
 
 /**
+ * Look up field labels from the database for old-format offer_info
+ * This is needed for offers saved before we started storing labels alongside values
+ */
+async function resolveFieldLabels(fieldIds: string[]): Promise<Map<string, string>> {
+  if (fieldIds.length === 0) return new Map();
+  
+  // Query subcategory_product_fields to get labels for these field IDs
+  const placeholders = fieldIds.map((_, i) => `$${i + 1}`).join(', ');
+  const sql = `
+    SELECT field_id, field_label 
+    FROM application.subcategory_product_fields 
+    WHERE field_id IN (${placeholders})
+  `;
+  
+  const result = await query<{ field_id: string; field_label: string }>(sql, fieldIds);
+  
+  const labelMap = new Map<string, string>();
+  result.forEach(row => {
+    labelMap.set(row.field_id, row.field_label);
+  });
+  
+  return labelMap;
+}
+
+/**
  * Fetch a single offer by ID
  * Includes offer_info, pickup_address, and product_info from joined products table
+ * Resolves field labels for old-format offer_info
  */
 export async function fetchOfferById(offerId: string): Promise<Offer | null> {
   const sql = `
@@ -171,7 +197,24 @@ export async function fetchOfferById(offerId: string): Promise<Offer | null> {
     return null;
   }
   
-  return mapToOffer(result[0]);
+  const offer = mapToOffer(result[0]);
+  
+  // Resolve field labels for old-format data (where fieldName equals fieldId/UUID)
+  if (offer.offerInfo && offer.offerInfo.length > 0) {
+    const oldFormatFieldIds = offer.offerInfo
+      .filter(f => f.fieldName === f.fieldId) // Old format: fieldName is the UUID
+      .map(f => f.fieldId);
+    
+    if (oldFormatFieldIds.length > 0) {
+      const labelMap = await resolveFieldLabels(oldFormatFieldIds);
+      offer.offerInfo = offer.offerInfo.map(f => ({
+        ...f,
+        fieldName: labelMap.get(f.fieldId) || f.fieldName,
+      }));
+    }
+  }
+  
+  return offer;
 }
 
 export interface FetchOffersOptions {
