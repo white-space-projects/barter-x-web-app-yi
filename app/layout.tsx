@@ -4,6 +4,7 @@ import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
 import { BarterProvider } from "@/lib/store";
+import { DataProvider } from "@/lib/data-provider";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { ToastDismissWrapper } from "@/components/ui/toast-dismiss-wrapper";
 import { SWRProvider } from "@/lib/swr-provider";
@@ -50,21 +51,23 @@ export default function RootLayout({
         <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!}>
           <SWRProvider>
             <BarterProvider>
-              <ToastDismissWrapper>
-                {children}
-              </ToastDismissWrapper>
-              <Toaster
-                theme="dark"
-                position="top-center"
-                toastOptions={{
-                  style: {
-                    background: "hsl(0 0% 9%)",
-                    border: "1px solid hsl(0 0% 14%)",
-                    color: "hsl(0 0% 96%)",
-                  },
-                  className: "cursor-pointer",
-                }}
-              />
+              <DataProvider>
+                <ToastDismissWrapper>
+                  {children}
+                </ToastDismissWrapper>
+                <Toaster
+                  theme="dark"
+                  position="top-center"
+                  toastOptions={{
+                    style: {
+                      background: "hsl(0 0% 9%)",
+                      border: "1px solid hsl(0 0% 14%)",
+                      color: "hsl(0 0% 96%)",
+                    },
+                    className: "cursor-pointer",
+                  }}
+                />
+              </DataProvider>
             </BarterProvider>
           </SWRProvider>
         </GoogleOAuthProvider>
