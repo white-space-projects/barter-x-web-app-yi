@@ -148,34 +148,11 @@ export async function POST(request: NextRequest) {
         }
 
         // Step 3: Create record in application.users
-        // Look up country ID if provided
-        let countryId: string | null = null;
-        let cityId: string | null = null;
-
-        if (country) {
-          const countryData = await query<{ country_id: string; country_code: string }>(
-            `SELECT country_id, country_code FROM application.countries 
-             WHERE LOWER(name) = LOWER($1) OR LOWER(country_code) = LOWER($2)
-             LIMIT 1`,
-            [country, countryCode || country]
-          );
-          if (countryData.length > 0) {
-            countryId = countryData[0].country_id;
-            userCountryCode = countryData[0].country_code;
-
-            if (city) {
-              const cityData = await query<{ city_id: string }>(
-                `SELECT city_id FROM application.cities 
-                 WHERE LOWER(name) = LOWER($1) AND country_id = $2
-                 LIMIT 1`,
-                [city, countryId]
-              );
-              if (cityData.length > 0) {
-                cityId = cityData[0].city_id;
-              }
-            }
-          }
-        }
+        // Use passed IDs directly (from frontend that fetched from DB)
+        const selectedCountryIdValue = countryId || null;
+        const selectedCityIdValue = cityId || null;
+        const detectedCountryIdValue = detectedCountryId || selectedCountryIdValue;
+        const detectedCityIdValue = detectedCityId || selectedCityIdValue;
 
         // Insert into application.users
         await query(
@@ -186,31 +163,36 @@ export async function POST(request: NextRequest) {
             is_active, is_verified, is_admin,
             created_at, updated_at, last_login_at
           ) VALUES (
-            $1, $2, $3, $4, $5, NOW(), $4, $5,
-            true, false, $6, NOW(), NOW(), NOW()
+            $1, $2, $3, $4, $5, NOW(), $6, $7,
+            true, false, $8, NOW(), NOW(), NOW()
           )
           ON CONFLICT (user_id) DO UPDATE SET
             last_login_at = NOW(),
             updated_at = NOW()`,
-          [userId, normalizedEmail, name || null, countryId, cityId, isAdmin]
+          [userId, normalizedEmail, name || null, detectedCountryIdValue, detectedCityIdValue, selectedCountryIdValue, selectedCityIdValue, isAdmin]
         );
 
         console.log("[v0] Login API: Created application.users record");
 
-        // Step 4: Create user_profiles record
+        // Step 4: Create user_profiles record with detected and selected locations
         await query(
           `INSERT INTO application.user_profiles (
             user_id, full_name, email,
             country_id, city_id,
             detected_country_id, detected_city_id, detected_at,
+            selected_country_id, selected_city_id,
             email_connected, created_at, updated_at
           ) VALUES (
-            $1, $2, $3, $4, $5, $4, $5, NOW(),
+            $1, $2, $3, $4, $5, $6, $7, NOW(), $4, $5,
             true, NOW(), NOW()
           )
           ON CONFLICT (user_id) DO UPDATE SET
+            country_id = COALESCE($4, application.user_profiles.country_id),
+            city_id = COALESCE($5, application.user_profiles.city_id),
+            selected_country_id = COALESCE($4, application.user_profiles.selected_country_id),
+            selected_city_id = COALESCE($5, application.user_profiles.selected_city_id),
             updated_at = NOW()`,
-          [userId, name || null, normalizedEmail, countryId, cityId]
+          [userId, name || null, normalizedEmail, selectedCountryIdValue, selectedCityIdValue, detectedCountryIdValue, detectedCityIdValue]
         );
 
         console.log("[v0] Login API: Created user_profiles record");
