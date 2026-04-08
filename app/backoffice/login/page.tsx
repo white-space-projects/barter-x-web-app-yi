@@ -188,10 +188,19 @@ export default function BackOfficeLoginPage() {
           )}
         </div>
 
-        {/* Footer */}
+{/* Footer */}
         <p className="text-center text-xs text-muted-foreground mt-6">
           Internal use only. Unauthorized access is prohibited.
         </p>
+
+        {/* Back to App Link */}
+        <Link
+          href="/"
+          className="flex items-center justify-center gap-2 mt-4 text-sm text-muted-foreground hover:text-primary transition-colors"
+        >
+          <Home className="h-4 w-4" />
+          Back to App
+        </Link>
       </div>
     </div>
   );
