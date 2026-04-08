@@ -35,7 +35,10 @@ const supabaseAdmin = createClient(
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email, name, city, country, countryCode } = body;
+    const { 
+      email, name, city, cityId, country, countryId, countryCode,
+      detectedCountryId, detectedCityId 
+    } = body;
 
     if (!email) {
       return NextResponse.json({ error: "Email is required" }, { status: 400 });
