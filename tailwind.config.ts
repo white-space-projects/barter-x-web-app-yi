@@ -63,8 +63,10 @@ const config: Config = {
         },
       },
       fontFamily: {
-        sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],
-        mono: ['var(--font-jetbrains-mono)', 'monospace'],
+        sans: ['var(--font-space-mono)', '"Space Mono"', 'monospace'],
+        mono: ['var(--font-space-mono)', '"Space Mono"', 'monospace'],
+        title: ['var(--font-space-grotesk)', '"Space Grotesk"', 'sans-serif'],
+        paragraph: ['var(--font-dm-sans)', '"DM Sans"', 'sans-serif'],
       },
       borderRadius: {
         lg: 'var(--radius)',
