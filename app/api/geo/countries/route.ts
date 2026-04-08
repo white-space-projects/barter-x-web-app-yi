@@ -1,34 +1,31 @@
 import { NextResponse } from "next/server";
-import { getSession } from "@/lib/auth"; // your session helper
+import { query } from "@/lib/db/postgres";
 
-const BASE = process.env.API_BASE_URL;
-
+// Public endpoint - no auth required for login page
 export async function GET() {
   try {
-    const session: any = await getSession();
-    
+    const result = await query<{
+      country_id: string;
+      country_code: string;
+      name: string;
+    }>(
+      `SELECT country_id, country_code, name 
+       FROM application.countries 
+       WHERE is_active = true 
+       ORDER BY name ASC`
+    );
 
-    if (!session) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-    }
+    const countries = result.map((row) => ({
+      id: row.country_id,
+      code: row.country_code,
+      name: row.name,
+    }));
 
-    const res = await fetch(`${BASE}/countries`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${session.access_token}`,
-      },
-    });
-
-    const data = await res.json();
-
-    return NextResponse.json(data, { status: res.status });
-
+    return NextResponse.json({ countries });
   } catch (error) {
-    console.error("Countries list API error:", error);
-
+    console.error("[v0] Countries API error:", error);
     return NextResponse.json(
-      { message: "Internal Server Error" },
+      { error: "Failed to fetch countries" },
       { status: 500 }
     );
   }

@@ -91,7 +91,7 @@ export default function LoginPage() {
   const [country, setCountry] = useState(""); // #Login#Location#CountryInput#
   const [countryId, setCountryId] = useState<string | null>(null);
   const [countryCode, setCountryCode] = useState("");
-  const [locationLoading, setLocationLoading] = useState(true);
+  const [locationLoading, setLocationLoading] = useState(false); // Don't block UI - detection happens in background
   const [locationDetected, setLocationDetected] = useState(false);
   const [locationNotSupported, setLocationNotSupported] = useState(false); // #Login#Location#NotSupported#
   
@@ -758,11 +758,11 @@ Exchange Reimagined
                               setCityId(null);
                               if (errors.country) setErrors((p) => ({ ...p, country: "" }));
                             }}
-                            disabled={locationLoading || countriesLoading}
+                            disabled={countriesLoading}
                             className="h-11 w-full appearance-none rounded-lg border border-input bg-secondary pl-3 pr-10 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-60"
                           >
                             <option value="">
-                              {countriesLoading ? "Loading..." : locationLoading ? "Detecting..." : "Select country"}
+                              {countriesLoading ? "Loading countries..." : "Select country"}
                             </option>
                             {countries.map((c) => (
                               <option key={c.id} value={c.name}>
@@ -795,11 +795,11 @@ Exchange Reimagined
                               setCityId(selectedCity?.id || null);
                               if (errors.city) setErrors((p) => ({ ...p, city: "" }));
                             }}
-                            disabled={locationLoading || citiesLoading || !countryId}
+                            disabled={citiesLoading || !countryId}
                             className="h-11 w-full appearance-none rounded-lg border border-input bg-secondary pl-3 pr-10 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-60"
                           >
                             <option value="">
-                              {!countryId ? "Select country first" : citiesLoading ? "Loading..." : locationLoading ? "Detecting..." : "Select city"}
+                              {!countryId ? "Select country first" : citiesLoading ? "Loading cities..." : "Select city"}
                             </option>
                             {cities.map((c) => (
                               <option key={c.id} value={c.name}>

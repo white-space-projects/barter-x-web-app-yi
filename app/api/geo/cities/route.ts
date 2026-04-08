@@ -1,36 +1,42 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSession } from "@/lib/auth"; // your session helper
+import { query } from "@/lib/db/postgres";
 
-const BASE = process.env.API_BASE_URL;
-
-export async function GET(req:NextRequest) {
+// Public endpoint - no auth required for login page
+export async function GET(req: NextRequest) {
   try {
-    const session: any = await getSession();
-     const { searchParams } = new URL(req.url);
-      const country = searchParams.get("country");
-      console.log(country)
+    const { searchParams } = new URL(req.url);
+    const countryId = searchParams.get("countryId");
 
-    if (!session) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    if (!countryId) {
+      return NextResponse.json(
+        { error: "countryId is required" },
+        { status: 400 }
+      );
     }
 
-    const res = await fetch(`${BASE}/countries/${country}/cities`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${session.access_token}`,
-      },
-    });
+    const result = await query<{
+      city_id: string;
+      country_id: string;
+      name: string;
+    }>(
+      `SELECT city_id, country_id, name 
+       FROM application.cities 
+       WHERE country_id = $1 AND is_active = true 
+       ORDER BY name ASC`,
+      [countryId]
+    );
 
-    const data = await res.json();
+    const cities = result.map((row) => ({
+      id: row.city_id,
+      countryId: row.country_id,
+      name: row.name,
+    }));
 
-    return NextResponse.json(data, { status: res.status });
-
+    return NextResponse.json({ cities });
   } catch (error) {
-    console.error("Cities list API error:", error);
-
+    console.error("[v0] Cities API error:", error);
     return NextResponse.json(
-      { message: "Internal Server Error" },
+      { error: "Failed to fetch cities" },
       { status: 500 }
     );
   }
