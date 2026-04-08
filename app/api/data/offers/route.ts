@@ -12,15 +12,11 @@ import { fetchOffers, createOffer, updateOffer, deleteOffer } from "@/lib/db/rep
 
 export async function GET(request: NextRequest) {
   try {
-    console.log("[v0] Offers API: GET request received");
-    
     const searchParams = request.nextUrl.searchParams;
     const productId = searchParams.get("productId");
     const userId = searchParams.get("userId");
     const limit = parseInt(searchParams.get("limit") || "100", 10);
     const offset = parseInt(searchParams.get("offset") || "0", 10);
-
-    console.log("[v0] Offers API: Fetching with params:", { productId, userId, limit, offset });
 
     const { offers, total } = await fetchOffers({
       productId: productId || undefined,
@@ -28,8 +24,6 @@ export async function GET(request: NextRequest) {
       limit,
       offset,
     });
-
-    console.log("[v0] Offers API: Fetched", offers.length, "offers, total:", total);
 
     return NextResponse.json({ 
       offers, 
@@ -49,6 +43,8 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
+    console.log("[v0] Offers API POST: Received body:", JSON.stringify(body, null, 2));
+    
     const { 
       productId, 
       tempProductId, 
@@ -57,27 +53,30 @@ export async function POST(request: NextRequest) {
       description, 
       condition, 
       exchangePreferences,
-      offerInfo,      // Dynamic offer info fields as JSONB object { field_key: value }
-      pickupAddress,  // Full address object as JSONB
+      offerInfo,
+      pickupAddress,
     } = body;
 
-    console.log("[v0] Offers API POST: Creating offer", { 
+    console.log("[v0] Offers API POST: Parsed fields:", { 
       productId, 
       tempProductId, 
       userId, 
       title,
-      hasOfferInfo: !!offerInfo && Object.keys(offerInfo).length > 0,
+      hasOfferInfo: !!offerInfo,
       hasPickupAddress: !!pickupAddress,
     });
 
     // Either productId or tempProductId is required, but not both required
     if (!userId || (!productId && !tempProductId)) {
+      console.error("[v0] Offers API POST: Missing required fields", { userId, productId, tempProductId });
       return NextResponse.json(
         { error: "Missing required fields: userId and either productId or tempProductId" },
         { status: 400 }
       );
     }
 
+    console.log("[v0] Offers API POST: Calling createOffer");
+    
     const offer = await createOffer({
       productId: productId || null,
       tempProductId: tempProductId || null,
@@ -86,15 +85,19 @@ export async function POST(request: NextRequest) {
       description,
       condition,
       exchangePreferences,
-      offerInfo,       // Pass offer_info JSONB to repository
-      pickupAddress,   // Pass pickup_address JSONB to repository
+      offerInfo,
+      pickupAddress,
     });
 
     console.log("[v0] Offers API POST: Offer created successfully", offer.offerId);
 
     return NextResponse.json({ offer }, { status: 201 });
   } catch (error) {
-    console.error("[API] Offer create error:", error);
+    console.error("[v0] Offers API POST: Error creating offer:", error);
+    console.error("[v0] Offers API POST: Error details:", {
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Failed to create offer" },
       { status: 500 }
