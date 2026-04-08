@@ -42,15 +42,23 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Loader2, MapPin, ChevronDown } from "lucide-react";
-import { detectLocationFromIP, isAppleDevice, type GeoLocation } from "@/lib/geolocation";
-import { getCountryNames, getCitiesForCountry, getCountryCode, isCountrySupported } from "@/lib/countries-data";
+import { detectLocationFromIP, isAppleDevice } from "@/lib/geolocation";
 import { SupportAPI, type LoginIssueReport } from "@/lib/api";
 
 type LoginStep = "credentials" | "otp";
 
-// #Auth#AdminEmails# - Admin email configuration
-const ADMIN_EMAIL = "admin@barter-x.com";
-const ADMIN_OTP = "123456";
+// Types for geo data from database
+interface GeoCountry {
+  id: string;
+  code: string;
+  name: string;
+}
+
+interface GeoCity {
+  id: string;
+  countryId: string;
+  name: string;
+}
 
 export default function LoginPage() {
   const { auth, authReady, login } = useBarterStore();
@@ -79,15 +87,26 @@ export default function LoginPage() {
   
   // #Login#Location#AutoDetect# - Location state (auto-detected from IP)
   const [city, setCity] = useState(""); // #Login#Location#CityInput#
+  const [cityId, setCityId] = useState<string | null>(null);
   const [country, setCountry] = useState(""); // #Login#Location#CountryInput#
+  const [countryId, setCountryId] = useState<string | null>(null);
   const [countryCode, setCountryCode] = useState("");
   const [locationLoading, setLocationLoading] = useState(true);
   const [locationDetected, setLocationDetected] = useState(false);
   const [locationNotSupported, setLocationNotSupported] = useState(false); // #Login#Location#NotSupported#
   
-  // Available options for dropdowns
-  const countries = getCountryNames();
-  const cities = country ? getCitiesForCountry(country) : [];
+  // Detected location IDs for user_profiles
+  const [detectedCountryId, setDetectedCountryId] = useState<string | null>(null);
+  const [detectedCityId, setDetectedCityId] = useState<string | null>(null);
+  
+  // Available options for dropdowns (from database)
+  const [countries, setCountries] = useState<GeoCountry[]>([]);
+  const [cities, setCities] = useState<GeoCity[]>([]);
+  const [countriesLoading, setCountriesLoading] = useState(true);
+  const [citiesLoading, setCitiesLoading] = useState(false);
+  
+  // OTP timer using absolute timestamp
+  const [otpExpiresAt, setOtpExpiresAt] = useState<number | null>(null);
   
   // #Login#Apple#DeviceDetection# - Apple device detection for showing Apple Sign-In
   const [showAppleSignIn, setShowAppleSignIn] = useState(false);
@@ -105,28 +124,91 @@ export default function LoginPage() {
     setShowAppleSignIn(isAppleDevice());
   }, []);
 
-  // #API#Login#LocationDetection# - Auto-detect location from IP
+  // Fetch countries from database
+  useEffect(() => {
+    async function fetchCountries() {
+      setCountriesLoading(true);
+      try {
+        const response = await fetch("/api/geo/countries");
+        if (response.ok) {
+          const data = await response.json();
+          setCountries(data.countries || []);
+        }
+      } catch (error) {
+        console.error("[v0] Failed to fetch countries:", error);
+      } finally {
+        setCountriesLoading(false);
+      }
+    }
+    fetchCountries();
+  }, []);
+
+  // Fetch cities when country changes
+  useEffect(() => {
+    async function fetchCities() {
+      if (!countryId) {
+        setCities([]);
+        return;
+      }
+      setCitiesLoading(true);
+      try {
+        const response = await fetch(`/api/geo/cities?countryId=${countryId}`);
+        if (response.ok) {
+          const data = await response.json();
+          setCities(data.cities || []);
+        }
+      } catch (error) {
+        console.error("[v0] Failed to fetch cities:", error);
+      } finally {
+        setCitiesLoading(false);
+      }
+    }
+    fetchCities();
+  }, [countryId]);
+
+  // #API#Login#LocationDetection# - Auto-detect location from IP & match with DB
   useEffect(() => {
     async function detectLocation() {
+      if (countriesLoading || countries.length === 0) return;
+      
       setLocationLoading(true);
-      // #Login#Location#AutoDetect# - Call IP geolocation API
       const location = await detectLocationFromIP();
+      
       if (location) {
-        // Check if detected country is in our supported list
-        if (location.isSupported && isCountrySupported(location.country)) {
-          setCountry(location.country);
-          setCountryCode(location.countryCode);
-          // Check if detected city is in the country's city list
-          const availableCities = getCitiesForCountry(location.country);
-          if (availableCities.includes(location.city)) {
-            setCity(location.city);
-          } else if (availableCities.length > 0) {
-            // City not in list, user will need to select manually
-            setCity("");
-          }
+        const matchedCountry = countries.find(
+          (c) => 
+            c.code.toLowerCase() === location.countryCode.toLowerCase() ||
+            c.name.toLowerCase() === location.country.toLowerCase()
+        );
+        
+        if (matchedCountry) {
+          setCountry(matchedCountry.name);
+          setCountryId(matchedCountry.id);
+          setCountryCode(matchedCountry.code);
+          setDetectedCountryId(matchedCountry.id);
           setLocationDetected(true);
+          
+          try {
+            const citiesResponse = await fetch(`/api/geo/cities?countryId=${matchedCountry.id}`);
+            if (citiesResponse.ok) {
+              const citiesData = await citiesResponse.json();
+              const fetchedCities = citiesData.cities || [];
+              setCities(fetchedCities);
+              
+              const matchedCity = fetchedCities.find(
+                (c: GeoCity) => c.name.toLowerCase() === location.city.toLowerCase()
+              );
+              
+              if (matchedCity) {
+                setCity(matchedCity.name);
+                setCityId(matchedCity.id);
+                setDetectedCityId(matchedCity.id);
+              }
+            }
+          } catch (error) {
+            console.error("[v0] Failed to fetch cities for location:", error);
+          }
         } else {
-          // Country not supported - user needs to select manually
           setLocationNotSupported(true);
           setLocationDetected(false);
         }
@@ -134,25 +216,31 @@ export default function LoginPage() {
       setLocationLoading(false);
     }
     detectLocation();
-  }, []);
+  }, [countries, countriesLoading]);
 
-  // Countdown timer
+  // Countdown timer using absolute timestamp
   useEffect(() => {
-    if (countdown > 0) {
-      timerRef.current = setInterval(() => {
-        setCountdown((prev) => {
-          if (prev <= 1) {
-            if (timerRef.current) clearInterval(timerRef.current);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
+    if (!otpExpiresAt) {
+      setCountdown(0);
+      return;
     }
+    
+    const updateCountdown = () => {
+      const remaining = Math.max(0, Math.ceil((otpExpiresAt - Date.now()) / 1000));
+      setCountdown(remaining);
+      
+      if (remaining <= 0) {
+        setOtpExpiresAt(null);
+      }
+    };
+    
+    updateCountdown();
+    timerRef.current = setInterval(updateCountdown, 1000);
+    
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [countdown]);
+  }, [otpExpiresAt]);
 
   const validateCredentials = useCallback((): Record<string, string> => {
     const errs: Record<string, string> = {};
@@ -188,7 +276,7 @@ export default function LoginPage() {
       
       setLoading(false);
       setStep("otp");
-      setCountdown(60); // #Login#OTP#CountdownTimer# - Start countdown
+      setOtpExpiresAt(Date.now() + 60 * 1000); // #Login#OTP#CountdownTimer# - Absolute timestamp
       // #Login#OTP#SendSuccess# - OTP sent successfully
       // #Analytics#Login#OTP#SendSuccess# - TODO: Track OTP send success
       toast.success("OTP sent to your email. (Use any 6-digit code)");
@@ -231,8 +319,12 @@ export default function LoginPage() {
           email: email.toLowerCase(),
           name: name.trim() || "Barter User",
           city: city.trim(),
+          cityId: cityId,
           country: country.trim(),
+          countryId: countryId,
           countryCode: countryCode,
+          detectedCountryId: detectedCountryId,
+          detectedCityId: detectedCityId,
         }),
       });
 
@@ -300,13 +392,17 @@ export default function LoginPage() {
           const response = await fetch("/api/auth/login", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              email: googleEmail,
-              name: googleName,
-              city: city.trim(),
-              country: country.trim(),
-              countryCode: countryCode,
-            }),
+          body: JSON.stringify({
+            email: googleEmail,
+            name: googleName,
+            city: city.trim(),
+            cityId: cityId,
+            country: country.trim(),
+            countryId: countryId,
+            countryCode: countryCode,
+            detectedCountryId: detectedCountryId,
+            detectedCityId: detectedCityId,
+          }),
           });
 
           if (!response.ok) {
@@ -373,8 +469,12 @@ export default function LoginPage() {
           email: "apple.user@icloud.com", // TODO: Get from Apple Sign-In
           name: "Apple User",
           city: city.trim(),
+          cityId: cityId,
           country: country.trim(),
+          countryId: countryId,
           countryCode: countryCode,
+          detectedCountryId: detectedCountryId,
+          detectedCityId: detectedCityId,
         }),
       });
 
@@ -412,8 +512,8 @@ export default function LoginPage() {
   function handleResendOtp() {
     // #Login#OTPResend#CooldownCheck# - Check if cooldown is active
     if (countdown > 0) return;
-    // #Login#OTPResend#CooldownReset# - Reset countdown timer
-    setCountdown(60);
+    // #Login#OTPResend#CooldownReset# - Reset countdown timer with absolute timestamp
+    setOtpExpiresAt(Date.now() + 60 * 1000);
     // #API#Login#OTP#ResendRequest# - TODO: Call API to resend OTP
     // #Logging#Login#OTP#Resend# - TODO: Log OTP resend
     // #Analytics#Login#OTP#Resend# - TODO: Track OTP resend
@@ -498,9 +598,9 @@ export default function LoginPage() {
               <h1 className="text-2xl font-bold tracking-tight">
                 <span className="text-primary">BARTER-X</span>
               </h1>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Exchange used products without buying or selling.
-              </p>
+  <p className="mt-2 text-sm font-semibold text-foreground">
+Exchange Reimagined
+  </p>
             </div>
 
             {step === "credentials" ? (
@@ -650,21 +750,23 @@ export default function LoginPage() {
                             id="login-country"
                             value={country}
                             onChange={(e) => {
-                              const selectedCountry = e.target.value;
-                              setCountry(selectedCountry);
+                              const selectedCountry = countries.find(c => c.name === e.target.value);
+                              setCountry(e.target.value);
+                              setCountryId(selectedCountry?.id || null);
+                              setCountryCode(selectedCountry?.code || "");
                               setCity(""); // Reset city when country changes
-                              setCountryCode(getCountryCode(selectedCountry) || "");
+                              setCityId(null);
                               if (errors.country) setErrors((p) => ({ ...p, country: "" }));
                             }}
-                            disabled={locationLoading}
+                            disabled={locationLoading || countriesLoading}
                             className="h-11 w-full appearance-none rounded-lg border border-input bg-secondary pl-3 pr-10 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-60"
                           >
                             <option value="">
-                              {locationLoading ? "Detecting..." : "Select country"}
+                              {countriesLoading ? "Loading..." : locationLoading ? "Detecting..." : "Select country"}
                             </option>
                             {countries.map((c) => (
-                              <option key={c} value={c}>
-                                {c}
+                              <option key={c.id} value={c.name}>
+                                {c.name}
                               </option>
                             ))}
                           </select>
@@ -688,18 +790,20 @@ export default function LoginPage() {
                             id="login-city"
                             value={city}
                             onChange={(e) => {
+                              const selectedCity = cities.find(c => c.name === e.target.value);
                               setCity(e.target.value);
+                              setCityId(selectedCity?.id || null);
                               if (errors.city) setErrors((p) => ({ ...p, city: "" }));
                             }}
-                            disabled={locationLoading || !country}
+                            disabled={locationLoading || citiesLoading || !countryId}
                             className="h-11 w-full appearance-none rounded-lg border border-input bg-secondary pl-3 pr-10 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-60"
                           >
                             <option value="">
-                              {!country ? "Select country first" : locationLoading ? "Detecting..." : "Select city"}
+                              {!countryId ? "Select country first" : citiesLoading ? "Loading..." : locationLoading ? "Detecting..." : "Select city"}
                             </option>
                             {cities.map((c) => (
-                              <option key={c} value={c}>
-                                {c}
+                              <option key={c.id} value={c.name}>
+                                {c.name}
                               </option>
                             ))}
                           </select>

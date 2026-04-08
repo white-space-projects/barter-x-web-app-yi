@@ -16,6 +16,7 @@ import { createClient } from "@supabase/supabase-js";
 import { generateGuid } from "@/lib/guid";
 import { setSessionCookie, type UserSession } from "@/lib/auth";
 import { query } from "@/lib/db/postgres";
+import { logLoginEvent } from "@/lib/analytics";
 
 // Admin emails that should have admin privileges
 const ADMIN_EMAILS = ["rakshith66@hotmail.com", "admin@barterx.com"];
@@ -215,6 +216,17 @@ export async function POST(request: NextRequest) {
 
       console.log("[v0] Login API: Login successful for", normalizedEmail, "userId:", userId);
 
+      // Log analytics event
+      await logLoginEvent("login_completed", {
+        email: normalizedEmail,
+        userId,
+        countryId: countryId || null,
+        cityId: cityId || null,
+        detectedCountryId: detectedCountryId || countryId || null,
+        detectedCityId: detectedCityId || cityId || null,
+        metadata: { isNewUser },
+      });
+
       return NextResponse.json({
         success: true,
         user: {
@@ -237,6 +249,14 @@ export async function POST(request: NextRequest) {
     } catch (dbError) {
       // Database error - log and return error
       console.error("[v0] Login API: Database error:", dbError);
+      
+      // Log analytics event for failure
+      await logLoginEvent("login_failed", {
+        email: normalizedEmail,
+        errorType: "database_error",
+        errorMessage: dbError instanceof Error ? dbError.message : "Unknown database error",
+      });
+      
       return NextResponse.json(
         { 
           success: false, 
@@ -247,6 +267,13 @@ export async function POST(request: NextRequest) {
     }
   } catch (error) {
     console.error("[v0] Login API: Error:", error);
+    
+    // Log analytics event for failure
+    await logLoginEvent("login_failed", {
+      errorType: "general_error",
+      errorMessage: error instanceof Error ? error.message : "Unknown error",
+    });
+    
     return NextResponse.json(
       { success: false, error: error instanceof Error ? error.message : "Login failed" },
       { status: 500 }
