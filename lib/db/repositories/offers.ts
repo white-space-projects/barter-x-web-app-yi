@@ -351,9 +351,9 @@ export async function createOffer(data: {
       data.title || null,
       data.description || null,
       data.condition || 'good',
-      data.exchangePreferences ? JSON.stringify(data.exchangePreferences) : null,
-      data.offerInfo ? JSON.stringify(data.offerInfo) : null,
-      data.pickupAddress ? JSON.stringify(data.pickupAddress) : null,
+      data.exchangePreferences ? JSON.stringify(data.exchangePreferences) : '{}',
+      JSON.stringify(data.offerInfo || {}),  // offer_info has NOT NULL constraint
+      data.pickupAddress ? JSON.stringify(data.pickupAddress) : '{}',
     ]
   );
 
