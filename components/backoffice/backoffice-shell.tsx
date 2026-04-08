@@ -11,7 +11,7 @@
 import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
-import { FileText, LogOut, Menu, X, Package } from "lucide-react";
+import { FileText, LogOut, Menu, X, Package, Ticket } from "lucide-react";
 import { useBackOfficeAuth } from "@/lib/backoffice/auth-store";
 
 interface NavItem {
