@@ -16,7 +16,6 @@ import { createClient } from "@supabase/supabase-js";
 import { generateGuid } from "@/lib/guid";
 import { setSessionCookie, type UserSession } from "@/lib/auth";
 import { query } from "@/lib/db/postgres";
-import { logLoginEvent } from "@/lib/analytics";
 
 // Admin emails that should have admin privileges
 const ADMIN_EMAILS = ["rakshith66@hotmail.com", "admin@barterx.com"];
@@ -36,10 +35,7 @@ const supabaseAdmin = createClient(
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { 
-      email, name, city, cityId, country, countryId, countryCode,
-      detectedCountryId, detectedCityId 
-    } = body;
+    const { email, name, city, country, countryCode } = body;
 
     if (!email) {
       return NextResponse.json({ error: "Email is required" }, { status: 400 });
@@ -80,8 +76,6 @@ export async function POST(request: NextRequest) {
         console.log("[v0] Login API: Found existing user:", userId);
 
         // Get location data if available
-        console.log("[v0] Login API: User profile_country_id:", existingUser.profile_country_id);
-        
         if (existingUser.profile_country_id) {
           const locationData = await query<{
             country_name: string;
@@ -98,14 +92,10 @@ export async function POST(request: NextRequest) {
             [existingUser.profile_country_id, existingUser.profile_city_id]
           );
           
-          console.log("[v0] Login API: Location query result:", locationData);
-          
           if (locationData.length > 0) {
             userCountry = locationData[0].country_name;
             userCountryCode = locationData[0].country_code;
-            // Only use saved city if it exists - don't mix detected city with profile country
             userCity = locationData[0].city_name || "";
-            console.log("[v0] Login API: Set location to:", { userCountry, userCountryCode, userCity });
           }
         }
 
@@ -120,7 +110,7 @@ export async function POST(request: NextRequest) {
         isNewUser = true;
 
         // Check if user exists in auth.users using listUsers
-        const { data: listData, error: lookupError } = await supabaseAdmin.auth.admin.listUsers();
+        const { data: listData } = await supabaseAdmin.auth.admin.listUsers();
         const existingAuthUser = listData?.users?.find(u => u.email?.toLowerCase() === normalizedEmail);
         
         if (existingAuthUser) {
@@ -131,7 +121,7 @@ export async function POST(request: NextRequest) {
           // Create new user in auth.users
           const { data: newAuthUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
             email: normalizedEmail,
-            email_confirm: true, // Auto-confirm for dev/demo purposes
+            email_confirm: true,
             user_metadata: {
               name: name || "User",
               city: city,
@@ -149,11 +139,34 @@ export async function POST(request: NextRequest) {
         }
 
         // Step 3: Create record in application.users
-        // Use passed IDs directly (from frontend that fetched from DB)
-        const selectedCountryIdValue = countryId || null;
-        const selectedCityIdValue = cityId || null;
-        const detectedCountryIdValue = detectedCountryId || selectedCountryIdValue;
-        const detectedCityIdValue = detectedCityId || selectedCityIdValue;
+        // Look up country ID if provided
+        let countryId: string | null = null;
+        let cityId: string | null = null;
+
+        if (country) {
+          const countryData = await query<{ country_id: string; country_code: string }>(
+            `SELECT country_id, country_code FROM application.countries 
+             WHERE LOWER(name) = LOWER($1) OR LOWER(country_code) = LOWER($2)
+             LIMIT 1`,
+            [country, countryCode || country]
+          );
+          if (countryData.length > 0) {
+            countryId = countryData[0].country_id;
+            userCountryCode = countryData[0].country_code;
+
+            if (city) {
+              const cityData = await query<{ city_id: string }>(
+                `SELECT city_id FROM application.cities 
+                 WHERE LOWER(name) = LOWER($1) AND country_id = $2
+                 LIMIT 1`,
+                [city, countryId]
+              );
+              if (cityData.length > 0) {
+                cityId = cityData[0].city_id;
+              }
+            }
+          }
+        }
 
         // Insert into application.users
         await query(
@@ -164,36 +177,30 @@ export async function POST(request: NextRequest) {
             is_active, is_verified, is_admin,
             created_at, updated_at, last_login_at
           ) VALUES (
-            $1, $2, $3, $4, $5, NOW(), $6, $7,
-            true, false, $8, NOW(), NOW(), NOW()
+            $1, $2, $3, $4, $5, NOW(), $4, $5,
+            true, false, $6, NOW(), NOW(), NOW()
           )
           ON CONFLICT (user_id) DO UPDATE SET
             last_login_at = NOW(),
             updated_at = NOW()`,
-          [userId, normalizedEmail, name || null, detectedCountryIdValue, detectedCityIdValue, selectedCountryIdValue, selectedCityIdValue, isAdmin]
+          [userId, normalizedEmail, name || null, countryId, cityId, isAdmin]
         );
 
         console.log("[v0] Login API: Created application.users record");
 
-        // Step 4: Create user_profiles record with detected and selected locations
+        // Step 4: Create user_profiles record
         await query(
           `INSERT INTO application.user_profiles (
             user_id, full_name, email,
             country_id, city_id,
-            detected_country_id, detected_city_id, detected_at,
-            selected_country_id, selected_city_id,
             email_connected, created_at, updated_at
           ) VALUES (
-            $1, $2, $3, $4, $5, $6, $7, NOW(), $4, $5,
+            $1, $2, $3, $4, $5,
             true, NOW(), NOW()
           )
           ON CONFLICT (user_id) DO UPDATE SET
-            country_id = COALESCE($4, application.user_profiles.country_id),
-            city_id = COALESCE($5, application.user_profiles.city_id),
-            selected_country_id = COALESCE($4, application.user_profiles.selected_country_id),
-            selected_city_id = COALESCE($5, application.user_profiles.selected_city_id),
             updated_at = NOW()`,
-          [userId, name || null, normalizedEmail, selectedCountryIdValue, selectedCityIdValue, detectedCountryIdValue, detectedCityIdValue]
+          [userId, name || null, normalizedEmail, countryId, cityId]
         );
 
         console.log("[v0] Login API: Created user_profiles record");
@@ -216,17 +223,6 @@ export async function POST(request: NextRequest) {
 
       console.log("[v0] Login API: Login successful for", normalizedEmail, "userId:", userId);
 
-      // Log analytics event
-      await logLoginEvent("login_completed", {
-        email: normalizedEmail,
-        userId,
-        countryId: countryId || null,
-        cityId: cityId || null,
-        detectedCountryId: detectedCountryId || countryId || null,
-        detectedCityId: detectedCityId || cityId || null,
-        metadata: { isNewUser },
-      });
-
       return NextResponse.json({
         success: true,
         user: {
@@ -237,7 +233,6 @@ export async function POST(request: NextRequest) {
           city: userCity,
           country: userCountry,
           countryCode: userCountryCode,
-          // Include profileAddress for components that expect it
           profileAddress: userCity || userCountry ? {
             city: userCity,
             country: userCountry,
@@ -247,16 +242,7 @@ export async function POST(request: NextRequest) {
         isNewUser,
       });
     } catch (dbError) {
-      // Database error - log and return error
       console.error("[v0] Login API: Database error:", dbError);
-      
-      // Log analytics event for failure
-      await logLoginEvent("login_failed", {
-        email: normalizedEmail,
-        errorType: "database_error",
-        errorMessage: dbError instanceof Error ? dbError.message : "Unknown database error",
-      });
-      
       return NextResponse.json(
         { 
           success: false, 
@@ -267,13 +253,6 @@ export async function POST(request: NextRequest) {
     }
   } catch (error) {
     console.error("[v0] Login API: Error:", error);
-    
-    // Log analytics event for failure
-    await logLoginEvent("login_failed", {
-      errorType: "general_error",
-      errorMessage: error instanceof Error ? error.message : "Unknown error",
-    });
-    
     return NextResponse.json(
       { success: false, error: error instanceof Error ? error.message : "Login failed" },
       { status: 500 }
