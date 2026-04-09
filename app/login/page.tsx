@@ -242,6 +242,25 @@ export default function LoginPage() {
     };
   }, [otpExpiresAt]);
 
+  // Save location to user_profiles after successful login (does not modify auth)
+  const saveLocationAfterLogin = useCallback(async () => {
+    try {
+      await fetch("/api/profile/location", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          detected_country_id: detectedCountryId,
+          detected_city_id: detectedCityId,
+          selected_country_id: countryId,
+          selected_city_id: cityId,
+        }),
+      });
+    } catch (error) {
+      // Non-blocking - location save failure should not affect login
+      console.error("[v0] Failed to save location:", error);
+    }
+  }, [detectedCountryId, detectedCityId, countryId, cityId]);
+
   const validateCredentials = useCallback((): Record<string, string> => {
     const errs: Record<string, string> = {};
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {

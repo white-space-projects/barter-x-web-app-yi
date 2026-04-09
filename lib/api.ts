@@ -423,24 +423,19 @@ export const SupportAPI = {
    * - Labels: ["login-issue", errorType]
    */
   reportLoginIssue: async (data: LoginIssueReport): Promise<JiraTicketResponse> => {
-    // TODO: Replace with actual API call when Jira is set up
-    // const response = await fetch(`${API_BASE_URL}/support/login-issue`, {
-    //   method: "POST",
-    //   headers: { "Content-Type": "application/json" },
-    //   body: JSON.stringify(data),
-    // });
-    // if (!response.ok) throw new Error("Failed to report issue");
-    // return response.json();
+    // Call the real API to create a ticket in application.tickets
+    const response = await fetch(`${API_BASE_URL}/support/login-issue`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
     
-    // Mock implementation - log to console for now
-    console.log("[Support] Login issue reported:", data);
+    if (!response.ok) {
+      console.error("[Support] Failed to report issue:", await response.text());
+      throw new Error("Failed to report issue");
+    }
     
-    // Simulate ticket creation
-    await new Promise((r) => setTimeout(r, 500));
-    return {
-      ticketId: `BTRX-${Date.now()}`,
-      status: "pending",
-    };
+    return response.json();
   },
 };
 
