@@ -215,6 +215,56 @@ export async function updateTicket(
   return result[0] ? mapToTicket(result[0]) : null;
 }
 
+// Create a login issue ticket (for anonymous users having trouble logging in)
+export async function createLoginIssueTicket(data: {
+  email: string;
+  description: string;
+  metadata?: {
+    errorType?: string;
+    errorMessage?: string;
+    source?: string;
+    context?: string;
+    userAgent?: string;
+    platform?: string;
+  };
+}): Promise<{ ticketId: string }> {
+  const result = await query<{ ticket_id: string }>(
+    `INSERT INTO application.tickets (
+      user_id,
+      subject,
+      description,
+      status,
+      priority,
+      category,
+      metadata,
+      created_at,
+      updated_at
+    ) VALUES (
+      NULL,
+      $1,
+      $2,
+      'open',
+      'medium',
+      'technical',
+      $3,
+      NOW(),
+      NOW()
+    )
+    RETURNING ticket_id`,
+    [
+      `Login Issue: ${data.email}`,
+      data.description,
+      JSON.stringify({
+        email: data.email,
+        ...data.metadata,
+        reportedAt: new Date().toISOString(),
+      }),
+    ]
+  );
+
+  return { ticketId: result[0].ticket_id };
+}
+
 export async function getTicketStats(): Promise<{
   total: number;
   open: number;

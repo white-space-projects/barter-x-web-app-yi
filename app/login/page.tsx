@@ -319,12 +319,8 @@ export default function LoginPage() {
           email: email.toLowerCase(),
           name: name.trim() || "Barter User",
           city: city.trim(),
-          cityId: cityId,
           country: country.trim(),
-          countryId: countryId,
           countryCode: countryCode,
-          detectedCountryId: detectedCountryId,
-          detectedCityId: detectedCityId,
         }),
       });
 
@@ -342,6 +338,10 @@ export default function LoginPage() {
       // #Auth#Session#Create# - Create user session in client store
       login(data.user, data.token);
       setLoading(false);
+      
+      // Save location after successful login (non-blocking)
+      saveLocationAfterLogin();
+      
       // #Logging#Login#OTP#VerifySuccess# - TODO: Log successful verification
       // #Analytics#Login#OTP#VerifySuccess# - TODO: Track OTP verify success
       toast.success("Logged in successfully.");
@@ -396,12 +396,8 @@ export default function LoginPage() {
             email: googleEmail,
             name: googleName,
             city: city.trim(),
-            cityId: cityId,
             country: country.trim(),
-            countryId: countryId,
             countryCode: countryCode,
-            detectedCountryId: detectedCountryId,
-            detectedCityId: detectedCityId,
           }),
           });
 
@@ -419,6 +415,10 @@ export default function LoginPage() {
           // #Auth#Session#Create# - Create user session in client store
           login(data.user, data.token);
           setGoogleLoading(false);
+          
+          // Save location after successful login (non-blocking)
+          saveLocationAfterLogin();
+          
           // #Logging#Login#Google#Success# - TODO: Log successful Google sign-in
           // #Analytics#Login#Google#Success# - TODO: Track Google sign-in success
           toast.success("Signed in with Google.");
@@ -469,12 +469,8 @@ export default function LoginPage() {
           email: "apple.user@icloud.com", // TODO: Get from Apple Sign-In
           name: "Apple User",
           city: city.trim(),
-          cityId: cityId,
           country: country.trim(),
-          countryId: countryId,
           countryCode: countryCode,
-          detectedCountryId: detectedCountryId,
-          detectedCityId: detectedCityId,
         }),
       });
 
@@ -492,6 +488,10 @@ export default function LoginPage() {
       // #Auth#Session#Create# - Create user session in client store
       login(data.user, data.token);
       setAppleLoading(false);
+      
+      // Save location after successful login (non-blocking)
+      saveLocationAfterLogin();
+      
       // #Logging#Login#Apple#Success# - TODO: Log successful Apple sign-in
       // #Analytics#Login#Apple#Success# - TODO: Track Apple sign-in success
       toast.success("Signed in with Apple.");
