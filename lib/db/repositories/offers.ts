@@ -136,8 +136,13 @@ function mapToOffer(row: DbOffer): Offer {
     } : undefined,
     // Offer info from offer_info JSONB column
     offerInfo: offerInfoValues.length > 0 ? offerInfoValues : undefined,
-    // Product info from joined products.product_info
-    productInfo: productInfoObj || undefined,
+    // Product info from joined products.product_info - convert to array format
+    productInfo: productInfoObj
+      ? Object.entries(productInfoObj).map(([key, value]) => ({
+          fieldName: key,
+          value: String(value)
+        }))
+      : undefined,
     // Workflow fields
     readyState: row.ready_state,
     escrowPaid: false, // Not in current schema
