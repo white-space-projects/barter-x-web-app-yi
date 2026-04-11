@@ -2,21 +2,21 @@ import { query } from "../postgres";
 
 export interface Ticket {
   ticketId: string;
-  userId: string;
+  userId: string | null;
   subject: string;
-  description: string;
-  status: "open" | "in_progress" | "resolved" | "closed";
+  description: string | null;
+  status: "new" | "in_progress" | "done" | "open" | "resolved" | "closed";
   priority: "low" | "medium" | "high" | "urgent";
-  category: "general" | "technical" | "billing" | "account" | "other";
+  category: "login_issue" | "feedback" | "product_review" | "general" | "technical" | "billing" | "account" | "other";
   assignedTo: string | null;
   resolutionNotes: string | null;
   createdAt: Date;
   updatedAt: Date;
   resolvedAt: Date | null;
   // Joined fields
-  userName?: string;
-  userEmail?: string;
-  assignedToName?: string;
+  userName?: string | null;
+  userEmail?: string | null;
+  assignedToName?: string | null;
 }
 
 interface DbTicket {
