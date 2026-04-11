@@ -48,6 +48,7 @@ interface DbProduct {
   subcategory_slug: string | null;
   brand_name: string | null;
   brand_slug: string | null;
+  offer_count: string | null;
 }
 
 /**
@@ -69,7 +70,7 @@ function mapToProduct(row: DbProduct): Product {
     imageUrl: row.image_key
       ? `https://mdytcwlxlwvmioizaidu.supabase.co/storage/v1/object/public/product-images/${row.image_key}`
       : undefined,
-    offerCount: 0, // TODO: Add offer count query
+    offerCount: parseInt(row.offer_count || "0", 10),
     productInfo: productInfoObj 
       ? Object.entries(productInfoObj).map(([key, value]) => ({ 
           fieldName: key, 
@@ -142,7 +143,7 @@ export async function fetchProducts(
     ${whereClause}
   `;
 
-  // Data query
+  // Data query with offer count
   const dataSql = `
     SELECT 
       p.product_id,
@@ -165,7 +166,8 @@ export async function fetchProducts(
       sc.name as subcategory_name,
       sc.slug as subcategory_slug,
       b.name as brand_name,
-      b.slug as brand_slug
+      b.slug as brand_slug,
+      (SELECT COUNT(*) FROM application.offers o WHERE o.product_id = p.product_id AND o.status = 'active') as offer_count
     FROM application.products p
     LEFT JOIN application.barter_types bt ON p.barter_type_id = bt.barter_type_id
     LEFT JOIN application.categories c ON p.category_id = c.category_id
