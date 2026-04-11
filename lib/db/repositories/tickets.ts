@@ -5,9 +5,9 @@ export interface Ticket {
   userId: string | null;
   subject: string;
   description: string | null;
-  status: "new" | "in_progress" | "done" | "open" | "resolved" | "closed";
+  status: "open" | "in_progress" | "resolved" | "closed";
   priority: "low" | "medium" | "high" | "urgent";
-  category: "login_issue" | "feedback" | "product_review" | "general" | "technical" | "billing" | "account" | "other";
+  category: "general" | "technical" | "billing" | "account" | "other";
   assignedTo: string | null;
   resolutionNotes: string | null;
   createdAt: Date;
@@ -21,7 +21,7 @@ export interface Ticket {
 
 interface DbTicket {
   ticket_id: string;
-  user_id: string;
+  user_id: string | null;
   subject: string;
   description: string;
   status: string;
@@ -112,9 +112,9 @@ export async function getTickets(options?: {
   const ticketsResult = await query<DbTicket>(
     `SELECT 
       t.*,
-      u.name as user_name,
+      u.display_name as user_name,
       u.email as user_email,
-      a.name as assigned_to_name
+      a.display_name as assigned_to_name
     FROM application.tickets t
     LEFT JOIN application.users u ON t.user_id = u.user_id
     LEFT JOIN application.users a ON t.assigned_to = a.user_id
@@ -141,9 +141,9 @@ export async function getTicketById(ticketId: string): Promise<Ticket | null> {
   const result = await query<DbTicket>(
     `SELECT 
       t.*,
-      u.name as user_name,
+      u.display_name as user_name,
       u.email as user_email,
-      a.name as assigned_to_name
+      a.display_name as assigned_to_name
     FROM application.tickets t
     LEFT JOIN application.users u ON t.user_id = u.user_id
     LEFT JOIN application.users a ON t.assigned_to = a.user_id
@@ -198,21 +198,22 @@ export async function updateTicket(
     params.push(data.resolutionNotes);
   }
 
-  if (updates.length === 0) {
+  updates.push(`updated_at = NOW()`);
+
+  if (updates.length === 1) {
     return getTicketById(ticketId);
   }
 
   params.push(ticketId);
 
-  const result = await query<DbTicket>(
+  await query(
     `UPDATE application.tickets 
      SET ${updates.join(", ")}
-     WHERE ticket_id = $${paramIndex}
-     RETURNING *`,
+     WHERE ticket_id = $${paramIndex}`,
     params
   );
 
-  return result[0] ? mapToTicket(result[0]) : null;
+  return getTicketById(ticketId);
 }
 
 // Create a login issue ticket (for anonymous users having trouble logging in)
@@ -228,6 +229,11 @@ export async function createLoginIssueTicket(data: {
     platform?: string;
   };
 }): Promise<{ ticketId: string }> {
+  // Include metadata in description since metadata column doesn't exist in table
+  const fullDescription = data.metadata 
+    ? `${data.description}\n\n---\nEmail: ${data.email}\nError Type: ${data.metadata.errorType || 'N/A'}\nReported At: ${new Date().toISOString()}`
+    : data.description;
+
   const result = await query<{ ticket_id: string }>(
     `INSERT INTO application.tickets (
       user_id,
@@ -236,7 +242,6 @@ export async function createLoginIssueTicket(data: {
       status,
       priority,
       category,
-      metadata,
       created_at,
       updated_at
     ) VALUES (
@@ -246,19 +251,13 @@ export async function createLoginIssueTicket(data: {
       'open',
       'medium',
       'technical',
-      $3,
       NOW(),
       NOW()
     )
     RETURNING ticket_id`,
     [
       `Login Issue: ${data.email}`,
-      data.description,
-      JSON.stringify({
-        email: data.email,
-        ...data.metadata,
-        reportedAt: new Date().toISOString(),
-      }),
+      fullDescription,
     ]
   );
 
