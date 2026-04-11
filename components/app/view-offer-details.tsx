@@ -444,13 +444,52 @@ export function ViewOfferDetails({ offerId, onClose, onEdit, onAddOfferToProduct
   // Fetch and resolve product specifications from database
   useEffect(() => {
     async function loadProductSpecs() {
-      if (!product?.productInfo || product.productInfo.length === 0) {
+      if (!product?.productInfo) {
+        setProductSpecs([]);
+        return;
+      }
+      
+      // Handle productInfo that may be a string (needs parsing) or already an array/object
+      let parsedInfo: { fieldName: string; value: string }[] = [];
+      
+      if (typeof product.productInfo === 'string') {
+        // Parse if it's a JSON string
+        try {
+          let parsed = JSON.parse(product.productInfo);
+          // Handle double-stringified JSON
+          if (typeof parsed === 'string') {
+            parsed = JSON.parse(parsed);
+          }
+          // Convert object to array format if needed
+          if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+            parsedInfo = Object.entries(parsed).map(([key, value]) => ({
+              fieldName: key,
+              value: String(value)
+            }));
+          } else if (Array.isArray(parsed)) {
+            parsedInfo = parsed;
+          }
+        } catch {
+          setProductSpecs([]);
+          return;
+        }
+      } else if (Array.isArray(product.productInfo)) {
+        parsedInfo = product.productInfo;
+      } else if (typeof product.productInfo === 'object' && product.productInfo !== null) {
+        // Convert object to array format
+        parsedInfo = Object.entries(product.productInfo).map(([key, value]) => ({
+          fieldName: key,
+          value: String(value)
+        }));
+      }
+      
+      if (parsedInfo.length === 0) {
         setProductSpecs([]);
         return;
       }
       
       // Get field IDs from productInfo (fieldName might be UUID if not resolved)
-      const fieldIds = product.productInfo.map(f => f.fieldName);
+      const fieldIds = parsedInfo.map(f => f.fieldName);
       
       // Check if fieldNames look like UUIDs (need to resolve labels)
       const looksLikeUUIDs = fieldIds.some(id => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id));
@@ -464,22 +503,22 @@ export function ViewOfferDetails({ offerId, onClose, onEdit, onAddOfferToProduct
             const labelMap: Record<string, string> = data.labels || {};
             
             // Map product info with resolved labels
-            const mapped = product.productInfo.map(f => ({
+            const mapped = parsedInfo.map(f => ({
               fieldName: labelMap[f.fieldName] || f.fieldName,
               value: f.value,
             }));
             setProductSpecs(mapped);
           } else {
             // Fallback to original fieldNames
-            setProductSpecs(product.productInfo);
+            setProductSpecs(parsedInfo);
           }
         } catch {
           // Fallback to original fieldNames
-          setProductSpecs(product.productInfo);
+          setProductSpecs(parsedInfo);
         }
       } else {
         // fieldNames are already human-readable
-        setProductSpecs(product.productInfo);
+        setProductSpecs(parsedInfo);
       }
     }
     loadProductSpecs();
