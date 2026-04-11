@@ -41,6 +41,12 @@ const navItems: NavItem[] = [
     icon: Ticket,
     href: "/backoffice/tickets",
   },
+  {
+    id: "users",
+    label: "Users",
+    icon: Users,
+    href: "/backoffice/users",
+  },
 ];
 
 export function BackOfficeShell({ children }: { children: React.ReactNode }) {
