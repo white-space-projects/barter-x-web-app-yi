@@ -55,7 +55,7 @@ export async function addAllowedEmail(email: string, role: "admin" | "operator" 
     email,
     role,
     addedAt: new Date().toISOString(),
-    addedBy: "admin@project-x.com",
+    addedBy: "admin@barter-x.com",
   };
   ALLOWED_EMAILS.push(newEmail);
   return newEmail;
@@ -69,4 +69,75 @@ export async function removeAllowedEmail(id: string): Promise<boolean> {
     return true;
   }
   return false;
+}
+
+// =============================================================================
+// BACKOFFICE USERS API (for Users tab)
+// =============================================================================
+
+interface BackofficeUserData {
+  id: string;
+  email: string;
+  role: string;
+  addedAt: string;
+  addedBy: string;
+  isVerified: boolean;
+  displayName?: string;
+  status?: string;
+  verifiedAt?: string;
+}
+
+export async function getBackofficeUsers(): Promise<BackofficeUserData[]> {
+  await new Promise((r) => setTimeout(r, 300));
+  return ALLOWED_EMAILS.map((e) => ({
+    id: e.id,
+    email: e.email,
+    role: e.role,
+    addedAt: e.addedAt,
+    addedBy: e.addedBy,
+    isVerified: true,
+    status: "verified",
+  }));
+}
+
+export async function inviteBackofficeUser(
+  email: string,
+  role: "admin" | "operator" | "viewer" = "operator"
+): Promise<{ success: boolean; error?: string; magicLink?: string }> {
+  await new Promise((r) => setTimeout(r, 300));
+  
+  const existing = ALLOWED_EMAILS.find((e) => e.email.toLowerCase() === email.toLowerCase());
+  if (existing) {
+    return { success: false, error: "Email already has access" };
+  }
+  
+  const newUser: AllowedEmail = {
+    id: crypto.randomUUID(),
+    email,
+    role,
+    addedAt: new Date().toISOString(),
+    addedBy: "admin@barter-x.com",
+  };
+  ALLOWED_EMAILS.push(newUser);
+  
+  const token = crypto.randomUUID();
+  const magicLink = `/backoffice/verify?token=${token}`;
+  
+  return { success: true, magicLink };
+}
+
+export async function regenerateMagicLink(
+  userId: string
+): Promise<{ success: boolean; error?: string; magicLink?: string }> {
+  await new Promise((r) => setTimeout(r, 300));
+  
+  const user = ALLOWED_EMAILS.find((e) => e.id === userId);
+  if (!user) {
+    return { success: false, error: "User not found" };
+  }
+  
+  const token = crypto.randomUUID();
+  const magicLink = `/backoffice/verify?token=${token}`;
+  
+  return { success: true, magicLink };
 }
