@@ -13,7 +13,7 @@ import type { BackOfficeUser, AllowedEmail, LoginResponse } from "./types";
 // =============================================================================
 
 const ALLOWED_EMAILS: AllowedEmail[] = [
-  { id: "1", email: "admin@project-x.com", role: "admin", addedAt: "2024-01-01T00:00:00Z", addedBy: "system" },
+  { id: "1", email: "admin@barter-x.com", role: "admin", addedAt: "2024-01-01T00:00:00Z", addedBy: "system" },
 ];
 
 const HARDCODED_OTP = "123456";
