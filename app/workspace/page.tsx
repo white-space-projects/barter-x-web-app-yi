@@ -2,7 +2,7 @@
 
 /**
  * ============================================================================
- * WORKSPACE PAGE - Main application workspace
+ * WORKSPACE PAGE - Main application workspace (Updated)
  * ============================================================================
  * 
  * This is the main authenticated workspace where users can:

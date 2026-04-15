@@ -1,5 +1,6 @@
 "use client";
 
+// My Offers Tab - Updated design
 import { useState, useMemo, useEffect } from "react";
 import { Package, ChevronDown, ChevronUp, MapPin, MessageSquare, Pencil, MoreHorizontal, X, Link2Off, Eye, Trash2 } from "lucide-react";
 import { useBarterStore } from "@/lib/store";
