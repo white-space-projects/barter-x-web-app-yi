@@ -79,6 +79,49 @@ const PROGRESS_STAGES: Record<LockLevel, number> = {
   3: 3,
 };
 
+// Image component with error fallback for hooked offer rows
+function HookedOfferImage({ 
+  offerImage, 
+  productImage, 
+  alt 
+}: { 
+  offerImage?: string | null; 
+  productImage?: string | null; 
+  alt: string;
+}) {
+  const [imgError, setImgError] = useState(false);
+  const [imgLoading, setImgLoading] = useState(true);
+  
+  const imageSrc = offerImage || productImage;
+  
+  if (!imageSrc || imgError) {
+    return (
+      <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-lg bg-secondary overflow-hidden">
+        <Package className="h-6 w-6 text-muted-foreground/40" />
+      </div>
+    );
+  }
+  
+  return (
+    <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-lg bg-secondary overflow-hidden relative">
+      {imgLoading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-secondary">
+          <Package className="h-6 w-6 text-muted-foreground/40 animate-pulse" />
+        </div>
+      )}
+      <img
+        src={imageSrc}
+        alt={alt}
+        className="h-full w-full object-cover"
+        crossOrigin="anonymous"
+        onLoad={() => setImgLoading(false)}
+        onError={() => { setImgError(true); setImgLoading(false); }}
+        style={{ display: imgLoading ? 'none' : 'block' }}
+      />
+    </div>
+  );
+}
+
 export function MyOffersTab() {
   const { getMyOffers, getHooksByFromOffer, getOfferById, removeHook, updateHook, updateOffer, products, addNotification, getOrCreateConversation } =
     useBarterStore();
@@ -363,7 +406,7 @@ export function MyOffersTab() {
                     </div>
                   )}
 
-{/* Main content: 64x64 image + info */}
+                  {/* Main content: 64x64 image + info */}
                   <div 
                     className="flex gap-3 cursor-pointer"
                     onClick={() => setViewOffer(offer.offerId)}
@@ -397,7 +440,7 @@ export function MyOffersTab() {
                     </div>
                   </div>
 
-{/* Progress bar - only shown when lock_level > 0 */}
+                  {/* Progress bar - only shown when lock_level > 0 */}
                   {progressStage > 0 && (
                     <div className="mt-4">
                       <div className="flex items-center justify-end mb-2">
@@ -526,26 +569,12 @@ export function MyOffersTab() {
                               {/* Hooked offer row - 88px height, 64x64 image */}
                               <div className="p-3 h-full flex items-center">
                                 <div className="flex gap-3 items-center w-full">
-                                  {/* 64x64 Image */}
-                                  <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-lg bg-secondary overflow-hidden">
-                                    {targetOffer?.images && targetOffer.images.length > 0 ? (
-                                      <img
-                                        src={targetOffer.images[0].url}
-                                        alt={targetOffer?.title}
-                                        className="h-full w-full object-cover"
-                                        crossOrigin="anonymous"
-                                      />
-                                    ) : targetProduct?.imageUrl ? (
-                                      <img
-                                        src={targetProduct.imageUrl}
-                                        alt={targetOffer?.title}
-                                        className="h-full w-full object-cover"
-                                        crossOrigin="anonymous"
-                                      />
-                                    ) : (
-                                      <Package className="h-6 w-6 text-muted-foreground/40" />
-                                    )}
-                                  </div>
+                                  {/* 64x64 Image with fallback */}
+                                  <HookedOfferImage 
+                                    offerImage={targetOffer?.images?.[0]?.url}
+                                    productImage={targetProduct?.imageUrl}
+                                    alt={targetOffer?.title || "Hooked offer"}
+                                  />
 
                                   {/* Offer info: Title + Status pill + Location */}
                                   <div className="flex-1 min-w-0">
