@@ -273,14 +273,14 @@ function MarketplaceOfferCard({
 
         {/* Description - Anuphan font */}
         {offer.description && (
-          <p className="font-body text-sm text-muted-foreground line-clamp-2 mb-3">
+          <p className="font-body text-sm text-muted-foreground line-clamp-2">
             {offer.description}
           </p>
         )}
 
-        {/* Location - below description, above divider, no label, full country name, not bold */}
+        {/* Location - right-aligned, smaller text, reduced spacing */}
         {offer.pickupAddress?.city && (
-          <p className="font-label text-sm text-primary">
+          <p className="font-body text-xs text-primary text-right mt-2">
             {offer.pickupAddress.city}, {offer.pickupAddress.country || ""}
           </p>
         )}
@@ -290,7 +290,7 @@ function MarketplaceOfferCard({
       <div className="h-px bg-border/50 mx-4" />
 
       {/* Bottom row: Hooked thumbnails + Hook button */}
-      <div className="p-4 pt-3">
+      <div className="px-4 py-3">
         <div className="flex items-center justify-between" onClick={(e) => e.stopPropagation()}>
           {/* Left side: 3 product thumbnails (24x24) + Details link */}
           <div className="flex items-center gap-2">
