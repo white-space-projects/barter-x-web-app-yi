@@ -63,10 +63,11 @@ const config: Config = {
         },
       },
       fontFamily: {
-        sans: ['var(--font-space-mono)', '"Space Mono"', 'monospace'],
-        mono: ['var(--font-space-mono)', '"Space Mono"', 'monospace'],
+        sans: ['var(--font-inter)', 'Inter', 'sans-serif'],
+        mono: ['var(--font-jetbrains-mono)', '"JetBrains Mono"', 'monospace'],
         title: ['var(--font-space-grotesk)', '"Space Grotesk"', 'sans-serif'],
-        paragraph: ['var(--font-dm-sans)', '"DM Sans"', 'sans-serif'],
+        label: ['var(--font-sora)', 'Sora', 'sans-serif'],
+        body: ['var(--font-anuphan)', 'Anuphan', 'sans-serif'],
       },
       borderRadius: {
         lg: 'var(--radius)',
