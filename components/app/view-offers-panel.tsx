@@ -259,31 +259,29 @@ function MarketplaceOfferCard({
 
       {/* Content section - clickable to open details */}
       <div className="p-4 cursor-pointer" onClick={onViewDetails}>
-        {/* Title and location row */}
-        <div className="flex items-start justify-between gap-3 mb-2">
-          <div className="flex-1 min-w-0">
-            {/* Title - Space Grotesk font */}
-            <h3 className="font-title text-base font-semibold text-foreground truncate">
-              {offer.title}
-            </h3>
-            {/* Brand/model - Anuphan font */}
-            <p className="font-body text-xs text-muted-foreground mt-0.5">
-              {product.brand || product.subcategory} {product.model ? `. ${product.model}` : ""}
-            </p>
-          </div>
-          {locationDisplay && (
-            <div className="flex-shrink-0 text-right">
-              {/* Location label - Sora font */}
-              <p className="font-label text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Location</p>
-              <p className="font-label text-sm font-medium text-primary">{locationDisplay}</p>
-            </div>
-          )}
+        {/* Title row - full width */}
+        <div className="mb-2">
+          {/* Title - Space Grotesk font */}
+          <h3 className="font-title text-base font-semibold text-foreground truncate">
+            {offer.title}
+          </h3>
+          {/* Brand/model - Anuphan font */}
+          <p className="font-body text-xs text-muted-foreground mt-0.5">
+            {product.brand || product.subcategory} {product.model ? `. ${product.model}` : ""}
+          </p>
         </div>
 
         {/* Description - Anuphan font */}
         {offer.description && (
           <p className="font-body text-sm text-muted-foreground line-clamp-2 mb-3">
             {offer.description}
+          </p>
+        )}
+
+        {/* Location - below description, above divider, no label, full country name, not bold */}
+        {offer.pickupAddress?.city && (
+          <p className="font-label text-sm text-primary">
+            {offer.pickupAddress.city}, {offer.pickupAddress.country || ""}
           </p>
         )}
       </div>
@@ -294,26 +292,33 @@ function MarketplaceOfferCard({
       {/* Bottom row: Hooked thumbnails + Hook button */}
       <div className="p-4 pt-3">
         <div className="flex items-center justify-between" onClick={(e) => e.stopPropagation()}>
-          {/* Left side: Hooked offer thumbnails + Details link */}
+          {/* Left side: 3 product thumbnails (24x24) + Details link */}
           <div className="flex items-center gap-2">
-            {/* 24x24 hooked product thumbnails */}
-            {hookedOfferThumbnails.length > 0 && (
-              <div className="flex -space-x-2">
-                {hookedOfferThumbnails.map((thumbnail, idx) => (
+            {/* Always show 3 24x24 hooked product thumbnails - use real data or dummy fallbacks */}
+            <div className="flex -space-x-2">
+              {[0, 1, 2].map((idx) => {
+                const thumbnail = hookedOfferThumbnails[idx];
+                return (
                   <div 
                     key={idx}
                     className="h-6 w-6 rounded-md bg-secondary border border-background overflow-hidden flex-shrink-0"
                   >
-                    <ThumbnailWithFallback src={thumbnail.image} alt={thumbnail.title} />
+                    {thumbnail ? (
+                      <ThumbnailWithFallback src={thumbnail.image} alt={thumbnail.title} />
+                    ) : (
+                      <div className="h-full w-full flex items-center justify-center bg-muted">
+                        <Package className="h-3 w-3 text-muted-foreground/50" />
+                      </div>
+                    )}
                   </div>
-                ))}
-              </div>
-            )}
+                );
+              })}
+            </div>
             
-            {/* +N badge if more hooked offers */}
-            {offer.outgoingHookCount > hookedOfferThumbnails.length && (
+            {/* +N badge if more hooked offers beyond 3 */}
+            {offer.outgoingHookCount > 3 && (
               <span className="bg-muted rounded-full px-1.5 py-0.5 text-[10px] font-medium font-label">
-                +{offer.outgoingHookCount - hookedOfferThumbnails.length}
+                +{offer.outgoingHookCount - 3}
               </span>
             )}
             
@@ -327,32 +332,36 @@ function MarketplaceOfferCard({
             </button>
           </div>
 
-          {/* Right side: Hook button - OLD STYLE (rounded-full pill, muted bg, uppercase HOOK) */}
+          {/* Right side: Hook button - matches offer details page style */}
           {!isOwn && (
             !hasOffers ? (
               <button 
                 disabled 
-                className="font-label rounded-full bg-muted px-4 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/60 cursor-not-allowed"
+                className="font-label inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs font-medium bg-muted text-muted-foreground/60 cursor-not-allowed"
               >
-                Hook
+                <ArrowRightLeft className="h-3.5 w-3.5" />
+                Hook this offer
               </button>
             ) : !hasMatchingTypeOffers ? (
               <button 
                 disabled 
-                className="font-label rounded-full bg-muted px-4 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/60 cursor-not-allowed"
+                className="font-label inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs font-medium bg-muted text-muted-foreground/60 cursor-not-allowed"
               >
-                Hook
+                <ArrowRightLeft className="h-3.5 w-3.5" />
+                Hook this offer
               </button>
             ) : isAlreadyHooked ? (
-              <span className="font-label px-4 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <span className="font-label inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs font-medium bg-muted text-muted-foreground">
+                <ArrowRightLeft className="h-3.5 w-3.5" />
                 Hooked
               </span>
             ) : (
               <button 
                 onClick={onHook} 
-                className="font-label rounded-full bg-muted hover:bg-primary/20 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-foreground transition-colors"
+                className="font-label inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
               >
-                Hook
+                <ArrowRightLeft className="h-3.5 w-3.5" />
+                Hook this offer
               </button>
             )
           )}
