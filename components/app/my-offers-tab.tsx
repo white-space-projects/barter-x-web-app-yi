@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { Package, ChevronDown, ChevronUp, MapPin, MessageSquare, Pencil, MoreHorizontal, X, Link2Off, Eye } from "lucide-react";
+import { Package, ChevronDown, ChevronUp, MapPin, MessageSquare, Pencil, MoreHorizontal, X, Link2Off, Eye, Trash2 } from "lucide-react";
 import { useBarterStore } from "@/lib/store";
 import { useBarterData } from "@/lib/data-provider";
 import type { HookStatus, LockLevel, Offer, Product } from "@/lib/types";
@@ -11,8 +11,17 @@ import { PickupReadinessModal } from "./pickup-readiness-modal";
 import { AddOfferFlow } from "./add-offer-flow";
 import { ViewOfferDetails } from "./view-offer-details";
 import { ProductImage } from "./product-image";
-import { SimulateControl } from "./simulate-control";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 /**
  * MY OFFERS TAB
@@ -54,6 +63,22 @@ const HOOK_STATUS_BG_COLORS: Record<HookStatus, string> = {
   expired: "bg-muted/50",
 };
 
+// My Offer status labels based on lock_level (per design spec)
+const MY_OFFER_STATUS_LABELS: Record<LockLevel, string | null> = {
+  0: null,              // No status label for lock_level 0
+  1: "Cycle formed",    // lock_level 1
+  2: "Exchange initiated", // lock_level 2  
+  3: "Exchange complete",  // lock_level 3
+};
+
+// Progress bar stage mapping (1-3)
+const PROGRESS_STAGES: Record<LockLevel, number> = {
+  0: 0,
+  1: 1,
+  2: 2,
+  3: 3,
+};
+
 export function MyOffersTab() {
   const { getMyOffers, getHooksByFromOffer, getOfferById, removeHook, updateHook, updateOffer, products, addNotification, getOrCreateConversation } =
     useBarterStore();
@@ -73,6 +98,8 @@ export function MyOffersTab() {
   const [mobileMenuOffer, setMobileMenuOffer] = useState<string | null>(null);
   // For adding an offer to a linked product from ViewOfferDetails
   const [addOfferToProduct, setAddOfferToProduct] = useState<Product | null>(null);
+  // Delete confirmation dialog
+  const [deleteOfferDialog, setDeleteOfferDialog] = useState<{ offerId: string; title: string } | null>(null);
   
   // Fetch offer from API when editing (DB is single source of truth)
   // MUST be declared here before any conditional returns to follow Rules of Hooks
@@ -312,135 +339,168 @@ export function MyOffersTab() {
             const canUnconfirmReady = canToggleReadinessOff(offer);
             const showPickupDate = offer.readyState && offer.pickupReadyDate;
 
+            // My Offer Status Label
+            const statusLabel = MY_OFFER_STATUS_LABELS[offer.lockLevel];
+            const progressStage = PROGRESS_STAGES[offer.lockLevel];
+
             return (
               <div
                 key={offer.offerId}
-                className="rounded-xl border border-border bg-card overflow-hidden w-full card-shadow-primary relative"
+                className="rounded-xl border border-primary/30 bg-card overflow-hidden w-full card-shadow-primary relative"
               >
-                {/* Card header - compact 88px with 12px top/bottom, 16px left/right padding */}
-                <div className="py-3 px-4">
-                  <div className="flex gap-3">
-                    {/* Clickable card area - opens View Offer */}
-                    <div 
-                      className="flex gap-3 flex-1 min-w-0 cursor-pointer"
-                      onClick={() => setViewOffer(offer.offerId)}
-                    >
-                      {/* 64x64 Image - show offer's first image if available, else product image */}
-                      {offer.images && offer.images.length > 0 ? (
-                        <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-lg bg-secondary overflow-hidden">
-                          <img
-                            src={offer.images[0].url}
-                            alt={offer.title}
-                            className="h-full w-full object-cover"
-                            crossOrigin="anonymous"
-                          />
-                        </div>
-                      ) : (
-                        <ProductImage 
-                          src={product?.imageUrl} 
-                          alt={offer.title} 
-                          size="md"
-                        />
-                      )}
-
-                      {/* Content */}
-                      <div className="flex-1 min-w-0 flex flex-col justify-center">
-                        <p className="text-sm font-medium text-foreground truncate">
-                          {offer.title}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {product?.subcategory} . {product?.brand}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Hooks {offer.outgoingHookCount}/3
-                        </p>
-                        {/* Pickup date shown inline when confirmed */}
-                        {showPickupDate && (
-                          <button
-                            onClick={(e) => { e.stopPropagation(); setPickupOffer(offer.offerId); }}
-                            className="text-xs text-primary hover:underline text-left mt-0.5"
-                          >
-                            Pickup: <span className="underline">{offer.pickupReadyDate}</span>
-                          </button>
-                        )}
-                      </div>
+                {/* Card header with status label */}
+                <div className="p-4">
+                  {/* Status label at top if lock_level > 0 */}
+                  {statusLabel && (
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-xs font-semibold uppercase tracking-wider text-primary">
+                        {statusLabel}
+                      </span>
+                      {/* Lock level badge */}
+                      <span className="px-2 py-1 rounded-lg bg-primary/20 text-primary text-xs font-medium">
+                        L{offer.lockLevel}
+                      </span>
                     </div>
+                  )}
 
-                    {/* Right side: status badge and 3-dots menu */}
-                    <div className="flex-shrink-0 flex flex-col items-end justify-between h-16">
-                      {/* 3-dots menu (mobile only) - horizontal dots */}
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setMobileMenuOffer(offer.offerId); }}
-                        className="p-1 text-muted-foreground hover:text-foreground transition-colors lg:hidden"
-                        aria-label="More options"
-                      >
-                        <MoreHorizontal className="h-5 w-5" />
-                      </button>
-                      
-                      {/* Status badge with down arrow - accordion trigger */}
-                      {activeSubTab === "open" && (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setExpandedOffer(isExpanded ? null : offer.offerId); }}
-                          className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium transition-colors ${LOCK_LEVEL_BG_COLORS[offer.lockLevel]} ${LOCK_LEVEL_COLORS[offer.lockLevel]} hover:opacity-80`}
-                        >
-                          {LOCK_LEVEL_LABELS[offer.lockLevel]}
-                          {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                        </button>
-                      )}
-                      {activeSubTab === "closed" && (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setExpandedOffer(isExpanded ? null : offer.offerId); }}
-                          className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium transition-colors ${LOCK_LEVEL_BG_COLORS[3]} ${LOCK_LEVEL_COLORS[3]} hover:opacity-80`}
-                        >
-                          {LOCK_LEVEL_LABELS[3]}
-                          {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                        </button>
-                      )}
+                  {/* Main content: 64x64 image + info */}
+                  <div 
+                    className="flex gap-3 cursor-pointer"
+                    onClick={() => setViewOffer(offer.offerId)}
+                  >
+                    {/* 64x64 Image */}
+                    {offer.images && offer.images.length > 0 ? (
+                      <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-lg bg-secondary overflow-hidden">
+                        <img
+                          src={offer.images[0].url}
+                          alt={offer.title}
+                          className="h-full w-full object-cover"
+                          crossOrigin="anonymous"
+                        />
+                      </div>
+                    ) : (
+                      <ProductImage 
+                        src={product?.imageUrl} 
+                        alt={offer.title} 
+                        size="md"
+                      />
+                    )}
+
+                    {/* Content */}
+                    <div className="flex-1 min-w-0 flex flex-col justify-center">
+                      <p className="text-base font-semibold text-foreground truncate">
+                        {offer.title}
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-0.5 line-clamp-2">
+                        {offer.description || `${product?.subcategory} . ${product?.brand}`}
+                      </p>
                     </div>
                   </div>
 
-                </div>
+                  {/* Progress bar - only shown when lock_level > 0 */}
+                  {progressStage > 0 && (
+                    <div className="mt-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                          Lock Level
+                        </span>
+                        <span className="text-xs font-medium text-primary">
+                          {progressStage} / 3
+                        </span>
+                      </div>
+                      <div className="flex gap-1">
+                        {[1, 2, 3].map((stage) => (
+                          <div
+                            key={stage}
+                            className={`h-1.5 flex-1 rounded-full transition-colors ${
+                              stage <= progressStage
+                                ? "bg-primary"
+                                : "bg-muted"
+                            }`}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
-                {/* Confirm Pickup / Ready for Pickup section - shown outside main header */}
-                {showConfirmPickup && (
-                  <div className="px-4 pb-3 pt-2 border-t border-border/50 flex justify-end">
+                  {/* Confirm Pickup button - full width when lock_level >= 1 */}
+                  {showConfirmPickup && (
                     <button
                       onClick={(e) => { e.stopPropagation(); setPickupOffer(offer.offerId); }}
-                      className="px-3 py-1.5 text-xs font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                      className="w-full mt-4 py-3 text-sm font-semibold uppercase tracking-wider rounded-full bg-primary/20 text-primary border border-primary/30 hover:bg-primary/30 transition-colors"
                     >
                       Confirm Pickup Readiness
                     </button>
-                  </div>
-                )}
-                
-                {/* Show Pickup Confirmed with edit button when confirmed */}
-                {showReadyLabel && !showConfirmPickup && (
-                  <div className="px-4 pb-3 pt-2 border-t border-border/50 flex justify-end">
+                  )}
+                  
+                  {/* Pickup Confirmed indicator */}
+                  {showReadyLabel && !showConfirmPickup && (
                     <button
                       onClick={(e) => { e.stopPropagation(); setPickupOffer(offer.offerId); }}
-                      className="px-3 py-1.5 text-xs font-medium rounded-md bg-green-500/10 text-green-500 hover:bg-green-500/20 transition-colors flex items-center gap-1.5"
+                      className="w-full mt-4 py-3 text-sm font-semibold uppercase tracking-wider rounded-full bg-green-500/20 text-green-500 border border-green-500/30 hover:bg-green-500/30 transition-colors flex items-center justify-center gap-2"
                     >
                       <span>Pickup Confirmed</span>
-                      <Pencil className="h-3 w-3" />
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                  )}
+
+                  {/* Action buttons row: Edit, Delete, (3-dots for mobile) */}
+                  <div className="flex items-center gap-2 mt-4 pt-4 border-t border-border/50">
+                    {/* Edit button - always visible, disabled when locked */}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); canModifyOffer(offer) && setEditOffer(offer.offerId); }}
+                      disabled={!canModifyOffer(offer)}
+                      className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                        canModifyOffer(offer)
+                          ? "bg-secondary text-foreground hover:bg-secondary/80"
+                          : "bg-muted/50 text-muted-foreground/50 cursor-not-allowed"
+                      }`}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                      Edit
+                    </button>
+
+                    {/* Delete button - always visible, disabled when locked */}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); canModifyOffer(offer) && setDeleteOfferDialog({ offerId: offer.offerId, title: offer.title }); }}
+                      disabled={!canModifyOffer(offer)}
+                      className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                        canModifyOffer(offer)
+                          ? "bg-destructive/10 text-destructive hover:bg-destructive/20"
+                          : "bg-muted/50 text-muted-foreground/50 cursor-not-allowed"
+                      }`}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Delete
+                    </button>
+
+                    {/* Mobile 3-dots menu */}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setMobileMenuOffer(offer.offerId); }}
+                      className="p-2 text-muted-foreground hover:text-foreground transition-colors lg:hidden rounded-lg hover:bg-secondary"
+                      aria-label="More options"
+                    >
+                      <MoreHorizontal className="h-5 w-5" />
                     </button>
                   </div>
-                )}
+                </div>
 
-                {/* Expanded section: outgoing hooks */}
+                {/* Hooked Offers Accordion Section */}
+                <div className="border-t border-border/50">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setExpandedOffer(isExpanded ? null : offer.offerId); }}
+                    className="w-full flex items-center justify-between px-4 py-3 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <span className="text-xs font-medium uppercase tracking-wider">
+                      Hooked Offers ({hooks.length}/3)
+                    </span>
+                    {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  </button>
+                </div>
+
+                {/* Expanded hooked offers - yellow accent for offer flow */}
                 {isExpanded && (
-                  <div className="border-t border-border bg-secondary/30 px-4 py-3">
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                        Your Outgoing Hooks ({hooks.length}/3)
-                      </p>
-                      <button
-                        onClick={() => setExpandedOffer(null)}
-                        className="p-1 text-muted-foreground hover:text-foreground"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    </div>
-
+                  <div className="border-t border-border bg-secondary/20 px-4 py-3">
                     {hooks.length === 0 ? (
                       <p className="text-xs text-muted-foreground py-2">
                         No hooks yet. Browse products to hook offers.
@@ -452,19 +512,24 @@ export function MyOffersTab() {
                           const targetProduct = targetOffer
                             ? products.find((p) => p.productId === targetOffer.productId)
                             : null;
-                          
-                          // Get the target offer's lock level for status badge display
-                          const targetLockLevel = targetOffer?.lockLevel ?? 0;
+
+                          // Map hook status to display labels
+                          const hookStatusLabel = hook.status === "reserved" ? "RESERVED" : 
+                                                   hook.status === "processing" ? "PROCESSING" :
+                                                   hook.status === "searching" ? "AWAITING" :
+                                                   hook.status === "cycle_found" ? "CYCLE FOUND" :
+                                                   hook.status === "exchanged" ? "EXCHANGED" : "EXPIRED";
 
                           return (
                             <div
                               key={hook.hookId}
-                              className="rounded-lg border border-border bg-card overflow-hidden card-shadow-primary"
+                              className="rounded-lg border border-border bg-card overflow-hidden"
+                              style={{ boxShadow: '0 4px 0 0 hsl(var(--primary) / 0.6)' }} // Yellow accent like primary color
                             >
-                              {/* Compact hooked offer card - smaller padding and image */}
+                              {/* Compact hooked offer row */}
                               <div className="p-3">
                                 <div className="flex gap-2.5 items-center">
-                                  {/* 48x48 Image - smaller than main cards */}
+                                  {/* Small thumbnail image */}
                                   <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-secondary overflow-hidden">
                                     {targetOffer?.images && targetOffer.images.length > 0 ? (
                                       <img
@@ -485,75 +550,61 @@ export function MyOffersTab() {
                                     )}
                                   </div>
 
-                                  {/* Target offer info */}
+                                  {/* Offer info with status indicator */}
                                   <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium text-foreground truncate">
-                                      {targetOffer?.title || "Unknown Offer"}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground">
-                                      {targetProduct?.subcategory} . {targetProduct?.brand}
-                                    </p>
-                                  </div>
-
-                                  {/* Status badge - inline right side */}
-                                  <span className={`flex-shrink-0 px-2 py-0.5 rounded-full text-xs font-medium ${LOCK_LEVEL_BG_COLORS[targetLockLevel]} ${LOCK_LEVEL_COLORS[targetLockLevel]}`}>
-                                    {LOCK_LEVEL_LABELS[targetLockLevel]}
-                                  </span>
-                                </div>
-
-                                {/* Hook status and actions row */}
-                                <div className="flex items-center justify-between mt-2 pt-2 border-t border-border/50">
-                                  {/* Hook status badge */}
-                                  <div className="flex items-center gap-1.5">
-                                    <span className="text-xs text-muted-foreground">Hook:</span>
-                                    <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${HOOK_STATUS_BG_COLORS[hook.status]} ${HOOK_STATUS_COLORS[hook.status]}`}>
-                                      {HOOK_STATUS_LABELS[hook.status]}
-                                    </span>
-                                  </div>
-                                  
-                                  {/* Action buttons */}
-                                  <div className="flex items-center gap-2">
-                                    {(hook.status === "reserved" || hook.status === "processing") && (
-                                      <button
-                                        onClick={() => handleOpenChat(hook.hookId, offer.offerId, hook.toOfferId)}
-                                        className="flex items-center gap-1 text-xs text-primary hover:underline"
-                                      >
-                                        <MessageSquare className="h-3 w-3" />
-                                        Chat
-                                      </button>
-                                    )}
-                                    {/* TEMPORARY: Simulate control for testing workflow */}
-                                    <SimulateControl
-                                      currentLockLevel={targetLockLevel}
-                                      hookId={hook.hookId}
-                                      sourceOfferId={offer.offerId}
-                                      targetOfferId={hook.toOfferId}
-                                    />
-                                    {/* Unhook button - always visible but disabled when locked */}
-                                    <button
-                                      onClick={() => canRemoveHook(hook) && handleUnhook(hook.hookId, hook)}
-                                      disabled={!canRemoveHook(hook)}
-                                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
-                                        canRemoveHook(hook)
-                                          ? "bg-destructive/10 text-destructive hover:bg-destructive/20 border border-destructive/30" 
-                                          : "bg-muted/50 text-muted-foreground/50 cursor-not-allowed border border-transparent"
-                                      }`}
-                                    >
-                                      <Link2Off className="h-3 w-3" />
-                                      Unhook
-                                    </button>
-                                  </div>
-                                </div>
-
-                                {/* Show pickup address if hook is processing/committed */}
-                                {hook.status === "processing" && targetOffer?.pickupAddress && (
-                                  <div className="mt-2 pt-2 border-t border-border/50">
-                                    <p className="text-xs text-muted-foreground flex items-start gap-1">
-                                      <MapPin className="h-3 w-3 mt-0.5 flex-shrink-0" />
-                                      <span>
-                                        <strong>Pickup:</strong> {targetOffer.pickupAddress.street}, {targetOffer.pickupAddress.city}
+                                    <div className="flex items-center gap-1.5">
+                                      <span className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                                        hook.status === "reserved" || hook.status === "processing" ? "bg-primary" :
+                                        hook.status === "searching" || hook.status === "cycle_found" ? "bg-blue-500" :
+                                        "bg-muted-foreground"
+                                      }`} />
+                                      <p className="text-sm font-medium text-foreground truncate">
+                                        {targetOffer?.title || "Unknown Offer"}
+                                      </p>
+                                    </div>
+                                    <div className="flex items-center gap-2 mt-0.5">
+                                      <span className={`text-xs font-medium uppercase ${
+                                        hook.status === "reserved" ? "text-primary" :
+                                        hook.status === "processing" ? "text-blue-500" :
+                                        "text-muted-foreground"
+                                      }`}>
+                                        {hookStatusLabel}
                                       </span>
-                                    </p>
+                                      {targetOffer?.pickupAddress?.city && (
+                                        <>
+                                          <span className="text-muted-foreground">.</span>
+                                          <span className="text-xs text-muted-foreground">
+                                            {targetOffer.pickupAddress.city}, {targetOffer.pickupAddress.country?.substring(0, 2).toUpperCase() || ""}
+                                          </span>
+                                        </>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {/* Unhook / Locked button */}
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); canRemoveHook(hook) && handleUnhook(hook.hookId, hook); }}
+                                    disabled={!canRemoveHook(hook)}
+                                    className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                                      canRemoveHook(hook)
+                                        ? "bg-muted/50 text-foreground hover:bg-muted"
+                                        : "text-muted-foreground/60"
+                                    }`}
+                                  >
+                                    {canRemoveHook(hook) ? "UNHOOK" : "LOCKED"}
+                                  </button>
+                                </div>
+
+                                {/* Chat button for reserved/processing hooks */}
+                                {(hook.status === "reserved" || hook.status === "processing") && (
+                                  <div className="mt-2 pt-2 border-t border-border/50 flex justify-end">
+                                    <button
+                                      onClick={() => handleOpenChat(hook.hookId, offer.offerId, hook.toOfferId)}
+                                      className="flex items-center gap-1 text-xs text-primary hover:underline"
+                                    >
+                                      <MessageSquare className="h-3 w-3" />
+                                      Chat
+                                    </button>
                                   </div>
                                 )}
                               </div>
@@ -642,7 +693,40 @@ export function MyOffersTab() {
           onClose={() => setPickupOffer(null)}
         />
       )}
-      
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deleteOfferDialog} onOpenChange={(open) => !open && setDeleteOfferDialog(null)}>
+        <AlertDialogContent className="max-w-[340px] rounded-xl">
+          <AlertDialogHeader>
+            <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10">
+              <Trash2 className="h-6 w-6 text-destructive" />
+            </div>
+            <AlertDialogTitle className="text-center">Delete this offer?</AlertDialogTitle>
+            <AlertDialogDescription className="text-center">
+              This will permanently remove &quot;{deleteOfferDialog?.title}&quot; from the marketplace. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col gap-2 sm:flex-col">
+            <AlertDialogAction
+              onClick={() => {
+                if (deleteOfferDialog) {
+                  const offer = getOfferById(deleteOfferDialog.offerId);
+                  if (offer) {
+                    handleDeactivateOffer(deleteOfferDialog.offerId, offer);
+                  }
+                }
+                setDeleteOfferDialog(null);
+              }}
+              className="w-full bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Yes, Delete
+            </AlertDialogAction>
+            <AlertDialogCancel className="w-full mt-0">
+              Cancel
+            </AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
     </div>
   );

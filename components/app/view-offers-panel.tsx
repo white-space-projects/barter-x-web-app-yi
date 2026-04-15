@@ -286,224 +286,323 @@ export function ViewOffersPanel({ product, onAddOffer, onViewModeChange }: Props
               </button>
             </div>
           ) : offers.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {offers.map((offer) => {
                 const isOwn = offer.ownerUserId === auth.user?.userId;
                 const displayStatus = isOwn ? getOfferDisplayStatus(offer.offerId) : null;
-const showConfirmPickup = isOwn && hasReservedHook(offer.offerId) && !offer.readyState;
-                  const showPickupConfirmed = isOwn && offer.readyState;
-                  const showPickupDate = isOwn && offer.readyState && offer.pickupReadyDate;
+                const showConfirmPickup = isOwn && hasReservedHook(offer.offerId) && !offer.readyState;
+                const showPickupConfirmed = isOwn && offer.readyState;
+                const showPickupDate = isOwn && offer.readyState && offer.pickupReadyDate;
+
+                // Get hooked offers for thumbnail preview (for other users viewing)
+                const offerHooks = getHooksByFromOffer(offer.offerId);
+                const hookedOfferThumbnails = offerHooks.slice(0, 3).map((hook) => {
+                  const hookedOffer = getOfferById(hook.toOfferId);
+                  const hookedProduct = hookedOffer ? products.find((p) => p.productId === hookedOffer.productId) : null;
+                  return {
+                    image: hookedOffer?.images?.[0]?.url || hookedProduct?.imageUrl || null,
+                    title: hookedOffer?.title || "Unknown",
+                  };
+                });
+
+                // Get location from offer's pickup address
+                const offerCity = offer.pickupAddress?.city;
+                const offerCountry = offer.pickupAddress?.country;
+                const locationDisplay = offerCity && offerCountry 
+                  ? `${offerCity}, ${offerCountry.length > 2 ? offerCountry.substring(0, 2).toUpperCase() : offerCountry}`
+                  : offerCity || offerCountry || null;
+
+                // Determine condition badge display
+                const conditionBadge = offer.offerInfo?.find(f => f.fieldName.toLowerCase() === 'condition')?.value;
+
+                // Check if user has already hooked this offer
+                const myOfferIds = myOffers.map((o) => o.offerId);
+                const isAlreadyHooked = hooks.some((h) => h.toOfferId === offer.offerId && myOfferIds.includes(h.fromOfferId));
                 
                 return (
                   <div 
                     key={offer.offerId} 
-                    className="rounded-xl border border-border bg-card overflow-hidden w-full card-shadow-primary cursor-pointer hover:border-primary/30 transition-colors"
-                    onClick={() => {
-                      // Click anywhere on card opens offer details
-                      setViewDetailsOfferId(offer.offerId);
-                    }}
+                    className="rounded-xl border border-primary/30 bg-card overflow-hidden w-full card-shadow-primary cursor-pointer hover:border-primary/50 transition-colors"
+                    onClick={() => setViewDetailsOfferId(offer.offerId)}
                   >
-                    <div className="p-4 min-h-[88px]">
-                      <div className="flex gap-3">
-                        {/* Image - offer images as-is, product images on white background */}
-                        {offer.images && offer.images.length > 0 ? (
-                          <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-lg bg-secondary overflow-hidden">
-                            <img src={offer.images[0].url} alt={offer.title} className="h-full w-full object-cover" crossOrigin="anonymous" />
+                    {/* Large main image section */}
+                    <div className="relative aspect-[4/3] bg-secondary overflow-hidden">
+                      {offer.images && offer.images.length > 0 ? (
+                        <img 
+                          src={offer.images[0].url} 
+                          alt={offer.title} 
+                          className="h-full w-full object-cover" 
+                          crossOrigin="anonymous" 
+                        />
+                      ) : product.imageUrl ? (
+                        <img 
+                          src={product.imageUrl} 
+                          alt={offer.title} 
+                          className="h-full w-full object-contain bg-white p-4" 
+                          crossOrigin="anonymous" 
+                        />
+                      ) : (
+                        <div className="h-full w-full flex items-center justify-center">
+                          <Package className="h-16 w-16 text-muted-foreground/30" />
+                        </div>
+                      )}
+                      
+                      {/* Condition badge - top left */}
+                      {conditionBadge && typeof conditionBadge === 'string' && (
+                        <div className="absolute top-3 left-3">
+                          <span className="px-2.5 py-1 rounded-md bg-primary text-primary-foreground text-xs font-semibold uppercase">
+                            {conditionBadge}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Content section */}
+                    <div className="p-4">
+                      {/* Title and location row */}
+                      <div className="flex items-start justify-between gap-3 mb-2">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-base font-semibold text-foreground truncate">
+                            {offer.title}
+                          </h3>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {product.brand || product.subcategory} {product.model ? `. ${product.model}` : ""}
+                          </p>
+                        </div>
+                        {locationDisplay && (
+                          <div className="flex-shrink-0 text-right">
+                            <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Location</p>
+                            <p className="text-sm font-medium text-primary">{locationDisplay}</p>
                           </div>
-                        ) : (
-                          <ProductImage src={product.imageUrl} alt={offer.title} size="md" />
                         )}
-
-                        <div className="flex-1 min-w-0 flex flex-col justify-center">
-                          <p className="text-sm font-medium text-foreground truncate">{offer.title}</p>
-                          <p className="text-xs text-muted-foreground flex items-center gap-1">
-                            {product.subcategory} <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary" /> {product.brand}
-                          </p>
-                          <p className="text-xs text-primary font-medium">
-                            {isOwn 
-                              ? `Hooks ${offer.outgoingHookCount}/3` 
-                              : offer.outgoingHookCount === 0 
-                                ? "Not hooked yet"
-                                : `Hooked to ${offer.outgoingHookCount} ${offer.outgoingHookCount === 1 ? "offer" : "offers"}`
-                            }
-                          </p>
-                        </div>
-
-                        <div className="flex flex-col items-end justify-start flex-shrink-0 gap-1">
-                          {showPickupDate && (
-                            <button 
-                              onClick={(e) => { e.stopPropagation(); setPickupOfferId(offer.offerId); }} 
-                              className="text-xs text-primary hover:underline"
-                            >
-                              Pickup: <span className="underline">{offer.pickupReadyDate}</span>
-                            </button>
-                          )}
-                          
-                          {displayStatus && (
-                            <p className={`text-xs font-medium ${HOOK_STATUS_COLORS[displayStatus]}`}>{HOOK_STATUS_LABELS[displayStatus]}</p>
-                          )}
-                        </div>
                       </div>
 
-                      <div className="mt-3 pt-2 border-t border-border/50 flex flex-col gap-2" onClick={(e) => e.stopPropagation()}>
-                        {isOwn ? (
-                          <>
+                      {/* Description */}
+                      {offer.description && (
+                        <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
+                          {offer.description}
+                        </p>
+                      )}
+
+                      {/* Divider */}
+                      <div className="h-px bg-border/50 my-3" />
+
+                      {/* Bottom row: Hooked thumbnails + Hook button */}
+                      <div className="flex items-center justify-between" onClick={(e) => e.stopPropagation()}>
+                        {/* Hooked offer thumbnails preview */}
+                        <div className="flex items-center gap-2">
+                          {hookedOfferThumbnails.length > 0 && (
+                            <div className="flex -space-x-2">
+                              {hookedOfferThumbnails.map((thumbnail, idx) => (
+                                <div 
+                                  key={idx}
+                                  className="h-6 w-6 rounded-md bg-secondary border border-background overflow-hidden flex-shrink-0"
+                                >
+                                  {thumbnail.image ? (
+                                    <img 
+                                      src={thumbnail.image} 
+                                      alt={thumbnail.title}
+                                      className="h-full w-full object-cover"
+                                      crossOrigin="anonymous"
+                                    />
+                                  ) : (
+                                    <div className="h-full w-full flex items-center justify-center bg-muted">
+                                      <Package className="h-3 w-3 text-muted-foreground/50" />
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          {offer.outgoingHookCount > 0 && (
+                            <button 
+                              onClick={() => setViewDetailsOfferId(offer.offerId)}
+                              className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+                            >
+                              {offer.outgoingHookCount > hookedOfferThumbnails.length && (
+                                <span className="bg-muted rounded-full px-1.5 py-0.5 text-[10px] font-medium">
+                                  +{offer.outgoingHookCount - hookedOfferThumbnails.length}
+                                </span>
+                              )}
+                              <span className="uppercase text-[10px] tracking-wider">Details</span>
+                              <span>&rarr;</span>
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Hook button - only for other users' offers */}
+                        {!isOwn && (
+                          !hasOffers ? (
+                            <button 
+                              disabled 
+                              className="rounded-full bg-muted px-4 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/60 cursor-not-allowed"
+                            >
+                              Hook
+                            </button>
+                          ) : !hasMatchingTypeOffers ? (
+                            <button 
+                              disabled 
+                              className="rounded-full bg-muted px-4 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/60 cursor-not-allowed"
+                            >
+                              Hook
+                            </button>
+                          ) : isAlreadyHooked ? (
+                            <span className="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                              Hooked
+                            </span>
+                          ) : (
+                            <button 
+                              onClick={() => setHookTargetOfferId(offer.offerId)} 
+                              className="rounded-full bg-muted hover:bg-primary/20 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-foreground transition-colors"
+                            >
+                              Hook
+                            </button>
+                          )
+                        )}
+
+                        {/* Own offer actions */}
+                        {isOwn && (
+                          <div className="flex items-center gap-2">
                             {showConfirmPickup && (
-                              <div className="flex justify-end">
-                                <button onClick={() => setPickupOfferId(offer.offerId)} className="px-3 py-1.5 text-xs font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">
-                                  Confirm Pickup Readiness
-                                </button>
-                              </div>
+                              <button 
+                                onClick={() => setPickupOfferId(offer.offerId)} 
+                                className="px-3 py-1.5 text-xs font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                              >
+                                Confirm Pickup
+                              </button>
                             )}
                             {showPickupConfirmed && (
-                              <div className="flex justify-end">
-                                <button onClick={() => setPickupOfferId(offer.offerId)} className="px-3 py-1.5 text-xs font-medium rounded-md bg-green-500/10 text-green-500 hover:bg-green-500/20 transition-colors flex items-center gap-1.5">
-                                  <span>Pickup Confirmed</span>
-                                  <Pencil className="h-3 w-3" />
-                                </button>
-                              </div>
+                              <button 
+                                onClick={() => setPickupOfferId(offer.offerId)} 
+                                className="px-3 py-1.5 text-xs font-medium rounded-md bg-green-500/10 text-green-500 hover:bg-green-500/20 transition-colors flex items-center gap-1.5"
+                              >
+                                <span>Confirmed</span>
+                                <Pencil className="h-3 w-3" />
+                              </button>
                             )}
-                            {/* Hooks accordion toggle */}
-                            {(() => {
-                              const offerHooks = getHooksByFromOffer(offer.offerId);
-                              return offerHooks.length > 0 ? (
-                                <button
-                                  onClick={() => setHooksExpandedOfferId(hooksExpandedOfferId === offer.offerId ? null : offer.offerId)}
-                                  className="flex items-center justify-between w-full text-xs text-muted-foreground hover:text-foreground transition-colors py-1"
-                                >
-                                  <span>Your Hooks ({offerHooks.length}/3)</span>
-                                  {hooksExpandedOfferId === offer.offerId ? (
-                                    <ChevronUp className="h-3.5 w-3.5" />
-                                  ) : (
-                                    <ChevronDown className="h-3.5 w-3.5" />
-                                  )}
-                                </button>
-                              ) : (
-                                <span className="text-xs text-muted-foreground italic">No hooks yet</span>
-                              );
-                            })()}
-                          </>
-                        ) : !hasOffers ? (
-                          <div className="text-right">
-                            <button disabled className="rounded-md bg-primary/40 px-3 py-1.5 text-xs font-medium text-primary-foreground/60 cursor-not-allowed">Hook this offer</button>
-                            <p className="mt-1 text-xs text-muted-foreground">Add an offer first to hook this one.</p>
-                          </div>
-                        ) : !hasMatchingTypeOffers ? (
-                          <div className="text-right">
-                            <button disabled className="rounded-md bg-primary/40 px-3 py-1.5 text-xs font-medium text-primary-foreground/60 cursor-not-allowed">Hook this offer</button>
-                            <p className="mt-1 text-xs text-muted-foreground">
-                              Add a <span className="font-medium">{getProductTypeName(product.productType)}</span> offer to hook.
-                            </p>
-                          </div>
-                        ) : (
-                          <div className="flex flex-wrap gap-2 justify-end">
-                            {(() => {
-                              const { canRequest, myMatchingOffer } = canRequestDirectExchange(offer.offerId);
-                              if (canRequest && myMatchingOffer) {
-                                return (
-                                  <button onClick={() => handleRequestDirectExchange(offer, myMatchingOffer)} className="flex items-center gap-1 rounded-md border border-primary bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/20">
-                                    <ArrowRightLeft className="h-3 w-3" />
-                                    Request Direct Exchange
-                                  </button>
-                                );
-                              }
-                              return null;
-                            })()}
-                            <button onClick={() => setHookTargetOfferId(offer.offerId)} className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90">
-                              Hook this offer
-                            </button>
                           </div>
                         )}
                       </div>
                     </div>
 
-                    {/* Expanded hooks section for own offers */}
-                    {isOwn && hooksExpandedOfferId === offer.offerId && (() => {
-                      const offerHooks = getHooksByFromOffer(offer.offerId);
-                      return offerHooks.length > 0 ? (
-                        <div className="border-t border-border bg-secondary/20 p-3" onClick={(e) => e.stopPropagation()}>
-                          <div className="space-y-2">
-                            {offerHooks.map((hook) => {
-                              const targetOffer = getOfferById(hook.toOfferId);
-                              if (!targetOffer) return null;
-                              const targetProduct = products.find((p) => p.productId === targetOffer.productId);
-                              const canUnhook = hook.lockLevel === 0 && hook.isActive;
+                    {/* Own offer hooks accordion */}
+                    {isOwn && offerHooks.length > 0 && (
+                      <>
+                        <div className="border-t border-border/50">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setHooksExpandedOfferId(hooksExpandedOfferId === offer.offerId ? null : offer.offerId); }}
+                            className="w-full flex items-center justify-between px-4 py-2 text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            <span className="text-xs font-medium uppercase tracking-wider">
+                              Your Hooks ({offerHooks.length}/3)
+                            </span>
+                            {hooksExpandedOfferId === offer.offerId ? (
+                              <ChevronUp className="h-4 w-4" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4" />
+                            )}
+                          </button>
+                        </div>
+                        {hooksExpandedOfferId === offer.offerId && (
+                          <div className="border-t border-border bg-secondary/20 p-3" onClick={(e) => e.stopPropagation()}>
+                            <div className="space-y-2">
+                              {offerHooks.map((hook) => {
+                                const targetOffer = getOfferById(hook.toOfferId);
+                                if (!targetOffer) return null;
+                                const targetProduct = products.find((p) => p.productId === targetOffer.productId);
+                                const canUnhook = hook.lockLevel === 0 && hook.isActive;
 
-                              return (
-                                <div key={hook.hookId} className="rounded-lg border border-border bg-card overflow-hidden">
-                                  <div className="p-3">
-                                    <div className="flex gap-2.5 items-center">
-                                      {/* 48x48 Image - offer images as-is, product images on white */}
-                                      {targetOffer.images && targetOffer.images.length > 0 ? (
+                                // Map hook status to display labels
+                                const hookStatusLabel = hook.status === "reserved" ? "RESERVED" : 
+                                                         hook.status === "processing" ? "PROCESSING" :
+                                                         hook.status === "searching" ? "AWAITING" :
+                                                         hook.status === "cycle_found" ? "CYCLE FOUND" :
+                                                         hook.status === "exchanged" ? "EXCHANGED" : "EXPIRED";
+
+                                return (
+                                  <div 
+                                    key={hook.hookId} 
+                                    className="rounded-lg border border-border bg-card overflow-hidden"
+                                    style={{ boxShadow: '0 4px 0 0 hsl(var(--primary) / 0.6)' }} // Yellow accent
+                                  >
+                                    <div className="p-3">
+                                      <div className="flex gap-2.5 items-center">
+                                        {/* Small thumbnail */}
                                         <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-secondary overflow-hidden">
-                                          <img
-                                            src={targetOffer.images[0].url}
-                                            alt={targetOffer.title}
-                                            className="h-full w-full object-cover"
-                                            crossOrigin="anonymous"
-                                          />
+                                          {targetOffer.images && targetOffer.images.length > 0 ? (
+                                            <img
+                                              src={targetOffer.images[0].url}
+                                              alt={targetOffer.title}
+                                              className="h-full w-full object-cover"
+                                              crossOrigin="anonymous"
+                                            />
+                                          ) : targetProduct?.imageUrl ? (
+                                            <img
+                                              src={targetProduct.imageUrl}
+                                              alt={targetOffer.title}
+                                              className="h-full w-full object-contain"
+                                              crossOrigin="anonymous"
+                                            />
+                                          ) : (
+                                            <Package className="h-5 w-5 text-muted-foreground/40" />
+                                          )}
                                         </div>
-                                      ) : (
-                                        <ProductImage 
-                                          src={targetProduct?.imageUrl} 
-                                          alt={targetOffer.title} 
-                                          size="sm"
-                                          className="h-12 w-12"
-                                        />
-                                      )}
 
-                                      {/* Offer info */}
-                                      <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-medium text-foreground truncate">
-                                          {targetOffer.title}
-                                        </p>
-                                        <p className="text-xs text-muted-foreground">
-                                          {targetProduct?.subcategory} . {targetProduct?.brand}
-                                        </p>
+                                        {/* Offer info with status indicator */}
+                                        <div className="flex-1 min-w-0">
+                                          <div className="flex items-center gap-1.5">
+                                            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                                              hook.status === "reserved" || hook.status === "processing" ? "bg-primary" :
+                                              hook.status === "searching" || hook.status === "cycle_found" ? "bg-blue-500" :
+                                              "bg-muted-foreground"
+                                            }`} />
+                                            <p className="text-sm font-medium text-foreground truncate">
+                                              {targetOffer.title}
+                                            </p>
+                                          </div>
+                                          <div className="flex items-center gap-2 mt-0.5">
+                                            <span className={`text-xs font-medium uppercase ${
+                                              hook.status === "reserved" ? "text-primary" :
+                                              hook.status === "processing" ? "text-blue-500" :
+                                              "text-muted-foreground"
+                                            }`}>
+                                              {hookStatusLabel}
+                                            </span>
+                                            {targetOffer.pickupAddress?.city && (
+                                              <>
+                                                <span className="text-muted-foreground">.</span>
+                                                <span className="text-xs text-muted-foreground">
+                                                  {targetOffer.pickupAddress.city}, {targetOffer.pickupAddress.country?.substring(0, 2).toUpperCase() || ""}
+                                                </span>
+                                              </>
+                                            )}
+                                          </div>
+                                        </div>
+
+                                        {/* Unhook / Locked button */}
+                                        <button
+                                          onClick={() => canUnhook && setShowUnhookDialog({ hookId: hook.hookId, offerTitle: targetOffer.title })}
+                                          disabled={!canUnhook || unhookingId === hook.hookId}
+                                          className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                                            canUnhook && unhookingId !== hook.hookId
+                                              ? "bg-muted/50 text-foreground hover:bg-muted"
+                                              : "text-muted-foreground/60"
+                                          }`}
+                                        >
+                                          {unhookingId === hook.hookId ? (
+                                            <Loader2 className="h-3 w-3 animate-spin" />
+                                          ) : canUnhook ? "UNHOOK" : "LOCKED"}
+                                        </button>
                                       </div>
-
-                                      {/* Offer status badge */}
-                                      <span className={`flex-shrink-0 px-2 py-0.5 rounded-full text-xs font-medium ${LOCK_LEVEL_BG_COLORS[targetOffer.lockLevel]} ${LOCK_LEVEL_COLORS[targetOffer.lockLevel]}`}>
-                                        {LOCK_LEVEL_LABELS[targetOffer.lockLevel]}
-                                      </span>
-                                    </div>
-
-                                    {/* Hook status and unhook action */}
-                                    <div className="flex items-center justify-between mt-2 pt-2 border-t border-border/50">
-                                      {/* Hook status */}
-                                      <div className="flex items-center gap-1.5">
-                                        <span className="text-xs text-muted-foreground">Hook:</span>
-                                        <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${HOOK_STATUS_BG_COLORS[hook.status]} ${HOOK_STATUS_COLORS[hook.status]}`}>
-                                          {HOOK_STATUS_LABELS[hook.status]}
-                                        </span>
-                                      </div>
-
-                                      {/* Unhook button */}
-                                      <button
-                                        onClick={() => canUnhook && setShowUnhookDialog({ hookId: hook.hookId, offerTitle: targetOffer.title })}
-                                        disabled={!canUnhook || unhookingId === hook.hookId}
-                                        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
-                                          canUnhook && unhookingId !== hook.hookId
-                                            ? "bg-destructive/10 text-destructive hover:bg-destructive/20 border border-destructive/30" 
-                                            : "bg-muted/50 text-muted-foreground/50 cursor-not-allowed border border-transparent"
-                                        }`}
-                                      >
-                                        {unhookingId === hook.hookId ? (
-                                          <Loader2 className="h-3 w-3 animate-spin" />
-                                        ) : (
-                                          <Link2Off className="h-3 w-3" />
-                                        )}
-                                        Unhook
-                                      </button>
                                     </div>
                                   </div>
-                                </div>
-                              );
-                            })}
+                                );
+                              })}
+                            </div>
                           </div>
-                        </div>
-                      ) : null;
-                    })()}
+                        )}
+                      </>
+                    )}
                   </div>
                 );
               })}
