@@ -363,7 +363,7 @@ export function MyOffersTab() {
                     </div>
                   )}
 
-                  {/* Main content: 64x64 image + info */}
+{/* Main content: 64x64 image + info */}
                   <div 
                     className="flex gap-3 cursor-pointer"
                     onClick={() => setViewOffer(offer.offerId)}
@@ -386,33 +386,30 @@ export function MyOffersTab() {
                       />
                     )}
 
-                    {/* Content */}
+                    {/* Content - Title + Subcategory/Brand only (no description) */}
                     <div className="flex-1 min-w-0 flex flex-col justify-center">
                       <p className="text-base font-semibold text-foreground truncate">
                         {offer.title}
                       </p>
-                      <p className="text-sm text-muted-foreground mt-0.5 line-clamp-2">
-                        {offer.description || `${product?.subcategory} . ${product?.brand}`}
+                      <p className="text-sm text-muted-foreground mt-0.5">
+                        {product?.subcategory} · {product?.brand}
                       </p>
                     </div>
                   </div>
 
-                  {/* Progress bar - only shown when lock_level > 0 */}
+{/* Progress bar - only shown when lock_level > 0 */}
                   {progressStage > 0 && (
                     <div className="mt-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                          Lock Level
-                        </span>
+                      <div className="flex items-center justify-end mb-2">
                         <span className="text-xs font-medium text-primary">
                           {progressStage} / 3
                         </span>
                       </div>
-                      <div className="flex gap-1">
+                      <div className="flex gap-1.5">
                         {[1, 2, 3].map((stage) => (
                           <div
                             key={stage}
-                            className={`h-1.5 flex-1 rounded-full transition-colors ${
+                            className={`h-2 flex-1 rounded-full transition-colors ${
                               stage <= progressStage
                                 ? "bg-primary"
                                 : "bg-muted"
@@ -523,14 +520,14 @@ export function MyOffersTab() {
                           return (
                             <div
                               key={hook.hookId}
-                              className="rounded-lg border border-border bg-card overflow-hidden"
-                              style={{ boxShadow: '0 4px 0 0 hsl(var(--primary) / 0.6)' }} // Yellow accent like primary color
+                              className="rounded-lg border border-border bg-card overflow-hidden h-[88px]"
+                              style={{ boxShadow: '0 4px 0 0 hsl(var(--primary) / 0.6)' }}
                             >
-                              {/* Compact hooked offer row */}
-                              <div className="p-3">
-                                <div className="flex gap-2.5 items-center">
-                                  {/* Small thumbnail image */}
-                                  <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-secondary overflow-hidden">
+                              {/* Hooked offer row - 88px height, 64x64 image */}
+                              <div className="p-3 h-full flex items-center">
+                                <div className="flex gap-3 items-center w-full">
+                                  {/* 64x64 Image */}
+                                  <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-lg bg-secondary overflow-hidden">
                                     {targetOffer?.images && targetOffer.images.length > 0 ? (
                                       <img
                                         src={targetOffer.images[0].url}
@@ -546,33 +543,31 @@ export function MyOffersTab() {
                                         crossOrigin="anonymous"
                                       />
                                     ) : (
-                                      <Package className="h-5 w-5 text-muted-foreground/40" />
+                                      <Package className="h-6 w-6 text-muted-foreground/40" />
                                     )}
                                   </div>
 
-                                  {/* Offer info with status indicator */}
+                                  {/* Offer info: Title + Status pill + Location */}
                                   <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-1.5">
-                                      <span className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                                        hook.status === "reserved" || hook.status === "processing" ? "bg-primary" :
-                                        hook.status === "searching" || hook.status === "cycle_found" ? "bg-blue-500" :
-                                        "bg-muted-foreground"
-                                      }`} />
-                                      <p className="text-sm font-medium text-foreground truncate">
-                                        {targetOffer?.title || "Unknown Offer"}
-                                      </p>
-                                    </div>
-                                    <div className="flex items-center gap-2 mt-0.5">
-                                      <span className={`text-xs font-medium uppercase ${
-                                        hook.status === "reserved" ? "text-primary" :
-                                        hook.status === "processing" ? "text-blue-500" :
-                                        "text-muted-foreground"
+                                    <p className="text-sm font-medium text-foreground truncate">
+                                      {targetOffer?.title || "Unknown Offer"}
+                                    </p>
+                                    <div className="flex items-center gap-2 mt-1">
+                                      {/* Status pill */}
+                                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium uppercase ${
+                                        hook.status === "reserved" ? "bg-primary/20 text-primary" :
+                                        hook.status === "processing" ? "bg-blue-500/20 text-blue-500" :
+                                        hook.status === "searching" ? "bg-blue-500/10 text-blue-400" :
+                                        hook.status === "cycle_found" ? "bg-purple-500/20 text-purple-400" :
+                                        hook.status === "exchanged" ? "bg-green-500/20 text-green-500" :
+                                        "bg-muted text-muted-foreground"
                                       }`}>
                                         {hookStatusLabel}
                                       </span>
+                                      {/* Location */}
                                       {targetOffer?.pickupAddress?.city && (
                                         <>
-                                          <span className="text-muted-foreground">.</span>
+                                          <span className="text-muted-foreground">·</span>
                                           <span className="text-xs text-muted-foreground">
                                             {targetOffer.pickupAddress.city}, {targetOffer.pickupAddress.country?.substring(0, 2).toUpperCase() || ""}
                                           </span>
@@ -581,32 +576,19 @@ export function MyOffersTab() {
                                     </div>
                                   </div>
 
-                                  {/* Unhook / Locked button */}
+                                  {/* Unhook button - old style */}
                                   <button
                                     onClick={(e) => { e.stopPropagation(); canRemoveHook(hook) && handleUnhook(hook.hookId, hook); }}
                                     disabled={!canRemoveHook(hook)}
-                                    className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                                    className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium uppercase tracking-wider transition-colors ${
                                       canRemoveHook(hook)
-                                        ? "bg-muted/50 text-foreground hover:bg-muted"
+                                        ? "bg-muted text-foreground hover:bg-muted/80"
                                         : "text-muted-foreground/60"
                                     }`}
                                   >
-                                    {canRemoveHook(hook) ? "UNHOOK" : "LOCKED"}
+                                    {canRemoveHook(hook) ? "Unhook" : "Locked"}
                                   </button>
                                 </div>
-
-                                {/* Chat button for reserved/processing hooks */}
-                                {(hook.status === "reserved" || hook.status === "processing") && (
-                                  <div className="mt-2 pt-2 border-t border-border/50 flex justify-end">
-                                    <button
-                                      onClick={() => handleOpenChat(hook.hookId, offer.offerId, hook.toOfferId)}
-                                      className="flex items-center gap-1 text-xs text-primary hover:underline"
-                                    >
-                                      <MessageSquare className="h-3 w-3" />
-                                      Chat
-                                    </button>
-                                  </div>
-                                )}
                               </div>
                             </div>
                           );
