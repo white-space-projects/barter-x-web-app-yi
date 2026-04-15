@@ -803,6 +803,7 @@ export function ViewOffersPanel({ product, onAddOffer, onViewModeChange }: Props
                     unhookingId={unhookingId}
                     setShowUnhookDialog={setShowUnhookDialog}
                   />
+                );
               })}
             </div>
           ) : null}
