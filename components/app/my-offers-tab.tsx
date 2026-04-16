@@ -1,6 +1,5 @@
 "use client";
 
-// My Offers Tab - Updated design
 import { useState, useMemo, useEffect } from "react";
 import { Package, ChevronDown, ChevronUp, MapPin, MessageSquare, Pencil, MoreHorizontal, X, Link2Off, Eye, Trash2 } from "lucide-react";
 import { useBarterStore } from "@/lib/store";
@@ -332,11 +331,6 @@ export function MyOffersTab() {
 
   return (
     <div className="w-full">
-      {/* DEBUG MARKER - REMOVE AFTER TESTING */}
-      <div className="bg-red-500 text-white p-2 mb-4 rounded text-center font-bold">
-        DEBUG_MY_OFFER_RENDER
-      </div>
-
       {/* Sub-tabs: Open Offers / Closed Offers */}
       <div className="mb-4 flex gap-2">
         <button
