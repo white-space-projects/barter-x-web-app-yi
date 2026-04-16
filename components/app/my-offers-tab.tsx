@@ -386,6 +386,7 @@ export function MyOffersTab() {
             const statusLabel = MY_OFFER_STATUS_LABELS[offer.lockLevel];
             const progressStage = PROGRESS_STAGES[offer.lockLevel];
 
+// 🔷 My Offer Progress Card v2 (Target UI for Cursor)
 return (
                               <div
                                 key={offer.offerId}
