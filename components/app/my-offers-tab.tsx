@@ -386,144 +386,135 @@ export function MyOffersTab() {
             const statusLabel = MY_OFFER_STATUS_LABELS[offer.lockLevel];
             const progressStage = PROGRESS_STAGES[offer.lockLevel];
 
-            return (
-              <div
-                key={offer.offerId}
-                className="rounded-xl border border-primary/30 bg-card overflow-hidden w-full card-shadow-primary relative"
-              >
-                {/* Card header with status label */}
-                <div className="p-4">
-                  {/* Status label at top if lock_level > 0 */}
-                  {statusLabel && (
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-xs font-semibold uppercase tracking-wider text-primary">
-                        {statusLabel}
-                      </span>
-                      {/* Lock level badge */}
-                      <span className="px-2 py-1 rounded-lg bg-primary/20 text-primary text-xs font-medium">
-                        L{offer.lockLevel}
-                      </span>
-                    </div>
-                  )}
+return (
+                              <div
+                                key={offer.offerId}
+                                className="rounded-xl border border-primary/30 bg-card overflow-hidden w-full card-shadow-primary relative"
+                              >
+                                {/* MY OFFER CARD - UPDATED STRUCTURE */}
+                                <div className="p-4">
+                                  {/* STATUS LABEL - only when lock_level > 0 */}
+                                  {statusLabel && (
+                                    <div className="flex items-center justify-between mb-3">
+                                      <span className="text-xs font-semibold uppercase tracking-wider text-primary">
+                                        {statusLabel}
+                                      </span>
+                                      <span className="px-2 py-1 rounded-lg bg-primary/20 text-primary text-xs font-medium">
+                                        L{offer.lockLevel}
+                                      </span>
+                                    </div>
+                                  )}
 
-                  {/* Main content: 64x64 image + info */}
-                  <div 
-                    className="flex gap-3 cursor-pointer"
-                    onClick={() => setViewOffer(offer.offerId)}
-                  >
-                    {/* 64x64 Image */}
-                    {offer.images && offer.images.length > 0 ? (
-                      <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-lg bg-secondary overflow-hidden">
-                        <img
-                          src={offer.images[0].url}
-                          alt={offer.title}
-                          className="h-full w-full object-cover"
-                          crossOrigin="anonymous"
-                        />
-                      </div>
-                    ) : (
-                      <ProductImage 
-                        src={product?.imageUrl} 
-                        alt={offer.title} 
-                        size="md"
-                      />
-                    )}
+                                  {/* TOP ROW: 64x64 image + Title + Subcategory/Brand (NO description) */}
+                                  <div 
+                                    className="flex gap-3 cursor-pointer"
+                                    onClick={() => setViewOffer(offer.offerId)}
+                                  >
+                                    {offer.images && offer.images.length > 0 ? (
+                                      <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-lg bg-secondary overflow-hidden">
+                                        <img
+                                          src={offer.images[0].url}
+                                          alt={offer.title}
+                                          className="h-full w-full object-cover"
+                                          crossOrigin="anonymous"
+                                        />
+                                      </div>
+                                    ) : (
+                                      <ProductImage 
+                                        src={product?.imageUrl} 
+                                        alt={offer.title} 
+                                        size="md"
+                                      />
+                                    )}
+                                    <div className="flex-1 min-w-0 flex flex-col justify-center">
+                                      <p className="text-base font-semibold text-foreground truncate">
+                                        {offer.title}
+                                      </p>
+                                      <p className="text-sm text-muted-foreground mt-0.5">
+                                        {product?.subcategory} · {product?.brand}
+                                      </p>
+                                    </div>
+                                  </div>
 
-                    {/* Content - Title + Subcategory/Brand only (no description) */}
-                    <div className="flex-1 min-w-0 flex flex-col justify-center">
-                      <p className="text-base font-semibold text-foreground truncate">
-                        {offer.title}
-                      </p>
-                      <p className="text-sm text-muted-foreground mt-0.5">
-                        {product?.subcategory} · {product?.brand}
-                      </p>
-                    </div>
-                  </div>
+                                  {/* PROGRESS BAR - 3 segments, shown when lock_level > 0 */}
+                                  {progressStage > 0 && (
+                                    <div className="mt-4">
+                                      <div className="flex items-center justify-end mb-2">
+                                        <span className="text-xs font-medium text-primary">
+                                          {progressStage} / 3
+                                        </span>
+                                      </div>
+                                      <div className="flex gap-1.5">
+                                        {[1, 2, 3].map((stage) => (
+                                          <div
+                                            key={stage}
+                                            className={`h-2 flex-1 rounded-full transition-colors ${
+                                              stage <= progressStage ? "bg-primary" : "bg-muted"
+                                            }`}
+                                          />
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
 
-                  {/* Progress bar - only shown when lock_level > 0 */}
-                  {progressStage > 0 && (
-                    <div className="mt-4">
-                      <div className="flex items-center justify-end mb-2">
-                        <span className="text-xs font-medium text-primary">
-                          {progressStage} / 3
-                        </span>
-                      </div>
-                      <div className="flex gap-1.5">
-                        {[1, 2, 3].map((stage) => (
-                          <div
-                            key={stage}
-                            className={`h-2 flex-1 rounded-full transition-colors ${
-                              stage <= progressStage
-                                ? "bg-primary"
-                                : "bg-muted"
-                            }`}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                                  {/* CONFIRM PICKUP BUTTON - highest priority action */}
+                                  {showConfirmPickup && (
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); setPickupOffer(offer.offerId); }}
+                                      className="w-full mt-4 py-3 text-sm font-semibold uppercase tracking-wider rounded-lg bg-primary/20 text-primary border border-primary/30 hover:bg-primary/30 transition-colors"
+                                    >
+                                      Confirm Pickup Readiness
+                                    </button>
+                                  )}
+                                  
+                                  {/* PICKUP CONFIRMED indicator */}
+                                  {showReadyLabel && !showConfirmPickup && (
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); setPickupOffer(offer.offerId); }}
+                                      className="w-full mt-4 py-3 text-sm font-semibold uppercase tracking-wider rounded-lg bg-green-500/20 text-green-500 border border-green-500/30 hover:bg-green-500/30 transition-colors flex items-center justify-center gap-2"
+                                    >
+                                      <span>Pickup Confirmed</span>
+                                      <Pencil className="h-4 w-4" />
+                                    </button>
+                                  )}
+                                </div>
 
-                  {/* Confirm Pickup button - full width when lock_level >= 1 */}
-                  {showConfirmPickup && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setPickupOffer(offer.offerId); }}
-                      className="w-full mt-4 py-3 text-sm font-semibold uppercase tracking-wider rounded-full bg-primary/20 text-primary border border-primary/30 hover:bg-primary/30 transition-colors"
-                    >
-                      Confirm Pickup Readiness
-                    </button>
-                  )}
-                  
-                  {/* Pickup Confirmed indicator */}
-                  {showReadyLabel && !showConfirmPickup && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setPickupOffer(offer.offerId); }}
-                      className="w-full mt-4 py-3 text-sm font-semibold uppercase tracking-wider rounded-full bg-green-500/20 text-green-500 border border-green-500/30 hover:bg-green-500/30 transition-colors flex items-center justify-center gap-2"
-                    >
-                      <span>Pickup Confirmed</span>
-                      <Pencil className="h-4 w-4" />
-                    </button>
-                  )}
-
-                  {/* Action buttons row: Edit, Delete, (3-dots for mobile) */}
-                  <div className="flex items-center gap-2 mt-4 pt-4 border-t border-border/50">
-                    {/* Edit button - always visible, disabled when locked */}
-                    <button
-                      onClick={(e) => { e.stopPropagation(); canModifyOffer(offer) && setEditOffer(offer.offerId); }}
-                      disabled={!canModifyOffer(offer)}
-                      className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
-                        canModifyOffer(offer)
-                          ? "bg-secondary text-foreground hover:bg-secondary/80"
-                          : "bg-muted/50 text-muted-foreground/50 cursor-not-allowed"
-                      }`}
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                      Edit
-                    </button>
-
-                    {/* Delete button - always visible, disabled when locked */}
-                    <button
-                      onClick={(e) => { e.stopPropagation(); canModifyOffer(offer) && setDeleteOfferDialog({ offerId: offer.offerId, title: offer.title }); }}
-                      disabled={!canModifyOffer(offer)}
-                      className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
-                        canModifyOffer(offer)
-                          ? "bg-destructive/10 text-destructive hover:bg-destructive/20"
-                          : "bg-muted/50 text-muted-foreground/50 cursor-not-allowed"
-                      }`}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                      Delete
-                    </button>
-
-                    {/* Mobile 3-dots menu */}
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setMobileMenuOffer(offer.offerId); }}
-                      className="p-2 text-muted-foreground hover:text-foreground transition-colors lg:hidden rounded-lg hover:bg-secondary"
-                      aria-label="More options"
-                    >
-                      <MoreHorizontal className="h-5 w-5" />
-                    </button>
-                  </div>
-                </div>
+                                {/* ACTION BUTTONS - Edit + Delete + overflow */}
+                                <div className="px-4 pb-4">
+                                  <div className="flex items-center gap-2 pt-4 border-t border-border/50">
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); canModifyOffer(offer) && setEditOffer(offer.offerId); }}
+                                      disabled={!canModifyOffer(offer)}
+                                      className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                                        canModifyOffer(offer)
+                                          ? "bg-secondary text-foreground hover:bg-secondary/80"
+                                          : "bg-muted/50 text-muted-foreground/50 cursor-not-allowed"
+                                      }`}
+                                    >
+                                      <Pencil className="h-3.5 w-3.5" />
+                                      Edit
+                                    </button>
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); canModifyOffer(offer) && setDeleteOfferDialog({ offerId: offer.offerId, title: offer.title }); }}
+                                      disabled={!canModifyOffer(offer)}
+                                      className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                                        canModifyOffer(offer)
+                                          ? "bg-destructive/10 text-destructive hover:bg-destructive/20"
+                                          : "bg-muted/50 text-muted-foreground/50 cursor-not-allowed"
+                                      }`}
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                      Delete
+                                    </button>
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); setMobileMenuOffer(offer.offerId); }}
+                                      className="p-2 text-muted-foreground hover:text-foreground transition-colors rounded-lg hover:bg-secondary"
+                                      aria-label="More options"
+                                    >
+                                      <MoreHorizontal className="h-5 w-5" />
+                                    </button>
+                                  </div>
+                                </div>
 
                 {/* Hooked Offers Accordion Section */}
                 <div className="border-t border-border/50">
