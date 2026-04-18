@@ -57,7 +57,7 @@ export function ProductImage({ src, alt, size = "md", className = "" }: ProductI
         <>
           {/* Loading state */}
           {isLoading && (
-            <div className="absolute inset-0 flex items-center justify-center bg-white">
+            <div className="absolute inset-0 flex items-center justify-center">
               <Package className={`${ICON_SIZE_CLASSES[size]} text-muted-foreground/20 animate-pulse`} />
             </div>
           )}
