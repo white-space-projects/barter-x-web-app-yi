@@ -468,21 +468,21 @@ export default function ProductCatalogPage() {
       
       
       // Convert compressed dataUrl back to File/Blob for FormData
-      const response = await fetch(compressed.dataUrl);
-      const blob = await response.blob();
+      const blobResponse = await fetch(compressed.dataUrl);
+      const blob = await blobResponse.blob();
       const compressedFile = new File([blob], `${selectedProduct.productId}.webp`, { type: "image/webp" });
       
       const formData = new FormData();
       formData.append("file", compressedFile);
       formData.append("productId", selectedProduct.productId);
       
-      const response = await fetch("/api/product/image/upload", {
+      const uploadResponse = await fetch("/api/product/image/upload", {
         method: "POST",
         body: formData,
       });
       
-      if (response.ok) {
-        const data = await response.json();
+      if (uploadResponse.ok) {
+        const data = await uploadResponse.json();
         setSelectedProduct(prev => prev ? { 
           ...prev, 
           imageUrl: data.imageUrl,
@@ -496,8 +496,8 @@ export default function ProductCatalogPage() {
         ));
         toast.success("Product image updated");
       } else {
-        const error = await response.json();
-        toast.error(error.error || "Failed to upload image");
+        const errorData = await uploadResponse.json();
+        toast.error(errorData.error || "Failed to upload image");
       }
     } catch (error) {
       console.error("Failed to upload image:", error);
