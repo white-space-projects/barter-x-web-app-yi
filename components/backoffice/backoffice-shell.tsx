@@ -198,7 +198,7 @@ export function BackOfficeShell({ children }: { children: React.ReactNode }) {
 
       {/* Main Content */}
       <main className="lg:ml-64 pt-14 lg:pt-0">
-        <div className="min-h-screen p-4 lg:p-6">{children}</div>
+        <div className="min-h-screen p-2 lg:p-4">{children}</div>
       </main>
     </div>
   );

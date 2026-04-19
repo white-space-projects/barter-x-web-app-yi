@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { Search, ChevronLeft, ChevronRight, X, Upload, Package, Loader2, Edit2, Save, ImageIcon } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, X, Upload, Package, Loader2, Edit2, Save, ImageIcon, Trash2, Check } from "lucide-react";
 import { toast } from "sonner";
 
 // Types
@@ -75,6 +75,18 @@ export default function ProductCatalogPage() {
   const [editingProductInfo, setEditingProductInfo] = useState<Record<string, unknown>>({});
   const [savingProductInfo, setSavingProductInfo] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  
+  // Title editing state
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [editedTitle, setEditedTitle] = useState("");
+  const [savingTitle, setSavingTitle] = useState(false);
+  
+  // Delete state
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deletingProduct, setDeletingProduct] = useState(false);
+  
+  // Image error state for fallback
+  const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
   
   // Filtered subcategories based on selected category
   const filteredSubcategories = useMemo(() => {
@@ -168,6 +180,9 @@ export default function ProductCatalogPage() {
   // Handle product selection
   function handleSelectProduct(product: Product) {
     setSelectedProduct(product);
+    setEditedTitle(product.title);
+    setEditingTitle(false);
+    setShowDeleteConfirm(false);
   }
 
   // Handle back to list
@@ -175,6 +190,72 @@ export default function ProductCatalogPage() {
     setSelectedProduct(null);
     setProductFields([]);
     setEditingProductInfo({});
+    setEditingTitle(false);
+    setShowDeleteConfirm(false);
+  }
+
+  // Save product title
+  async function handleSaveTitle() {
+    if (!selectedProduct || !editedTitle.trim()) return;
+    
+    setSavingTitle(true);
+    try {
+      const response = await fetch(`/api/data/products/${selectedProduct.productId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: editedTitle.trim() }),
+      });
+      
+      if (response.ok) {
+        setSelectedProduct(prev => prev ? { ...prev, title: editedTitle.trim() } : null);
+        setProducts(prev => prev.map(p => 
+          p.productId === selectedProduct.productId 
+            ? { ...p, title: editedTitle.trim() }
+            : p
+        ));
+        setEditingTitle(false);
+        toast.success("Product title updated");
+      } else {
+        toast.error("Failed to update title");
+      }
+    } catch (error) {
+      console.error("Failed to save title:", error);
+      toast.error("Failed to update title");
+    } finally {
+      setSavingTitle(false);
+    }
+  }
+
+  // Delete product
+  async function handleDeleteProduct() {
+    if (!selectedProduct) return;
+    
+    setDeletingProduct(true);
+    try {
+      const response = await fetch(`/api/data/products/${selectedProduct.productId}`, {
+        method: "DELETE",
+      });
+      
+      if (response.ok) {
+        toast.success("Product deleted");
+        setProducts(prev => prev.filter(p => p.productId !== selectedProduct.productId));
+        handleBackToList();
+      } else {
+        const error = await response.json();
+        toast.error(error.error || "Failed to delete product");
+      }
+    } catch (error) {
+      console.error("Failed to delete product:", error);
+      toast.error("Failed to delete product");
+    } finally {
+      setDeletingProduct(false);
+      setShowDeleteConfirm(false);
+    }
+  }
+
+  // Handle image error for fallback
+  function handleImageError(productId: string) {
+    setImageErrors(prev => ({ ...prev, [productId]: true }));
   }
 
   // Handle product info field change
@@ -377,7 +458,7 @@ export default function ProductCatalogPage() {
     const brand = brands.find(b => b.brandId === selectedProduct.brandId);
     
     return (
-      <div className="p-6 space-y-6">
+      <div className="p-4 space-y-4">
         {/* Header */}
         <div className="flex items-center gap-4">
           <button
@@ -396,12 +477,13 @@ export default function ProductCatalogPage() {
             <div className="bg-card rounded-xl border border-border p-4">
               <h3 className="text-sm font-medium text-foreground mb-4">Product Image</h3>
               <div className="relative aspect-square rounded-lg bg-secondary overflow-hidden">
-                {selectedProduct.imageUrl ? (
+                {selectedProduct.imageUrl && !imageErrors[selectedProduct.productId] ? (
                   <img
                     src={selectedProduct.imageUrl}
                     alt={selectedProduct.title}
                     className="w-full h-full object-cover"
                     crossOrigin="anonymous"
+                    onError={() => handleImageError(selectedProduct.productId)}
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
@@ -433,7 +515,44 @@ export default function ProductCatalogPage() {
               <div className="space-y-3">
                 <div>
                   <label className="text-xs text-muted-foreground">Title</label>
-                  <p className="text-sm text-foreground font-medium">{selectedProduct.title}</p>
+                  {editingTitle ? (
+                    <div className="flex items-center gap-2 mt-1">
+                      <input
+                        type="text"
+                        value={editedTitle}
+                        onChange={(e) => setEditedTitle(e.target.value)}
+                        className="flex-1 rounded-lg border border-border bg-secondary px-3 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                        autoFocus
+                      />
+                      <button
+                        onClick={handleSaveTitle}
+                        disabled={savingTitle || !editedTitle.trim()}
+                        className="p-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                      >
+                        {savingTitle ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setEditingTitle(false);
+                          setEditedTitle(selectedProduct.title);
+                        }}
+                        className="p-1.5 rounded-lg bg-secondary text-foreground hover:bg-secondary/80 transition-colors"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 mt-1">
+                      <p className="text-sm text-foreground font-medium">{selectedProduct.title}</p>
+                      <button
+                        onClick={() => setEditingTitle(true)}
+                        className="p-1 rounded text-muted-foreground hover:text-foreground transition-colors"
+                        title="Edit title"
+                      >
+                        <Edit2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  )}
                 </div>
                 {selectedProduct.description && (
                   <div>
@@ -470,6 +589,45 @@ export default function ProductCatalogPage() {
                   </p>
                 </div>
               </div>
+            </div>
+
+            {/* Delete Product */}
+            <div className="bg-card rounded-xl border border-destructive/30 p-4">
+              <h3 className="text-sm font-medium text-destructive mb-2">Danger Zone</h3>
+              <p className="text-xs text-muted-foreground mb-4">
+                Deleting a product will remove it from the catalog. This action cannot be undone.
+              </p>
+              {showDeleteConfirm ? (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleDeleteProduct}
+                    disabled={deletingProduct}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-destructive hover:bg-destructive/90 text-destructive-foreground text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+                  >
+                    {deletingProduct ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-4 w-4" />
+                    )}
+                    Confirm Delete
+                  </button>
+                  <button
+                    onClick={() => setShowDeleteConfirm(false)}
+                    disabled={deletingProduct}
+                    className="px-4 py-2 bg-secondary hover:bg-secondary/80 text-foreground text-sm font-medium rounded-lg transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-destructive/10 hover:bg-destructive/20 text-destructive text-sm font-medium rounded-lg transition-colors"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Delete Product
+                </button>
+              )}
             </div>
           </div>
 
@@ -522,9 +680,9 @@ export default function ProductCatalogPage() {
     );
   }
 
-  // List View
+// List View
   return (
-    <div className="p-6 space-y-6">
+  <div className="p-4 space-y-4">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-semibold text-foreground">Product Catalog</h1>
@@ -642,16 +800,17 @@ export default function ProductCatalogPage() {
                 className="group bg-card rounded-xl border border-border overflow-hidden hover:border-primary/50 transition-colors text-left"
               >
                 <div className="aspect-square bg-secondary relative overflow-hidden">
-                  {product.imageUrl ? (
+                  {product.imageUrl && !imageErrors[product.productId] ? (
                     <img
                       src={product.imageUrl}
                       alt={product.title}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       crossOrigin="anonymous"
+                      onError={() => handleImageError(product.productId)}
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
-                      <ImageIcon className="h-8 w-8 text-muted-foreground/30" />
+                      <Package className="h-8 w-8 text-muted-foreground/30" />
                     </div>
                   )}
                   {!product.isActive && (
