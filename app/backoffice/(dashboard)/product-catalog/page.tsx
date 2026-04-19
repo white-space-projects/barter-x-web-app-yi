@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { Search, ChevronLeft, ChevronRight, X, Upload, Package, Loader2, Edit2, Save, ImageIcon, Trash2, Check } from "lucide-react";
 import { toast } from "sonner";
+import { compressImageToWebP, formatFileSize } from "@/lib/image-utils";
 
 // Types
 interface Category {
@@ -336,52 +337,41 @@ export default function ProductCatalogPage() {
     const file = e.target.files?.[0];
     if (!file || !editedBrandId) return;
 
-    // Check file size (max 500KB for DB storage)
-    if (file.size > 500 * 1024) {
-      toast.error("Logo must be less than 500KB");
-      return;
-    }
-
     setUploadingBrandLogo(true);
     try {
-      // Convert to base64
-      const reader = new FileReader();
-      reader.onload = async () => {
-        const base64 = reader.result as string;
-        console.log("[v0] Uploading brand logo, brandId:", editedBrandId, "base64 length:", base64.length);
-        
-        const response = await fetch(`/api/data/brands/${editedBrandId}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ logoData: base64 }),
-        });
+      // Compress image to WebP (max 128px for logo, high quality)
+      const compressed = await compressImageToWebP(file, {
+        maxWidth: 128,
+        maxHeight: 128,
+        quality: 0.9,
+        maxFileSizeKB: 100, // Logos should be small
+      });
+      
+      
+      
+      const response = await fetch(`/api/data/brands/${editedBrandId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ logoData: compressed.dataUrl }),
+      });
 
-        console.log("[v0] Brand logo upload response:", response.status, response.ok);
-        
-        if (response.ok) {
-          // Update local brand state
-          setBrands(prev => prev.map(b => 
-            b.brandId === editedBrandId 
-              ? { ...b, logoUrl: base64 }
-              : b
-          ));
-          toast.success("Brand logo updated");
-        } else {
-          const errorData = await response.json().catch(() => ({}));
-          console.error("[v0] Brand logo upload failed:", errorData);
-          toast.error("Failed to upload logo");
-        }
-        setUploadingBrandLogo(false);
-      };
-      reader.onerror = () => {
-        console.error("[v0] FileReader error");
-        toast.error("Failed to read file");
-        setUploadingBrandLogo(false);
-      };
-      reader.readAsDataURL(file);
+      if (response.ok) {
+        // Update local brand state
+        setBrands(prev => prev.map(b => 
+          b.brandId === editedBrandId 
+            ? { ...b, logoUrl: compressed.dataUrl }
+            : b
+        ));
+        toast.success(`Logo uploaded (${formatFileSize(compressed.compressedSize)})`);
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        console.error("[v0] Brand logo upload failed:", errorData);
+        toast.error("Failed to upload logo");
+      }
     } catch (error) {
       console.error("Failed to upload brand logo:", error);
       toast.error("Failed to upload logo");
+    } finally {
       setUploadingBrandLogo(false);
     }
   }
@@ -466,16 +456,24 @@ export default function ProductCatalogPage() {
       return;
     }
     
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("Image must be less than 5MB");
-      return;
-    }
-    
     setUploadingImage(true);
     try {
+      // Compress image to WebP before upload
+      const compressed = await compressImageToWebP(file, {
+        maxWidth: 1200,
+        maxHeight: 1200,
+        quality: 0.85,
+      });
+      
+      
+      
+      // Convert compressed dataUrl back to File/Blob for FormData
+      const response = await fetch(compressed.dataUrl);
+      const blob = await response.blob();
+      const compressedFile = new File([blob], `${selectedProduct.productId}.webp`, { type: "image/webp" });
+      
       const formData = new FormData();
-      formData.append("file", file);
+      formData.append("file", compressedFile);
       formData.append("productId", selectedProduct.productId);
       
       const response = await fetch("/api/product/image/upload", {

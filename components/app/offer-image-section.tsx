@@ -5,6 +5,7 @@ import { Camera, QrCode, X, Smartphone } from "lucide-react";
 import type { OfferImage } from "@/lib/types";
 import { OfferCaptureQrModal } from "./offer-capture-qr-modal";
 import { OfferImagePreview } from "./offer-image-preview";
+import { compressDataUrlToWebP } from "@/lib/image-utils";
 
 type DraftData = {
   title?: string;
@@ -248,14 +249,33 @@ function MobileCaptureSection({
     event.target.value = "";
   };
 
-  const handleCropComplete = (croppedImageUrl: string) => {
-    const newImage: OfferImage = {
-      imageId: crypto.randomUUID(),
-      url: croppedImageUrl,
-      order: images.length,
-      uploadedAt: new Date(),
-    };
-    onImagesChange([...images, newImage]);
+  const handleCropComplete = async (croppedImageUrl: string) => {
+    try {
+      // Compress to WebP before storing
+      const compressed = await compressDataUrlToWebP(croppedImageUrl, {
+        maxWidth: 1200,
+        maxHeight: 1200,
+        quality: 0.85,
+      });
+      
+      const newImage: OfferImage = {
+        imageId: crypto.randomUUID(),
+        url: compressed.dataUrl,
+        order: images.length,
+        uploadedAt: new Date(),
+      };
+      onImagesChange([...images, newImage]);
+    } catch (error) {
+      console.error("Failed to compress image:", error);
+      // Fallback to original if compression fails
+      const newImage: OfferImage = {
+        imageId: crypto.randomUUID(),
+        url: croppedImageUrl,
+        order: images.length,
+        uploadedAt: new Date(),
+      };
+      onImagesChange([...images, newImage]);
+    }
     setShowCropModal(false);
     setCapturedImage(null);
   };
@@ -323,7 +343,8 @@ function ImageCropModal({
       canvas.height = cropH;
       ctx.drawImage(img, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
 
-      const croppedUrl = canvas.toDataURL("image/jpeg", 0.9);
+      // Output as WebP for better compression
+      const croppedUrl = canvas.toDataURL("image/webp", 0.85);
       onCropComplete(croppedUrl);
     };
     img.src = imageUrl;

@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { Camera, X, Check, Crop, ChevronLeft, LogIn } from "lucide-react";
 import type { OfferImage } from "@/lib/types";
 import { useBarterStore } from "@/lib/store";
+import { compressDataUrlToWebP } from "@/lib/image-utils";
 
 // Decode session data from URL
 function decodeSessionData(encoded: string): SessionData | null {
@@ -180,17 +181,38 @@ function CaptureContent() {
     event.target.value = "";
   };
 
-  // Handle cropped image
-  const handleCropComplete = (croppedUrl: string) => {
-    const newImage: OfferImage = {
-      imageId: crypto.randomUUID(),
-      url: croppedUrl,
-      order: images.length,
-      uploadedAt: new Date(),
-    };
-    const updatedImages = [...images, newImage];
-    setImages(updatedImages);
-    syncImages(updatedImages);
+  // Handle cropped image with WebP compression
+  const handleCropComplete = async (croppedUrl: string) => {
+    try {
+      // Compress to WebP before storing
+      const compressed = await compressDataUrlToWebP(croppedUrl, {
+        maxWidth: 1200,
+        maxHeight: 1200,
+        quality: 0.85,
+      });
+      
+      const newImage: OfferImage = {
+        imageId: crypto.randomUUID(),
+        url: compressed.dataUrl,
+        order: images.length,
+        uploadedAt: new Date(),
+      };
+      const updatedImages = [...images, newImage];
+      setImages(updatedImages);
+      syncImages(updatedImages);
+    } catch (error) {
+      console.error("Failed to compress image:", error);
+      // Fallback to original if compression fails
+      const newImage: OfferImage = {
+        imageId: crypto.randomUUID(),
+        url: croppedUrl,
+        order: images.length,
+        uploadedAt: new Date(),
+      };
+      const updatedImages = [...images, newImage];
+      setImages(updatedImages);
+      syncImages(updatedImages);
+    }
     setCapturedImage(null);
     setShowCropper(false);
   };
@@ -683,7 +705,8 @@ function ImageCropper({
       outputSize
     );
 
-    const croppedUrl = canvas.toDataURL("image/jpeg", 0.9);
+    // Output as WebP for better compression
+    const croppedUrl = canvas.toDataURL("image/webp", 0.85);
     onCropComplete(croppedUrl);
   };
 
