@@ -129,13 +129,29 @@ export async function getBackofficeUserByInviteToken(token: string): Promise<Bac
 
 /**
  * Create a new backoffice user (invite)
+ * Note: invitedBy should be a backoffice_user_id (UUID) or email
+ * If email is provided, we'll look up the UUID
  */
 export async function createBackofficeUser(data: {
   email: string;
   displayName?: string;
   role?: "admin" | "operator" | "viewer";
-  invitedBy?: string;
+  invitedBy?: string; // Can be UUID or email
 }): Promise<BackofficeUser> {
+  // If invitedBy is an email, look up the backoffice_user_id
+  let invitedByUuid: string | null = null;
+  if (data.invitedBy) {
+    // Check if it's already a UUID format
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(data.invitedBy);
+    if (isUuid) {
+      invitedByUuid = data.invitedBy;
+    } else {
+      // It's an email, look up the UUID
+      const inviter = await getBackofficeUserByEmail(data.invitedBy);
+      invitedByUuid = inviter?.backofficeUserId || null;
+    }
+  }
+  
   const result = await query<DbBackofficeUser>(
     `INSERT INTO application.backoffice_users (
       email, display_name, role, invited_by
@@ -145,7 +161,7 @@ export async function createBackofficeUser(data: {
       data.email.toLowerCase(),
       data.displayName || null,
       data.role || "operator",
-      data.invitedBy || null,
+      invitedByUuid,
     ]
   );
   return mapToBackofficeUser(result[0]);
@@ -336,6 +352,19 @@ export async function createManagedUser(data: {
   
   // F&F and Beta users - for now, also store in backoffice_users with a marker
   // This is temporary until users table is properly extended
+  
+  // If invitedBy is an email, look up the backoffice_user_id
+  let invitedByUuid: string | null = null;
+  if (data.invitedBy) {
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(data.invitedBy);
+    if (isUuid) {
+      invitedByUuid = data.invitedBy;
+    } else {
+      const inviter = await getBackofficeUserByEmail(data.invitedBy);
+      invitedByUuid = inviter?.backofficeUserId || null;
+    }
+  }
+  
   const result = await query<DbBackofficeUser>(
     `INSERT INTO application.backoffice_users (
       email, display_name, role, invited_by, status
@@ -345,7 +374,7 @@ export async function createManagedUser(data: {
       data.email.toLowerCase(),
       data.displayName || null,
       'viewer', // F&F and Beta users default to viewer role
-      data.invitedBy || null,
+      invitedByUuid,
     ]
   );
   
