@@ -186,3 +186,178 @@ export function supportsWebP(): boolean {
   
   return canvas.toDataURL("image/webp").startsWith("data:image/webp");
 }
+
+/**
+ * Remove background from image using canvas
+ * Works best with images that have solid or near-solid backgrounds (white, light gray, etc.)
+ * Uses a simple color-based approach suitable for logos and product images
+ */
+export async function removeBackground(
+  dataUrl: string,
+  options: {
+    threshold?: number; // 0-255, pixels within this distance from corners are made transparent
+    edgeSmooth?: number; // Smoothing radius for edge detection
+  } = {}
+): Promise<string> {
+  const { threshold = 30, edgeSmooth = 2 } = options;
+  
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    
+    img.onload = () => {
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = img.width;
+        canvas.height = img.height;
+        
+        const ctx = canvas.getContext("2d", { willReadFrequently: true });
+        if (!ctx) {
+          reject(new Error("Failed to get canvas context"));
+          return;
+        }
+        
+        // Draw original image
+        ctx.drawImage(img, 0, 0);
+        
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imageData.data;
+        
+        // Sample background color from corners (average of all 4 corners)
+        const sampleSize = 5;
+        const corners = [
+          { x: 0, y: 0 },
+          { x: canvas.width - sampleSize, y: 0 },
+          { x: 0, y: canvas.height - sampleSize },
+          { x: canvas.width - sampleSize, y: canvas.height - sampleSize }
+        ];
+        
+        let bgR = 0, bgG = 0, bgB = 0, samples = 0;
+        
+        for (const corner of corners) {
+          for (let dy = 0; dy < sampleSize; dy++) {
+            for (let dx = 0; dx < sampleSize; dx++) {
+              const x = corner.x + dx;
+              const y = corner.y + dy;
+              const idx = (y * canvas.width + x) * 4;
+              bgR += data[idx];
+              bgG += data[idx + 1];
+              bgB += data[idx + 2];
+              samples++;
+            }
+          }
+        }
+        
+        bgR = Math.round(bgR / samples);
+        bgG = Math.round(bgG / samples);
+        bgB = Math.round(bgB / samples);
+        
+        // Make pixels similar to background color transparent
+        for (let i = 0; i < data.length; i += 4) {
+          const r = data[i];
+          const g = data[i + 1];
+          const b = data[i + 2];
+          
+          // Calculate color distance from background
+          const distance = Math.sqrt(
+            Math.pow(r - bgR, 2) +
+            Math.pow(g - bgG, 2) +
+            Math.pow(b - bgB, 2)
+          );
+          
+          if (distance < threshold) {
+            // Make transparent with smooth falloff
+            const alpha = Math.min(255, Math.max(0, (distance / threshold) * 255));
+            data[i + 3] = Math.round(alpha);
+          }
+        }
+        
+        // Apply edge smoothing if requested
+        if (edgeSmooth > 0) {
+          // Simple alpha edge smoothing pass
+          const tempData = new Uint8ClampedArray(data);
+          for (let y = edgeSmooth; y < canvas.height - edgeSmooth; y++) {
+            for (let x = edgeSmooth; x < canvas.width - edgeSmooth; x++) {
+              const idx = (y * canvas.width + x) * 4;
+              let alphaSum = 0;
+              let count = 0;
+              
+              for (let dy = -edgeSmooth; dy <= edgeSmooth; dy++) {
+                for (let dx = -edgeSmooth; dx <= edgeSmooth; dx++) {
+                  const nIdx = ((y + dy) * canvas.width + (x + dx)) * 4;
+                  alphaSum += tempData[nIdx + 3];
+                  count++;
+                }
+              }
+              
+              data[idx + 3] = Math.round(alphaSum / count);
+            }
+          }
+        }
+        
+        ctx.putImageData(imageData, 0, 0);
+        
+        // Return as PNG to preserve transparency
+        resolve(canvas.toDataURL("image/png"));
+      } catch (error) {
+        reject(error);
+      }
+    };
+    
+    img.onerror = () => {
+      reject(new Error("Failed to load image"));
+    };
+    
+    img.src = dataUrl;
+  });
+}
+
+/**
+ * Process image for backoffice upload (logo or product)
+ * Removes background and compresses to WebP with transparency support
+ */
+export async function processBackofficeImage(
+  file: File,
+  options: {
+    maxWidth?: number;
+    maxHeight?: number;
+    quality?: number;
+    removeBackground?: boolean;
+  } = {}
+): Promise<CompressedImage> {
+  const {
+    maxWidth = 512,
+    maxHeight = 512,
+    quality = 0.9,
+    removeBackground: shouldRemoveBg = true,
+  } = options;
+  
+  // First read the file
+  const dataUrl = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => resolve(e.target?.result as string);
+    reader.onerror = () => reject(new Error("Failed to read file"));
+    reader.readAsDataURL(file);
+  });
+  
+  // Remove background if requested
+  let processedDataUrl = dataUrl;
+  if (shouldRemoveBg) {
+    try {
+      processedDataUrl = await removeBackground(dataUrl);
+    } catch (error) {
+      console.warn("Background removal failed, using original:", error);
+      // Continue with original if background removal fails
+    }
+  }
+  
+  // Compress to WebP (note: WebP supports transparency)
+  return compressDataUrlToWebP(processedDataUrl, {
+    maxWidth,
+    maxHeight,
+    quality,
+  }).then(result => ({
+    ...result,
+    originalSize: file.size,
+  }));
+}
