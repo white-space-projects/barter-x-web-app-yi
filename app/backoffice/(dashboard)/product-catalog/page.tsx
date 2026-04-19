@@ -81,6 +81,19 @@ export default function ProductCatalogPage() {
   const [editedTitle, setEditedTitle] = useState("");
   const [savingTitle, setSavingTitle] = useState(false);
   
+  // Category/Subcategory editing state
+  const [editingCategory, setEditingCategory] = useState(false);
+  const [editedCategoryId, setEditedCategoryId] = useState("");
+  const [editedSubcategoryId, setEditedSubcategoryId] = useState("");
+  const [savingCategory, setSavingCategory] = useState(false);
+  
+  // Brand editing state
+  const [editingBrand, setEditingBrand] = useState(false);
+  const [editedBrandId, setEditedBrandId] = useState("");
+  const [editedBrandName, setEditedBrandName] = useState("");
+  const [savingBrand, setSavingBrand] = useState(false);
+  const [uploadingBrandLogo, setUploadingBrandLogo] = useState(false);
+  
   // Delete state
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deletingProduct, setDeletingProduct] = useState(false);
@@ -183,6 +196,17 @@ export default function ProductCatalogPage() {
     setEditedTitle(product.title);
     setEditingTitle(false);
     setShowDeleteConfirm(false);
+    // Set category/subcategory editing defaults
+    const productSubcategory = subcategories.find(s => s.name === product.subcategoryName);
+    const productCategory = categories.find(c => c.name === product.categoryName);
+    setEditedCategoryId(productCategory?.categoryId || "");
+    setEditedSubcategoryId(productSubcategory?.subcategoryId || product.subcategoryId || "");
+    setEditingCategory(false);
+    // Set brand editing defaults
+    const productBrand = brands.find(b => b.name === product.brandName);
+    setEditedBrandId(productBrand?.brandId || product.brandId || "");
+    setEditedBrandName(productBrand?.name || product.brandName || "");
+    setEditingBrand(false);
   }
 
   // Handle back to list
@@ -191,6 +215,8 @@ export default function ProductCatalogPage() {
     setProductFields([]);
     setEditingProductInfo({});
     setEditingTitle(false);
+    setEditingCategory(false);
+    setEditingBrand(false);
     setShowDeleteConfirm(false);
   }
 
@@ -223,6 +249,134 @@ export default function ProductCatalogPage() {
       toast.error("Failed to update title");
     } finally {
       setSavingTitle(false);
+    }
+  }
+
+  // Save product category/subcategory
+  async function handleSaveCategory() {
+    if (!selectedProduct || !editedSubcategoryId) return;
+    
+    setSavingCategory(true);
+    try {
+      const response = await fetch(`/api/data/products/${selectedProduct.productId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          categoryId: editedCategoryId,
+          subcategoryId: editedSubcategoryId 
+        }),
+      });
+      
+      if (response.ok) {
+        const newCategory = categories.find(c => c.categoryId === editedCategoryId);
+        const newSubcategory = subcategories.find(s => s.subcategoryId === editedSubcategoryId);
+        setSelectedProduct(prev => prev ? { 
+          ...prev, 
+          categoryName: newCategory?.name || prev.categoryName,
+          subcategoryName: newSubcategory?.name || prev.subcategoryName,
+          subcategoryId: editedSubcategoryId
+        } : null);
+        setProducts(prev => prev.map(p => 
+          p.productId === selectedProduct.productId 
+            ? { ...p, categoryName: newCategory?.name, subcategoryName: newSubcategory?.name, subcategoryId: editedSubcategoryId }
+            : p
+        ));
+        setEditingCategory(false);
+        toast.success("Category updated");
+      } else {
+        toast.error("Failed to update category");
+      }
+    } catch (error) {
+      console.error("Failed to save category:", error);
+      toast.error("Failed to update category");
+    } finally {
+      setSavingCategory(false);
+    }
+  }
+
+  // Save product brand
+  async function handleSaveBrand() {
+    if (!selectedProduct) return;
+    
+    setSavingBrand(true);
+    try {
+      const response = await fetch(`/api/data/products/${selectedProduct.productId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ brandId: editedBrandId || null }),
+      });
+      
+      if (response.ok) {
+        const newBrand = brands.find(b => b.brandId === editedBrandId);
+        setSelectedProduct(prev => prev ? { 
+          ...prev, 
+          brandName: newBrand?.name || undefined,
+          brandId: editedBrandId || undefined
+        } : null);
+        setProducts(prev => prev.map(p => 
+          p.productId === selectedProduct.productId 
+            ? { ...p, brandName: newBrand?.name, brandId: editedBrandId || undefined }
+            : p
+        ));
+        setEditingBrand(false);
+        toast.success("Brand updated");
+      } else {
+        toast.error("Failed to update brand");
+      }
+    } catch (error) {
+      console.error("Failed to save brand:", error);
+      toast.error("Failed to update brand");
+    } finally {
+      setSavingBrand(false);
+    }
+  }
+
+  // Upload brand logo (stores base64 directly in DB)
+  async function handleUploadBrandLogo(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !editedBrandId) return;
+
+    // Check file size (max 500KB for DB storage)
+    if (file.size > 500 * 1024) {
+      toast.error("Logo must be less than 500KB");
+      return;
+    }
+
+    setUploadingBrandLogo(true);
+    try {
+      // Convert to base64
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const base64 = reader.result as string;
+        
+        const response = await fetch(`/api/data/brands/${editedBrandId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ logoData: base64 }),
+        });
+
+        if (response.ok) {
+          // Update local brand state
+          setBrands(prev => prev.map(b => 
+            b.brandId === editedBrandId 
+              ? { ...b, logoUrl: base64 }
+              : b
+          ));
+          toast.success("Brand logo updated");
+        } else {
+          toast.error("Failed to upload logo");
+        }
+        setUploadingBrandLogo(false);
+      };
+      reader.onerror = () => {
+        toast.error("Failed to read file");
+        setUploadingBrandLogo(false);
+      };
+      reader.readAsDataURL(file);
+    } catch (error) {
+      console.error("Failed to upload brand logo:", error);
+      toast.error("Failed to upload logo");
+      setUploadingBrandLogo(false);
     }
   }
 
@@ -562,15 +716,140 @@ export default function ProductCatalogPage() {
                 )}
                 <div>
                   <label className="text-xs text-muted-foreground">Category / Subcategory</label>
-                  <p className="text-sm text-foreground">
-                    {selectedProduct.categoryName} / {selectedProduct.subcategoryName}
-                  </p>
-                </div>
-                {brand && (
-                  <div>
-                    <label className="text-xs text-muted-foreground">Brand</label>
+                  {editingCategory ? (
+                    <div className="space-y-2 mt-1">
+                      <select
+                        value={editedCategoryId}
+                        onChange={(e) => {
+                          setEditedCategoryId(e.target.value);
+                          setEditedSubcategoryId("");
+                        }}
+                        className="w-full rounded-lg border border-border bg-secondary px-3 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                      >
+                        <option value="">Select Category</option>
+                        {categories.map(c => (
+                          <option key={c.categoryId} value={c.categoryId}>{c.name}</option>
+                        ))}
+                      </select>
+                      <select
+                        value={editedSubcategoryId}
+                        onChange={(e) => setEditedSubcategoryId(e.target.value)}
+                        className="w-full rounded-lg border border-border bg-secondary px-3 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                      >
+                        <option value="">Select Subcategory</option>
+                        {subcategories
+                          .filter(s => !editedCategoryId || s.categoryId === editedCategoryId)
+                          .map(s => (
+                            <option key={s.subcategoryId} value={s.subcategoryId}>{s.name}</option>
+                          ))}
+                      </select>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={handleSaveCategory}
+                          disabled={savingCategory || !editedSubcategoryId}
+                          className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 text-xs font-medium transition-colors"
+                        >
+                          {savingCategory ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                          Save
+                        </button>
+                        <button
+                          onClick={() => {
+                            setEditingCategory(false);
+                            const sc = subcategories.find(s => s.name === selectedProduct.subcategoryName);
+                            const cat = categories.find(c => c.name === selectedProduct.categoryName);
+                            setEditedCategoryId(cat?.categoryId || "");
+                            setEditedSubcategoryId(sc?.subcategoryId || "");
+                          }}
+                          className="flex-1 py-1.5 rounded-lg bg-secondary text-foreground hover:bg-secondary/80 text-xs font-medium transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
                     <div className="flex items-center gap-2 mt-1">
-                      {brand.logoUrl && (
+                      <p className="text-sm text-foreground">
+                        {selectedProduct.categoryName} / {selectedProduct.subcategoryName}
+                      </p>
+                      <button
+                        onClick={() => setEditingCategory(true)}
+                        className="p-1 rounded text-muted-foreground hover:text-foreground transition-colors"
+                        title="Edit category"
+                      >
+                        <Edit2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground">Brand</label>
+                  {editingBrand ? (
+                    <div className="space-y-2 mt-1">
+                      <select
+                        value={editedBrandId}
+                        onChange={(e) => {
+                          setEditedBrandId(e.target.value);
+                          const b = brands.find(br => br.brandId === e.target.value);
+                          setEditedBrandName(b?.name || "");
+                        }}
+                        className="w-full rounded-lg border border-border bg-secondary px-3 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                      >
+                        <option value="">No Brand</option>
+                        {brands.map(b => (
+                          <option key={b.brandId} value={b.brandId}>{b.name}</option>
+                        ))}
+                      </select>
+                      {editedBrandId && (
+                        <div className="flex items-center gap-2">
+                          <label className="flex-1 flex items-center justify-center gap-2 py-1.5 rounded-lg border border-dashed border-border bg-secondary/50 text-xs text-muted-foreground hover:bg-secondary cursor-pointer transition-colors">
+                            {uploadingBrandLogo ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <Upload className="h-3 w-3" />
+                            )}
+                            Upload Logo
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={handleUploadBrandLogo}
+                              className="hidden"
+                              disabled={uploadingBrandLogo}
+                            />
+                          </label>
+                          {brands.find(b => b.brandId === editedBrandId)?.logoUrl && (
+                            <img 
+                              src={brands.find(b => b.brandId === editedBrandId)?.logoUrl}
+                              alt="Brand logo"
+                              className="h-8 w-8 object-contain rounded border border-border"
+                            />
+                          )}
+                        </div>
+                      )}
+                      <div className="flex gap-2">
+                        <button
+                          onClick={handleSaveBrand}
+                          disabled={savingBrand}
+                          className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 text-xs font-medium transition-colors"
+                        >
+                          {savingBrand ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                          Save
+                        </button>
+                        <button
+                          onClick={() => {
+                            setEditingBrand(false);
+                            const b = brands.find(br => br.name === selectedProduct.brandName);
+                            setEditedBrandId(b?.brandId || "");
+                            setEditedBrandName(b?.name || "");
+                          }}
+                          className="flex-1 py-1.5 rounded-lg bg-secondary text-foreground hover:bg-secondary/80 text-xs font-medium transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 mt-1">
+                      {brand?.logoUrl && (
                         <img 
                           src={brand.logoUrl} 
                           alt={brand.name}
@@ -578,10 +857,17 @@ export default function ProductCatalogPage() {
                           crossOrigin="anonymous"
                         />
                       )}
-                      <p className="text-sm text-foreground">{brand.name}</p>
+                      <p className="text-sm text-foreground">{brand?.name || "No brand"}</p>
+                      <button
+                        onClick={() => setEditingBrand(true)}
+                        className="p-1 rounded text-muted-foreground hover:text-foreground transition-colors"
+                        title="Edit brand"
+                      >
+                        <Edit2 className="h-3.5 w-3.5" />
+                      </button>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
                 <div>
                   <label className="text-xs text-muted-foreground">Status</label>
                   <p className={`text-sm font-medium ${selectedProduct.isActive ? "text-emerald-500" : "text-red-500"}`}>

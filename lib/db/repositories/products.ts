@@ -477,6 +477,9 @@ interface UpdateProductInput {
   description?: string;
   productInfo?: Record<string, unknown>;
   imageKey?: string;
+  categoryId?: string;
+  subcategoryId?: string;
+  brandId?: string | null;
 }
 
 /**
@@ -502,6 +505,18 @@ export async function updateProduct(productId: string, input: UpdateProductInput
   if (input.imageKey !== undefined) {
     updates.push(`image_key = $${paramIndex++}`);
     params.push(input.imageKey);
+  }
+  if (input.categoryId !== undefined) {
+    updates.push(`category_id = $${paramIndex++}`);
+    params.push(input.categoryId);
+  }
+  if (input.subcategoryId !== undefined) {
+    updates.push(`subcategory_id = $${paramIndex++}`);
+    params.push(input.subcategoryId);
+  }
+  if (input.brandId !== undefined) {
+    updates.push(`brand_id = $${paramIndex++}`);
+    params.push(input.brandId);
   }
   
   if (updates.length === 0) {
@@ -551,11 +566,27 @@ export async function updateSubcategoryIcon(subcategoryId: string, iconKey: stri
 }
 
 /**
- * Update brand logo
+ * Update brand logo (key/path reference)
  */
 export async function updateBrandLogo(brandId: string, logoKey: string): Promise<void> {
   const sql = `UPDATE application.brands SET logo_key = $1, updated_at = NOW() WHERE brand_id = $2`;
   await query(sql, [logoKey, brandId]);
+}
+
+/**
+ * Update brand logo data (base64 stored directly in DB)
+ */
+export async function updateBrandLogoData(brandId: string, logoData: string): Promise<void> {
+  const sql = `UPDATE application.brands SET logo_data = $1, updated_at = NOW() WHERE brand_id = $2`;
+  await query(sql, [logoData, brandId]);
+}
+
+/**
+ * Update brand name
+ */
+export async function updateBrandName(brandId: string, name: string): Promise<void> {
+  const sql = `UPDATE application.brands SET name = $1, updated_at = NOW() WHERE brand_id = $2`;
+  await query(sql, [name, brandId]);
 }
 
 /**

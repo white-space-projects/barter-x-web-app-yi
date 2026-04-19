@@ -55,6 +55,9 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       description: body.description,
       productInfo: body.productInfo,
       imageKey: body.imageKey,
+      categoryId: body.categoryId,
+      subcategoryId: body.subcategoryId,
+      brandId: body.brandId,
     });
     
     return NextResponse.json({ product });
@@ -81,6 +84,9 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       description: body.description,
       productInfo: body.productInfo,
       imageKey: body.imageKey,
+      categoryId: body.categoryId,
+      subcategoryId: body.subcategoryId,
+      brandId: body.brandId,
     });
     
     return NextResponse.json({ product });
