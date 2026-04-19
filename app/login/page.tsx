@@ -85,6 +85,9 @@ export default function LoginPage() {
   const [troubleMessage, setTroubleMessage] = useState("");
   const [reportingIssue, setReportingIssue] = useState(false);
   
+  // #Login#FF#AccessBlocked# - F&F access blocked state
+  const [ffAccessBlocked, setFfAccessBlocked] = useState(false);
+  
   // #Login#Location#AutoDetect# - Location state (auto-detected from IP)
   const [city, setCity] = useState(""); // #Login#Location#CityInput#
   const [cityId, setCityId] = useState<string | null>(null);
@@ -284,10 +287,26 @@ export default function LoginPage() {
     if (Object.keys(errs).length > 0) return;
 
     setLoading(true);
+    setFfAccessBlocked(false); // Reset blocked state
     // #Logging#Login#OTP#SendAttempt# - TODO: Log OTP send attempt
     // #Analytics#Login#OTP#SendInitiated# - TODO: Track OTP send initiated
     
     try {
+      // #Login#FF#EligibilityCheck# - Check F&F eligibility BEFORE sending OTP
+      const ffCheckResponse = await fetch("/api/auth/check-ff-eligibility", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.toLowerCase().trim() }),
+      });
+      const ffCheckData = await ffCheckResponse.json();
+      
+      if (!ffCheckData.eligible) {
+        // User is not an eligible F&F user - block access
+        setLoading(false);
+        setFfAccessBlocked(true);
+        return;
+      }
+      
       // #API#Login#OTP#SendRequest# - POST /api/send-otp
       // #API#Login#OTP#RequestPayload# - Request: { email: string }
       // MOCK OTP SEND - Bypassing real API (replace with actual API call)
@@ -407,6 +426,21 @@ export default function LoginPage() {
             }
           }
 
+          // #Login#FF#EligibilityCheck# - Check F&F eligibility AFTER getting email from Google
+          const ffCheckResponse = await fetch("/api/auth/check-ff-eligibility", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: googleEmail.toLowerCase().trim() }),
+          });
+          const ffCheckData = await ffCheckResponse.json();
+          
+          if (!ffCheckData.eligible) {
+            // User is not an eligible F&F user - block access
+            setGoogleLoading(false);
+            setFfAccessBlocked(true);
+            return;
+          }
+
           // Call login API to find/create user and set session cookie
           const response = await fetch("/api/auth/login", {
             method: "POST",
@@ -471,6 +505,7 @@ export default function LoginPage() {
     }
     
     setAppleLoading(true);
+    setFfAccessBlocked(false); // Reset blocked state
     // #Logging#Login#Apple#Attempt# - TODO: Log Apple sign-in attempt
     // #Analytics#Login#Apple#Initiated# - TODO: Track Apple sign-in initiated
     
@@ -478,6 +513,22 @@ export default function LoginPage() {
       // #Login#Apple#ProviderStart# - Initialize Apple Sign-In
       // TODO: Implement real Apple Sign-In using Sign in with Apple JS
       // For now, use a temporary email-based login
+      const appleEmail = "apple.user@icloud.com"; // TODO: Get from Apple Sign-In
+      
+      // #Login#FF#EligibilityCheck# - Check F&F eligibility AFTER getting email from Apple
+      const ffCheckResponse = await fetch("/api/auth/check-ff-eligibility", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: appleEmail.toLowerCase().trim() }),
+      });
+      const ffCheckData = await ffCheckResponse.json();
+      
+      if (!ffCheckData.eligible) {
+        // User is not an eligible F&F user - block access
+        setAppleLoading(false);
+        setFfAccessBlocked(true);
+        return;
+      }
       
       // Call login API with Apple user placeholder
       // In production, this should verify Apple identity token first
@@ -485,7 +536,7 @@ export default function LoginPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email: "apple.user@icloud.com", // TODO: Get from Apple Sign-In
+          email: appleEmail,
           name: "Apple User",
           city: city.trim(),
           country: country.trim(),
@@ -621,6 +672,27 @@ export default function LoginPage() {
 Exchange Reimagined
   </p>
             </div>
+
+            {/* #Login#FF#BlockedMessage# - F&F access denied fallback */}
+            {ffAccessBlocked && (
+              <div className="mb-6 rounded-lg border border-primary/30 bg-primary/5 p-6 text-center">
+                <p className="text-sm font-medium text-foreground mb-2">
+                  Friends &amp; Family testing is ongoing.
+                </p>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Join the beta waitlist to get early access when it opens.
+                </p>
+                <a
+                  href="/"
+                  className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline"
+                >
+                  <span>Join Beta Waitlist</span>
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </a>
+              </div>
+            )}
 
             {step === "credentials" ? (
               <div>
