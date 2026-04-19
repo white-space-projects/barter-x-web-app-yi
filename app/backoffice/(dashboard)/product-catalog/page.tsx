@@ -348,6 +348,7 @@ export default function ProductCatalogPage() {
       const reader = new FileReader();
       reader.onload = async () => {
         const base64 = reader.result as string;
+        console.log("[v0] Uploading brand logo, brandId:", editedBrandId, "base64 length:", base64.length);
         
         const response = await fetch(`/api/data/brands/${editedBrandId}`, {
           method: "PATCH",
@@ -355,6 +356,8 @@ export default function ProductCatalogPage() {
           body: JSON.stringify({ logoData: base64 }),
         });
 
+        console.log("[v0] Brand logo upload response:", response.status, response.ok);
+        
         if (response.ok) {
           // Update local brand state
           setBrands(prev => prev.map(b => 
@@ -364,11 +367,14 @@ export default function ProductCatalogPage() {
           ));
           toast.success("Brand logo updated");
         } else {
+          const errorData = await response.json().catch(() => ({}));
+          console.error("[v0] Brand logo upload failed:", errorData);
           toast.error("Failed to upload logo");
         }
         setUploadingBrandLogo(false);
       };
       reader.onerror = () => {
+        console.error("[v0] FileReader error");
         toast.error("Failed to read file");
         setUploadingBrandLogo(false);
       };

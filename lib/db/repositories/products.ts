@@ -408,13 +408,14 @@ export async function fetchCategories(): Promise<{ categoryId: string; slug: str
 /**
  * Fetch brands
  */
-export async function fetchBrands(): Promise<{ brandId: string; slug: string; name: string }[]> {
-  const sql = `SELECT brand_id, slug, name FROM application.brands WHERE is_active = true ORDER BY name`;
-  const result = await query<{ brand_id: string; slug: string; name: string }>(sql);
+export async function fetchBrands(): Promise<{ brandId: string; slug: string; name: string; logoUrl?: string }[]> {
+  const sql = `SELECT brand_id, slug, name, logo_image_key FROM application.brands WHERE is_active = true ORDER BY name`;
+  const result = await query<{ brand_id: string; slug: string; name: string; logo_image_key: string | null }>(sql);
   return result.map((r) => ({
     brandId: r.brand_id,
     slug: r.slug,
     name: r.name,
+    logoUrl: r.logo_image_key || undefined,
   }));
 }
 
@@ -569,15 +570,15 @@ export async function updateSubcategoryIcon(subcategoryId: string, iconKey: stri
  * Update brand logo (key/path reference)
  */
 export async function updateBrandLogo(brandId: string, logoKey: string): Promise<void> {
-  const sql = `UPDATE application.brands SET logo_key = $1, updated_at = NOW() WHERE brand_id = $2`;
+  const sql = `UPDATE application.brands SET logo_image_key = $1, updated_at = NOW() WHERE brand_id = $2`;
   await query(sql, [logoKey, brandId]);
 }
 
 /**
- * Update brand logo data (base64 stored directly in DB)
+ * Update brand logo data (base64 stored directly in DB via logo_image_key column)
  */
 export async function updateBrandLogoData(brandId: string, logoData: string): Promise<void> {
-  const sql = `UPDATE application.brands SET logo_data = $1, updated_at = NOW() WHERE brand_id = $2`;
+  const sql = `UPDATE application.brands SET logo_image_key = $1, updated_at = NOW() WHERE brand_id = $2`;
   await query(sql, [logoData, brandId]);
 }
 

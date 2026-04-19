@@ -20,21 +20,27 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     const { brandId } = await params;
     const body = await request.json();
     
+    console.log("[v0] Brand PATCH request:", brandId, "fields:", Object.keys(body));
+    
     // Update logo key (path reference)
     if (body.logoKey !== undefined) {
+      console.log("[v0] Updating brand logoKey");
       await updateBrandLogo(brandId, body.logoKey);
     }
     
     // Update logo data (base64 image stored directly in DB)
     if (body.logoData !== undefined) {
+      console.log("[v0] Updating brand logoData, length:", body.logoData.length);
       await updateBrandLogoData(brandId, body.logoData);
     }
     
     // Update brand name
     if (body.name !== undefined) {
+      console.log("[v0] Updating brand name:", body.name);
       await updateBrandName(brandId, body.name);
     }
     
+    console.log("[v0] Brand update success");
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("[API] Brand update error:", error);
