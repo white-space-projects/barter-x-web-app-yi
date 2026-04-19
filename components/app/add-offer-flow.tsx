@@ -998,6 +998,25 @@ export function AddOfferFlow({
   const [loading, setLoading] = useState(false);
   const [showDiscardDialog, setShowDiscardDialog] = useState(false);
 
+  // Brands with logos from API
+  const [apiBrands, setApiBrands] = useState<{ brandId: string; name: string; logoUrl?: string }[]>([]);
+  
+  // Fetch brands with logos from API
+  useEffect(() => {
+    async function fetchBrandsWithLogos() {
+      try {
+        const response = await fetch("/api/data/brands");
+        if (response.ok) {
+          const data = await response.json();
+          setApiBrands(data.brands || []);
+        }
+      } catch (error) {
+        console.error("Failed to fetch brands:", error);
+      }
+    }
+    fetchBrandsWithLogos();
+  }, []);
+
   // Get data from store
   const brands = getBrands();
   const countryNames = getCountryNames();
@@ -1014,19 +1033,30 @@ export function AddOfferFlow({
     return getTypeSubcategories(selectedBarterType, selectedCategory.id);
   }, [selectedBarterType, selectedCategory]);
 
-  // Get unique brands for selected subcategory
+  // Get unique brands for selected subcategory - merged with API brand logos
   const availableBrands = useMemo(() => {
-    return products
+    const productBrands = products
       .filter(p => {
         if (selectedBarterType && p.productType !== selectedBarterType) return false;
         if (selectedCategory && p.category !== selectedCategory.name) return false;
         if (selectedSubcategory && p.subcategory !== selectedSubcategory.name) return false;
         return p.brand;
       })
-      .map(p => ({ id: p.brand!, name: p.brand!, imageUrl: undefined })) // TODO: Add brand logo from brands table
-      .filter((v, i, a) => a.findIndex(b => b.name === v.name) === i)
+      .map(p => p.brand!)
+      .filter((v, i, a) => a.indexOf(v) === i);
+    
+    // Merge with API brands to get logos
+    return productBrands
+      .map(brandName => {
+        const apiBrand = apiBrands.find(b => b.name.toLowerCase() === brandName.toLowerCase());
+        return {
+          id: apiBrand?.brandId || brandName,
+          name: brandName,
+          imageUrl: apiBrand?.logoUrl,
+        };
+      })
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [products, selectedBarterType, selectedCategory, selectedSubcategory]);
+  }, [products, selectedBarterType, selectedCategory, selectedSubcategory, apiBrands]);
 
   // Get unique models for selected brand
   const availableModels = useMemo(() => {
