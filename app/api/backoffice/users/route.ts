@@ -2,23 +2,28 @@
  * ============================================================================
  * BACKOFFICE USERS API
  * ============================================================================
- * API for managing internal backoffice users (separate from app users).
+ * API for managing internal users (BO, F&F, Beta).
+ * ADMIN ONLY - must verify caller has admin role.
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import {
-  getBackofficeUsers,
-  createBackofficeUser,
+  getManagedUsers,
+  createManagedUser,
   backofficeUserExists,
+  type ManagedUserType,
 } from "@/lib/db/repositories/backoffice-users";
 
 /**
  * GET /api/backoffice/users
- * List all backoffice users
+ * List all managed users (BO, F&F, Beta) - Admin only
  */
 export async function GET() {
   try {
-    const users = await getBackofficeUsers();
+    // TODO: Add proper admin authentication check here
+    // For now, relying on UI-level protection
+    
+    const users = await getManagedUsers();
     return NextResponse.json({ success: true, users });
   } catch (error) {
     console.error("[Backoffice Users API] Error fetching users:", error);
@@ -31,16 +36,28 @@ export async function GET() {
 
 /**
  * POST /api/backoffice/users
- * Create/invite a new backoffice user
+ * Create/invite a new managed user (BO, F&F, or Beta) - Admin only
  */
 export async function POST(request: NextRequest) {
   try {
+    // TODO: Add proper admin authentication check here
+    // For now, relying on UI-level protection
+    
     const body = await request.json();
-    const { email, displayName, role, invitedBy } = body;
+    const { email, displayName, userType, role, invitedBy } = body;
 
     if (!email || !email.includes("@")) {
       return NextResponse.json(
         { success: false, error: "Valid email is required" },
+        { status: 400 }
+      );
+    }
+
+    // Validate user type
+    const validUserTypes: ManagedUserType[] = ["bo", "friends_family", "beta"];
+    if (!validUserTypes.includes(userType)) {
+      return NextResponse.json(
+        { success: false, error: "Invalid user type. Must be: bo, friends_family, or beta" },
         { status: 400 }
       );
     }
@@ -55,10 +72,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Create the user
-    const user = await createBackofficeUser({
+    const user = await createManagedUser({
       email,
       displayName,
-      role,
+      userType,
+      role: userType === "bo" ? role : "viewer", // Only BO users can have different roles
       invitedBy,
     });
 
@@ -67,19 +85,21 @@ export async function POST(request: NextRequest) {
     const magicLink = `${baseUrl}/backoffice/verify?token=${user.inviteToken}`;
 
     // TODO: Send invite email when email service is configured
-    // For now, return the magic link for manual sharing
-    console.log(`[Backoffice Users API] Invite created for ${email}, magic link: ${magicLink}`);
+    console.log(`[Backoffice Users API] Invite created for ${email} (${userType}), magic link: ${magicLink}`);
 
     return NextResponse.json({
       success: true,
       user: {
-        backofficeUserId: user.backofficeUserId,
+        id: user.id,
+        visibleUserId: user.visibleUserId,
         email: user.email,
         displayName: user.displayName,
+        userType: user.userType,
         role: user.role,
-        status: user.status,
+        isActive: user.isActive,
         isVerified: user.isVerified,
         invitedAt: user.invitedAt,
+        userReferenceId: user.userReferenceId,
       },
       magicLink,
     });

@@ -19,6 +19,7 @@ interface NavItem {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   href: string;
+  adminOnly?: boolean; // If true, only visible to admin users
 }
 
 // Back Office navigation tabs
@@ -46,6 +47,7 @@ const navItems: NavItem[] = [
     label: "Users",
     icon: Users,
     href: "/backoffice/users",
+    adminOnly: true, // Only admins can access Users tab
   },
 ];
 
@@ -89,6 +91,17 @@ export function BackOfficeShell({ children }: { children: React.ReactNode }) {
   function isActive(href: string): boolean {
     return pathname.startsWith(href);
   }
+  
+  // Check if user is admin
+  const isAdmin = user?.role === "admin";
+  
+  // Filter nav items based on user role
+  const visibleNavItems = navItems.filter(item => {
+    if (item.adminOnly && !isAdmin) {
+      return false;
+    }
+    return true;
+  });
 
   const NavContent = () => (
     <nav className="flex flex-col h-full">
@@ -105,7 +118,7 @@ export function BackOfficeShell({ children }: { children: React.ReactNode }) {
       {/* Nav Items */}
       <div className="flex-1 overflow-y-auto py-4 px-2">
         <ul className="space-y-1">
-          {navItems.map((item) => {
+          {visibleNavItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.href);
 
