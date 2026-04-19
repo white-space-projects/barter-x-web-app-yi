@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { Search, ChevronLeft, ChevronRight, X, Upload, Package, Loader2, Edit2, Save, ImageIcon, Trash2, Check } from "lucide-react";
 import { toast } from "sonner";
-import { compressImageToWebP, formatFileSize } from "@/lib/image-utils";
+import { processBackofficeImage, formatFileSize } from "@/lib/image-utils";
 
 // Types
 interface Category {
@@ -339,15 +339,13 @@ export default function ProductCatalogPage() {
 
     setUploadingBrandLogo(true);
     try {
-      // Compress image to WebP (max 128px for logo, high quality)
-      const compressed = await compressImageToWebP(file, {
+      // Process logo: remove background and compress to WebP
+      const compressed = await processBackofficeImage(file, {
         maxWidth: 128,
         maxHeight: 128,
         quality: 0.9,
-        maxFileSizeKB: 100, // Logos should be small
+        removeBackground: true, // Remove background for logos
       });
-      
-      
       
       const response = await fetch(`/api/data/brands/${editedBrandId}`, {
         method: "PATCH",
@@ -458,14 +456,13 @@ export default function ProductCatalogPage() {
     
     setUploadingImage(true);
     try {
-      // Compress image to WebP before upload
-      const compressed = await compressImageToWebP(file, {
+      // Process product image: remove background and compress to WebP
+      const compressed = await processBackofficeImage(file, {
         maxWidth: 1200,
         maxHeight: 1200,
         quality: 0.85,
+        removeBackground: true, // Remove background for product images
       });
-      
-      
       
       // Convert compressed dataUrl back to File/Blob for FormData
       const blobResponse = await fetch(compressed.dataUrl);
