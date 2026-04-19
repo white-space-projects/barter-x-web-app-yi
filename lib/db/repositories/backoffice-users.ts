@@ -71,6 +71,7 @@ interface DbBackofficeUser {
   created_at: string;
   updated_at: string;
   last_login_at: string | null;
+  user_type: string; // 'bo', 'friends_family', 'beta'
 }
 
 function mapToBackofficeUser(row: DbBackofficeUser): BackofficeUser {
@@ -137,6 +138,7 @@ export async function createBackofficeUser(data: {
   displayName?: string;
   role?: "admin" | "operator" | "viewer";
   invitedBy?: string; // Can be UUID or email
+  userType?: ManagedUserType; // Defaults to 'bo'
 }): Promise<BackofficeUser> {
   // If invitedBy is an email, look up the backoffice_user_id
   let invitedByUuid: string | null = null;
@@ -154,14 +156,15 @@ export async function createBackofficeUser(data: {
   
   const result = await query<DbBackofficeUser>(
     `INSERT INTO application.backoffice_users (
-      email, display_name, role, invited_by
-    ) VALUES ($1, $2, $3, $4)
+      email, display_name, role, invited_by, user_type
+    ) VALUES ($1, $2, $3, $4, $5)
     RETURNING *`,
     [
       data.email.toLowerCase(),
       data.displayName || null,
       data.role || "operator",
       invitedByUuid,
+      data.userType || "bo",
     ]
   );
   return mapToBackofficeUser(result[0]);
@@ -274,42 +277,47 @@ export async function setBackofficeUserStatus(
 
 /**
  * Get all managed users (BO, F&F, Beta) - excludes app users
- * Currently only returns BO users from backoffice_users table
+ * Reads user_type from database to correctly identify each user
  */
 export async function getManagedUsers(): Promise<ManagedUser[]> {
-  // For now, only query backoffice_users (BO users)
-  // F&F and Beta users would come from users table once extended
   const result = await query<DbBackofficeUser>(
     `SELECT * FROM application.backoffice_users ORDER BY created_at DESC`
   );
   
-  return result.map((row): ManagedUser => ({
-    id: row.backoffice_user_id,
-    visibleUserId: 'BO-' + row.backoffice_user_id.substring(0, 8).toUpperCase(),
-    email: row.email,
-    displayName: row.display_name,
-    fullName: row.display_name,
-    userType: 'bo' as ManagedUserType,
-    role: row.role as ManagedUser["role"],
-    isActive: row.status !== 'disabled',
-    isVerified: row.is_verified,
-    inviteToken: row.invite_token,
-    inviteTokenExpiresAt: row.invite_token_expires_at ? new Date(row.invite_token_expires_at) : null,
-    invitedAt: new Date(row.invited_at),
-    invitedBy: row.invited_by,
-    verifiedAt: row.verified_at ? new Date(row.verified_at) : null,
-    referredBy: null,
-    userReferenceId: 'BO-' + row.backoffice_user_id.substring(0, 8).toUpperCase(),
-    createdAt: new Date(row.created_at),
-    updatedAt: new Date(row.updated_at),
-    lastLoginAt: row.last_login_at ? new Date(row.last_login_at) : null,
-  }));
+  return result.map((row): ManagedUser => {
+    // Determine prefix based on user_type
+    const userType = (row.user_type || 'bo') as ManagedUserType;
+    let prefix = 'BO';
+    if (userType === 'friends_family') prefix = 'FF';
+    else if (userType === 'beta') prefix = 'BT';
+    
+    return {
+      id: row.backoffice_user_id,
+      visibleUserId: `${prefix}-${row.backoffice_user_id.substring(0, 8).toUpperCase()}`,
+      email: row.email,
+      displayName: row.display_name,
+      fullName: row.display_name,
+      userType: userType,
+      role: row.role as ManagedUser["role"],
+      isActive: row.status !== 'disabled',
+      isVerified: row.is_verified,
+      inviteToken: row.invite_token,
+      inviteTokenExpiresAt: row.invite_token_expires_at ? new Date(row.invite_token_expires_at) : null,
+      invitedAt: new Date(row.invited_at),
+      invitedBy: row.invited_by,
+      verifiedAt: row.verified_at ? new Date(row.verified_at) : null,
+      referredBy: null,
+      userReferenceId: `${prefix}-${row.backoffice_user_id.substring(0, 8).toUpperCase()}`,
+      createdAt: new Date(row.created_at),
+      updatedAt: new Date(row.updated_at),
+      lastLoginAt: row.last_login_at ? new Date(row.last_login_at) : null,
+    };
+  });
 }
 
 /**
  * Create a managed user (BO, F&F, or Beta)
- * For BO users: writes to backoffice_users table (for login compatibility)
- * For F&F/Beta users: would write to users table (not yet implemented)
+ * All user types are stored in backoffice_users table with user_type column
  */
 export async function createManagedUser(data: {
   email: string;
@@ -318,88 +326,39 @@ export async function createManagedUser(data: {
   role?: "admin" | "operator" | "viewer";
   invitedBy?: string;
 }): Promise<ManagedUser> {
-  if (data.userType === 'bo') {
-    // BO users go to backoffice_users table for login compatibility
-    const boUser = await createBackofficeUser({
-      email: data.email,
-      displayName: data.displayName,
-      role: data.role,
-      invitedBy: data.invitedBy,
-    });
-    
-    return {
-      id: boUser.backofficeUserId,
-      visibleUserId: 'BO-' + boUser.backofficeUserId.substring(0, 8).toUpperCase(),
-      email: boUser.email,
-      displayName: boUser.displayName,
-      fullName: boUser.displayName,
-      userType: 'bo',
-      role: boUser.role,
-      isActive: boUser.status !== 'disabled',
-      isVerified: boUser.isVerified,
-      inviteToken: boUser.inviteToken,
-      inviteTokenExpiresAt: boUser.inviteTokenExpiresAt,
-      invitedAt: boUser.invitedAt,
-      invitedBy: boUser.invitedBy,
-      verifiedAt: boUser.verifiedAt,
-      referredBy: null,
-      userReferenceId: 'BO-' + boUser.backofficeUserId.substring(0, 8).toUpperCase(),
-      createdAt: boUser.createdAt,
-      updatedAt: boUser.updatedAt,
-      lastLoginAt: boUser.lastLoginAt,
-    };
-  }
+  // All user types go to backoffice_users table with user_type column
+  const boUser = await createBackofficeUser({
+    email: data.email,
+    displayName: data.displayName,
+    role: data.userType === 'bo' ? data.role : 'viewer', // F&F/Beta default to viewer
+    invitedBy: data.invitedBy,
+    userType: data.userType,
+  });
   
-  // F&F and Beta users - for now, also store in backoffice_users with a marker
-  // This is temporary until users table is properly extended
-  
-  // If invitedBy is an email, look up the backoffice_user_id
-  let invitedByUuid: string | null = null;
-  if (data.invitedBy) {
-    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(data.invitedBy);
-    if (isUuid) {
-      invitedByUuid = data.invitedBy;
-    } else {
-      const inviter = await getBackofficeUserByEmail(data.invitedBy);
-      invitedByUuid = inviter?.backofficeUserId || null;
-    }
-  }
-  
-  const result = await query<DbBackofficeUser>(
-    `INSERT INTO application.backoffice_users (
-      email, display_name, role, invited_by, status
-    ) VALUES ($1, $2, $3, $4, 'invited')
-    RETURNING *`,
-    [
-      data.email.toLowerCase(),
-      data.displayName || null,
-      'viewer', // F&F and Beta users default to viewer role
-      invitedByUuid,
-    ]
-  );
-  
-  const row = result[0];
-  const prefix = data.userType === 'friends_family' ? 'FF' : 'BT';
+  // Determine prefix based on user type
+  let prefix = 'BO';
+  if (data.userType === 'friends_family') prefix = 'FF';
+  else if (data.userType === 'beta') prefix = 'BT';
   
   return {
-    id: row.backoffice_user_id,
-    visibleUserId: `${prefix}-${row.backoffice_user_id.substring(0, 8).toUpperCase()}`,
-    email: row.email,
-    displayName: row.display_name,
-    fullName: row.display_name,
+    id: boUser.backofficeUserId,
+    visibleUserId: `${prefix}-${boUser.backofficeUserId.substring(0, 8).toUpperCase()}`,
+    email: boUser.email,
+    displayName: boUser.displayName,
+    fullName: boUser.displayName,
     userType: data.userType,
-    role: 'viewer',
-    isActive: row.status !== 'disabled',
-    isVerified: row.is_verified,
-    inviteToken: row.invite_token,
-    inviteTokenExpiresAt: row.invite_token_expires_at ? new Date(row.invite_token_expires_at) : null,
-    invitedAt: new Date(row.invited_at),
-    invitedBy: row.invited_by,
-    verifiedAt: row.verified_at ? new Date(row.verified_at) : null,
+    role: boUser.role,
+    isActive: boUser.status !== 'disabled',
+    isVerified: boUser.isVerified,
+    inviteToken: boUser.inviteToken,
+    inviteTokenExpiresAt: boUser.inviteTokenExpiresAt,
+    invitedAt: boUser.invitedAt,
+    invitedBy: boUser.invitedBy,
+    verifiedAt: boUser.verifiedAt,
     referredBy: null,
-    userReferenceId: `${prefix}-${row.backoffice_user_id.substring(0, 8).toUpperCase()}`,
-    createdAt: new Date(row.created_at),
-    updatedAt: new Date(row.updated_at),
-    lastLoginAt: row.last_login_at ? new Date(row.last_login_at) : null,
+    userReferenceId: `${prefix}-${boUser.backofficeUserId.substring(0, 8).toUpperCase()}`,
+    createdAt: boUser.createdAt,
+    updatedAt: boUser.updatedAt,
+    lastLoginAt: boUser.lastLoginAt,
   };
 }
