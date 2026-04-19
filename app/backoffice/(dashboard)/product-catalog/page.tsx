@@ -848,23 +848,27 @@ export default function ProductCatalogPage() {
                       </div>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-2 mt-1">
+                    <div className="mt-1">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm text-foreground">{brand?.name || "No brand"}</p>
+                        <button
+                          onClick={() => setEditingBrand(true)}
+                          className="p-1 rounded text-muted-foreground hover:text-foreground transition-colors"
+                          title="Edit brand"
+                        >
+                          <Edit2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
                       {brand?.logoUrl && (
-                        <img 
-                          src={brand.logoUrl} 
-                          alt={brand.name}
-                          className="h-6 w-6 object-contain"
-                          crossOrigin="anonymous"
-                        />
+                        <div className="mt-2 p-2 bg-secondary/50 rounded-lg inline-block">
+                          <img 
+                            src={brand.logoUrl} 
+                            alt={brand.name}
+                            className="h-12 w-12 object-contain"
+                            crossOrigin="anonymous"
+                          />
+                        </div>
                       )}
-                      <p className="text-sm text-foreground">{brand?.name || "No brand"}</p>
-                      <button
-                        onClick={() => setEditingBrand(true)}
-                        className="p-1 rounded text-muted-foreground hover:text-foreground transition-colors"
-                        title="Edit brand"
-                      >
-                        <Edit2 className="h-3.5 w-3.5" />
-                      </button>
                     </div>
                   )}
                 </div>
