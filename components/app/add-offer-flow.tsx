@@ -1516,6 +1516,28 @@ export function AddOfferFlow({
           isPendingReview = true;
           console.log("[v0] Temp product created:", tempProductId);
           
+          // Create product review ticket now that we have the temp product ID
+          try {
+            await fetch("/api/support/product-review", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                userId: auth.user?.userId,
+                userEmail: auth.user?.email,
+                tempProductId: tempProductId,
+                barterType: selectedBarterType,
+                category: selectedCategory?.name || "",
+                subcategory: selectedSubcategory?.name || "",
+                brand: selectedProduct.brand || "",
+                model: selectedProduct.model || selectedProduct.title,
+              }),
+            });
+            console.log("[v0] Product review ticket created for tempProductId:", tempProductId);
+          } catch (ticketError) {
+            console.error("[v0] Failed to create product review ticket:", ticketError);
+            // Don't block the offer creation if ticket fails
+          }
+          
           // Also add to local store for immediate display
           addProduct(selectedProduct);
           
@@ -1702,33 +1724,11 @@ export function AddOfferFlow({
     }
   }, [currentStep, isEditMode]);
 
-  const nextStep = useCallback(async () => {
+  const nextStep = useCallback(() => {
     if (currentStep < 4) {
-      // When moving from Step 1 to Step 2, create a product review ticket if custom product was created
-      if (currentStep === 1 && isCustomProduct && selectedProduct) {
-        try {
-          await fetch("/api/support/product-review", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              userId: auth.user?.userId,
-              userEmail: auth.user?.email,
-              barterType: selectedBarterType,
-              category: selectedCategory?.name || "",
-              subcategory: selectedSubcategory?.name || "",
-              brand: selectedBrand,
-              model: selectedModel,
-            }),
-          });
-          // Ticket created silently - no need to notify user, they already saw the toast about review
-        } catch (error) {
-          console.error("[v0] Failed to create product review ticket:", error);
-          // Don't block the user flow if ticket creation fails
-        }
-      }
       setCurrentStep((currentStep + 1) as Step);
     }
-  }, [currentStep, isCustomProduct, selectedProduct, auth.user, selectedBarterType, selectedCategory, selectedSubcategory, selectedBrand, selectedModel]);
+  }, [currentStep]);
 
   const prevStep = useCallback(() => {
     // In edit mode, can't go back to Step 1

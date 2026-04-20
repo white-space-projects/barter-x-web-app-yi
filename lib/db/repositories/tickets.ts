@@ -305,9 +305,11 @@ export async function createSupportTicket(data: {
 }
 
 // Create a product review ticket when user creates a new brand/model
+// This is called AFTER the temp product is created in the database
 export async function createProductReviewTicket(data: {
   userId?: string;
   userEmail?: string;
+  tempProductId: string; // Required - links ticket to the temp product
   barterType: string;
   category: string;
   subcategory: string;
@@ -317,6 +319,7 @@ export async function createProductReviewTicket(data: {
   const description = `
 New Product Submission - Requires Review
 
+**Temp Product ID:** ${data.tempProductId}
 **Barter Type:** ${data.barterType}
 **Category:** ${data.category}
 **Subcategory:** ${data.subcategory}
@@ -329,9 +332,9 @@ User Email: ${data.userEmail || 'N/A'}
 Submitted At: ${new Date().toISOString()}
 
 **Action Required:**
-1. Review and approve/reject the new product entry
-2. Add product specifications if approved
-3. Optionally add product image
+1. Review the temp product in Product Catalog > Pending Review
+2. Approve/reject the new product entry
+3. Add product specifications and image if approved
 `.trim();
 
   const result = await query<{ ticket_id: string }>(

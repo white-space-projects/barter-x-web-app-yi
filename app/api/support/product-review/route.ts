@@ -4,12 +4,12 @@ import { createProductReviewTicket } from "@/lib/db/repositories/tickets";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { userId, userEmail, barterType, category, subcategory, brand, model } = body;
+    const { userId, userEmail, tempProductId, barterType, category, subcategory, brand, model } = body;
 
-    // Validate required fields
-    if (!barterType || !category || !subcategory || !brand || !model) {
+    // Validate required fields - tempProductId is required to link the ticket
+    if (!tempProductId || !barterType || !brand || !model) {
       return NextResponse.json(
-        { error: "Missing required fields: barterType, category, subcategory, brand, model" },
+        { error: "Missing required fields: tempProductId, barterType, brand, model" },
         { status: 400 }
       );
     }
@@ -17,9 +17,10 @@ export async function POST(request: NextRequest) {
     const result = await createProductReviewTicket({
       userId,
       userEmail,
+      tempProductId,
       barterType,
-      category,
-      subcategory,
+      category: category || "",
+      subcategory: subcategory || "",
       brand,
       model,
     });

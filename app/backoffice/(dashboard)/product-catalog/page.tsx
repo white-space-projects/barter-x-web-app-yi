@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { Search, ChevronLeft, ChevronRight, X, Upload, Package, Loader2, Edit2, Save, ImageIcon, Trash2, Check } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, X, Upload, Package, Loader2, Edit2, Save, ImageIcon, Trash2, Check, Clock, AlertCircle, CheckCircle, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { processBackofficeImage, formatFileSize } from "@/lib/image-utils";
 
@@ -53,6 +53,22 @@ interface Product {
   brandName?: string;
 }
 
+interface TempProduct {
+  tempProductId: string;
+  createdByUserId: string;
+  barterTypeId: string;
+  categoryId?: string;
+  subcategoryId?: string;
+  brandName?: string;
+  modelName?: string;
+  title: string;
+  description?: string;
+  status: "pending" | "approved" | "rejected";
+  approvedProductId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export default function ProductCatalogPage() {
   // Filter state
   const [categories, setCategories] = useState<Category[]>([]);
@@ -102,6 +118,15 @@ export default function ProductCatalogPage() {
   // Image error state for fallback
   const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
   
+  // Tab state
+  const [activeTab, setActiveTab] = useState<"products" | "pending">("products");
+  
+  // Temp products state (pending review)
+  const [tempProducts, setTempProducts] = useState<TempProduct[]>([]);
+  const [loadingTempProducts, setLoadingTempProducts] = useState(false);
+  const [approvingTempProduct, setApprovingTempProduct] = useState<string | null>(null);
+  const [rejectingTempProduct, setRejectingTempProduct] = useState<string | null>(null);
+  
   // Filtered subcategories based on selected category
   const filteredSubcategories = useMemo(() => {
     if (!selectedCategory) return subcategories;
@@ -136,6 +161,27 @@ export default function ProductCatalogPage() {
     }
     fetchFilters();
   }, []);
+
+  // Fetch pending temp products when tab changes to "pending"
+  useEffect(() => {
+    async function fetchTempProducts() {
+      if (activeTab !== "pending") return;
+      
+      setLoadingTempProducts(true);
+      try {
+        const response = await fetch("/api/data/temp-products?pending=true");
+        if (response.ok) {
+          const data = await response.json();
+          setTempProducts(data.tempProducts || []);
+        }
+      } catch (error) {
+        console.error("Failed to fetch temp products:", error);
+      } finally {
+        setLoadingTempProducts(false);
+      }
+    }
+    fetchTempProducts();
+  }, [activeTab]);
 
   // Fetch products when filters change
   useEffect(() => {
@@ -404,6 +450,92 @@ export default function ProductCatalogPage() {
   // Handle image error for fallback
   function handleImageError(productId: string) {
     setImageErrors(prev => ({ ...prev, [productId]: true }));
+  }
+
+  // Approve temp product (creates real product and links it)
+  async function handleApproveTempProduct(tempProductId: string) {
+    setApprovingTempProduct(tempProductId);
+    try {
+      // First, find the temp product to get its details
+      const tempProduct = tempProducts.find(tp => tp.tempProductId === tempProductId);
+      if (!tempProduct) {
+        toast.error("Temp product not found");
+        return;
+      }
+
+      // Create a real product from the temp product data
+      const createResponse = await fetch("/api/data/products", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: tempProduct.title,
+          description: tempProduct.description,
+          subcategoryId: tempProduct.subcategoryId,
+          brandName: tempProduct.brandName,
+          barterTypeId: tempProduct.barterTypeId,
+        }),
+      });
+
+      if (!createResponse.ok) {
+        const error = await createResponse.json();
+        throw new Error(error.error || "Failed to create product");
+      }
+
+      const { product } = await createResponse.json();
+
+      // Update temp product status to approved with the new product ID
+      const updateResponse = await fetch("/api/data/temp-products", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tempProductId,
+          status: "approved",
+          approvedProductId: product.productId,
+        }),
+      });
+
+      if (!updateResponse.ok) {
+        toast.error("Product created but failed to update temp product status");
+      }
+
+      // Remove from pending list
+      setTempProducts(prev => prev.filter(tp => tp.tempProductId !== tempProductId));
+      toast.success(`Product "${tempProduct.title}" approved and added to catalog`);
+    } catch (error) {
+      console.error("Failed to approve temp product:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to approve product");
+    } finally {
+      setApprovingTempProduct(null);
+    }
+  }
+
+  // Reject temp product
+  async function handleRejectTempProduct(tempProductId: string) {
+    setRejectingTempProduct(tempProductId);
+    try {
+      const response = await fetch("/api/data/temp-products", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tempProductId,
+          status: "rejected",
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to reject product");
+      }
+
+      // Remove from pending list
+      setTempProducts(prev => prev.filter(tp => tp.tempProductId !== tempProductId));
+      toast.success("Product submission rejected");
+    } catch (error) {
+      console.error("Failed to reject temp product:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to reject product");
+    } finally {
+      setRejectingTempProduct(null);
+    }
   }
 
   // Handle product info field change
@@ -975,13 +1107,49 @@ export default function ProductCatalogPage() {
   return (
   <div className="p-4 space-y-4">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-semibold text-foreground">Product Catalog</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Manage product images and information fields
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-foreground">Product Catalog</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Manage product images and information fields
+          </p>
+        </div>
       </div>
 
+      {/* Tabs */}
+      <div className="flex gap-2 border-b border-border">
+        <button
+          onClick={() => setActiveTab("products")}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === "products"
+              ? "border-primary text-foreground"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <Package className="h-4 w-4 inline mr-2" />
+          All Products
+        </button>
+        <button
+          onClick={() => setActiveTab("pending")}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${
+            activeTab === "pending"
+              ? "border-primary text-foreground"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <Clock className="h-4 w-4" />
+          Pending Review
+          {tempProducts.length > 0 && (
+            <span className="px-1.5 py-0.5 bg-primary text-primary-foreground text-xs font-medium rounded-full">
+              {tempProducts.length}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* Products Tab Content */}
+      {activeTab === "products" && (
+        <>
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-4">
         {/* Search */}
@@ -1150,6 +1318,91 @@ export default function ProductCatalogPage() {
             </div>
           )}
         </>
+      )}
+
+      {/* Pending Review Tab Content */}
+      {activeTab === "pending" && (
+        <div className="space-y-4">
+          {loadingTempProducts ? (
+            <div className="py-12 text-center">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground">Loading pending submissions...</p>
+            </div>
+          ) : tempProducts.length === 0 ? (
+            <div className="py-12 text-center">
+              <CheckCircle className="h-12 w-12 text-green-500/30 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-foreground">All caught up!</h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                No pending product submissions to review
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {tempProducts.map(tp => (
+                <div
+                  key={tp.tempProductId}
+                  className="bg-card rounded-xl border border-border p-4"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <AlertCircle className="h-4 w-4 text-amber-500" />
+                        <span className="text-xs font-medium text-amber-500 uppercase">Pending Review</span>
+                      </div>
+                      <h3 className="text-lg font-semibold text-foreground truncate">
+                        {tp.title}
+                      </h3>
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-sm text-muted-foreground">
+                        {tp.brandName && (
+                          <span><strong>Brand:</strong> {tp.brandName}</span>
+                        )}
+                        {tp.modelName && (
+                          <span><strong>Model:</strong> {tp.modelName}</span>
+                        )}
+                      </div>
+                      {tp.description && (
+                        <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
+                          {tp.description}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-2 mt-3 text-xs text-muted-foreground">
+                        <span>Submitted: {new Date(tp.createdAt).toLocaleDateString()}</span>
+                        <span className="text-muted-foreground/50">|</span>
+                        <span>ID: {tp.tempProductId.slice(0, 8)}...</span>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <button
+                        onClick={() => handleApproveTempProduct(tp.tempProductId)}
+                        disabled={approvingTempProduct === tp.tempProductId || rejectingTempProduct === tp.tempProductId}
+                        className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+                      >
+                        {approvingTempProduct === tp.tempProductId ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <CheckCircle className="h-4 w-4" />
+                        )}
+                        Approve
+                      </button>
+                      <button
+                        onClick={() => handleRejectTempProduct(tp.tempProductId)}
+                        disabled={approvingTempProduct === tp.tempProductId || rejectingTempProduct === tp.tempProductId}
+                        className="flex items-center gap-2 px-4 py-2 bg-destructive/10 hover:bg-destructive/20 text-destructive text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+                      >
+                        {rejectingTempProduct === tp.tempProductId ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <XCircle className="h-4 w-4" />
+                        )}
+                        Reject
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
