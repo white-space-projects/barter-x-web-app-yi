@@ -88,6 +88,11 @@ export default function LoginPage() {
   // #Login#FF#AccessBlocked# - F&F access blocked state
   const [ffAccessBlocked, setFfAccessBlocked] = useState(false);
   
+  // #Login#AccessControl# - Access control state
+  const [accessMode, setAccessMode] = useState<"ff" | "ff_beta" | "all" | "maintenance" | null>(null);
+  const [accessModeLoading, setAccessModeLoading] = useState(true);
+  const [blockedReason, setBlockedReason] = useState<"ff_only" | "beta_only" | "maintenance" | null>(null);
+  
   // #Login#Location#AutoDetect# - Location state (auto-detected from IP)
   const [city, setCity] = useState(""); // #Login#Location#CityInput#
   const [cityId, setCityId] = useState<string | null>(null);
@@ -125,6 +130,25 @@ export default function LoginPage() {
   // Detect if Apple device (for Apple Sign-In button)
   useEffect(() => {
     setShowAppleSignIn(isAppleDevice());
+  }, []);
+
+  // #Login#AccessControl#Fetch# - Fetch access mode on page load
+  useEffect(() => {
+    async function fetchAccessMode() {
+      try {
+        const response = await fetch("/api/auth/check-ff-eligibility");
+        if (response.ok) {
+          const data = await response.json();
+          setAccessMode(data.accessMode || "ff");
+        }
+      } catch (error) {
+        console.error("[v0] Failed to fetch access mode:", error);
+        setAccessMode("ff"); // Default to F&F only on error
+      } finally {
+        setAccessModeLoading(false);
+      }
+    }
+    fetchAccessMode();
   }, []);
 
   // Fetch countries from database
@@ -288,22 +312,26 @@ export default function LoginPage() {
 
     setLoading(true);
     setFfAccessBlocked(false); // Reset blocked state
+    setBlockedReason(null);
     // #Logging#Login#OTP#SendAttempt# - TODO: Log OTP send attempt
     // #Analytics#Login#OTP#SendInitiated# - TODO: Track OTP send initiated
     
     try {
-      // #Login#FF#EligibilityCheck# - Check F&F eligibility BEFORE sending OTP
-      const ffCheckResponse = await fetch("/api/auth/check-ff-eligibility", {
+      // #Login#AccessControl#EligibilityCheck# - Check eligibility BEFORE sending OTP
+      const eligibilityResponse = await fetch("/api/auth/check-ff-eligibility", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: email.toLowerCase().trim() }),
       });
-      const ffCheckData = await ffCheckResponse.json();
+      const eligibilityData = await eligibilityResponse.json();
       
-      if (!ffCheckData.eligible) {
-        // User is not an eligible F&F user - block access
+      if (!eligibilityData.eligible) {
+        // User is not eligible - block access and show appropriate message
         setLoading(false);
         setFfAccessBlocked(true);
+        setBlockedReason(eligibilityData.reason === "ff_only" ? "ff_only" : 
+                        eligibilityData.reason === "beta_only" ? "beta_only" : 
+                        eligibilityData.reason === "maintenance" ? "maintenance" : "ff_only");
         return;
       }
       
@@ -426,18 +454,21 @@ export default function LoginPage() {
             }
           }
 
-          // #Login#FF#EligibilityCheck# - Check F&F eligibility AFTER getting email from Google
-          const ffCheckResponse = await fetch("/api/auth/check-ff-eligibility", {
+          // #Login#AccessControl#EligibilityCheck# - Check eligibility AFTER getting email from Google
+          const eligibilityResponse = await fetch("/api/auth/check-ff-eligibility", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ email: googleEmail.toLowerCase().trim() }),
           });
-          const ffCheckData = await ffCheckResponse.json();
+          const eligibilityData = await eligibilityResponse.json();
           
-          if (!ffCheckData.eligible) {
-            // User is not an eligible F&F user - block access
+          if (!eligibilityData.eligible) {
+            // User is not eligible - block access and show appropriate message
             setGoogleLoading(false);
             setFfAccessBlocked(true);
+            setBlockedReason(eligibilityData.reason === "ff_only" ? "ff_only" : 
+                            eligibilityData.reason === "beta_only" ? "beta_only" : 
+                            eligibilityData.reason === "maintenance" ? "maintenance" : "ff_only");
             return;
           }
 
@@ -506,6 +537,7 @@ export default function LoginPage() {
     
     setAppleLoading(true);
     setFfAccessBlocked(false); // Reset blocked state
+    setBlockedReason(null);
     // #Logging#Login#Apple#Attempt# - TODO: Log Apple sign-in attempt
     // #Analytics#Login#Apple#Initiated# - TODO: Track Apple sign-in initiated
     
@@ -515,18 +547,21 @@ export default function LoginPage() {
       // For now, use a temporary email-based login
       const appleEmail = "apple.user@icloud.com"; // TODO: Get from Apple Sign-In
       
-      // #Login#FF#EligibilityCheck# - Check F&F eligibility AFTER getting email from Apple
-      const ffCheckResponse = await fetch("/api/auth/check-ff-eligibility", {
+      // #Login#AccessControl#EligibilityCheck# - Check eligibility AFTER getting email from Apple
+      const eligibilityResponse = await fetch("/api/auth/check-ff-eligibility", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: appleEmail.toLowerCase().trim() }),
       });
-      const ffCheckData = await ffCheckResponse.json();
+      const eligibilityData = await eligibilityResponse.json();
       
-      if (!ffCheckData.eligible) {
-        // User is not an eligible F&F user - block access
+      if (!eligibilityData.eligible) {
+        // User is not eligible - block access and show appropriate message
         setAppleLoading(false);
         setFfAccessBlocked(true);
+        setBlockedReason(eligibilityData.reason === "ff_only" ? "ff_only" : 
+                        eligibilityData.reason === "beta_only" ? "beta_only" : 
+                        eligibilityData.reason === "maintenance" ? "maintenance" : "ff_only");
         return;
       }
       
@@ -645,13 +680,63 @@ export default function LoginPage() {
     }
   }
 
-  // #Auth#Session#Hydrating# - Show loading while auth is hydrating
-  if (!authReady || auth.isAuthenticated) {
+  // #Auth#Session#Hydrating# - Show loading while auth is hydrating or access mode loading
+  if (!authReady || auth.isAuthenticated || accessModeLoading) {
     return (
       <div className="min-h-screen bg-background">
         <GlobalNav />
         <main className="flex items-center justify-center px-4 py-16">
           <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        </main>
+      </div>
+    );
+  }
+
+  // #Login#AccessControl#MaintenanceMode# - Full page maintenance screen
+  if (accessMode === "maintenance") {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <GlobalNav />
+        <main className="flex-1 flex items-center justify-center px-4">
+          <div className="text-center max-w-md">
+            <div className="mb-6">
+              <h1 className="text-3xl font-bold tracking-tight">
+                <span className="text-primary">BARTER-X</span>
+              </h1>
+            </div>
+            <div className="rounded-xl border border-border bg-card p-8">
+              <div className="mb-4">
+                <svg 
+                  className="mx-auto h-12 w-12 text-muted-foreground" 
+                  fill="none" 
+                  viewBox="0 0 24 24" 
+                  stroke="currentColor"
+                >
+                  <path 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    strokeWidth={1.5} 
+                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" 
+                  />
+                  <path 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    strokeWidth={1.5} 
+                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" 
+                  />
+                </svg>
+              </div>
+              <h2 className="text-lg font-semibold text-foreground mb-2">
+                Undergoing Updates
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                Barter-X is currently undergoing updates.
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">
+                {"We'll be back shortly — thanks for your patience."}
+              </p>
+            </div>
+          </div>
         </main>
       </div>
     );
@@ -673,8 +758,8 @@ Exchange Reimagined
   </p>
             </div>
 
-            {/* #Login#FF#BlockedMessage# - F&F access denied fallback */}
-            {ffAccessBlocked && (
+            {/* #Login#AccessControl#BlockedMessage# - Access denied fallback messages */}
+            {ffAccessBlocked && blockedReason === "ff_only" && (
               <div className="mb-6 rounded-lg border border-primary/30 bg-primary/5 p-6 text-center">
                 <p className="text-sm font-medium text-foreground mb-2">
                   Friends &amp; Family testing is ongoing.
@@ -687,6 +772,26 @@ Exchange Reimagined
                   className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline"
                 >
                   <span>Join Beta Waitlist</span>
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </a>
+              </div>
+            )}
+            
+            {ffAccessBlocked && blockedReason === "beta_only" && (
+              <div className="mb-6 rounded-lg border border-primary/30 bg-primary/5 p-6 text-center">
+                <p className="text-sm font-medium text-foreground mb-2">
+                  Beta testing is currently in progress.
+                </p>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Register to join and get early access as soon as it becomes available.
+                </p>
+                <a
+                  href="/"
+                  className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline"
+                >
+                  <span>Join Beta Testing</span>
                   <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>

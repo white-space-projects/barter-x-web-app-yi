@@ -80,6 +80,15 @@ export default function BackOfficeUsersPage() {
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [filterType, setFilterType] = useState<UserType | "all">("all");
   const [hydrated, setHydrated] = useState(false);
+  
+  // Access control state
+  const [accessControl, setAccessControl] = useState({
+    allowFf: true,
+    allowBeta: false,
+    allowAll: false,
+  });
+  const [accessControlLoading, setAccessControlLoading] = useState(true);
+  const [savingAccessControl, setSavingAccessControl] = useState(false);
 
   // Wait for hydration
   useEffect(() => {
@@ -97,8 +106,58 @@ export default function BackOfficeUsersPage() {
   useEffect(() => {
     if (hydrated && user?.role === "admin") {
       fetchUsers();
+      fetchAccessControl();
     }
   }, [hydrated, user]);
+
+  // Fetch access control settings
+  async function fetchAccessControl() {
+    setAccessControlLoading(true);
+    try {
+      const response = await fetch("/api/app-access-control");
+      const data = await response.json();
+      setAccessControl({
+        allowFf: data.allowFf ?? true,
+        allowBeta: data.allowBeta ?? false,
+        allowAll: data.allowAll ?? false,
+      });
+    } catch (error) {
+      console.error("Failed to fetch access control:", error);
+    } finally {
+      setAccessControlLoading(false);
+    }
+  }
+
+  // Update access control settings
+  async function updateAccessControl(updates: Partial<typeof accessControl>) {
+    setSavingAccessControl(true);
+    const newSettings = { ...accessControl, ...updates };
+    
+    try {
+      const response = await fetch("/api/app-access-control", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          allowFf: newSettings.allowFf,
+          allowBeta: newSettings.allowBeta,
+          allowAll: newSettings.allowAll,
+        }),
+      });
+      
+      const data = await response.json();
+      if (response.ok) {
+        setAccessControl({
+          allowFf: data.allowFf,
+          allowBeta: data.allowBeta,
+          allowAll: data.allowAll,
+        });
+      }
+    } catch (error) {
+      console.error("Failed to update access control:", error);
+    } finally {
+      setSavingAccessControl(false);
+    }
+  }
 
   // Block rendering for non-admin users
   if (!hydrated || !isAuthenticated || user?.role !== "admin") {
@@ -268,6 +327,119 @@ export default function BackOfficeUsersPage() {
           <UserPlus className="h-4 w-4" />
           Add User
         </button>
+      </div>
+
+      {/* Access Control Panel */}
+      <div className="rounded-xl border border-border bg-card p-4">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-sm font-semibold text-foreground">App Access Control</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Control who can access the app
+            </p>
+          </div>
+          {savingAccessControl && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              Saving...
+            </div>
+          )}
+        </div>
+        
+        {accessControlLoading ? (
+          <div className="flex items-center justify-center py-4">
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          </div>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-3">
+            {/* Allow F&F */}
+            <button
+              onClick={() => updateAccessControl({ allowFf: !accessControl.allowFf })}
+              disabled={savingAccessControl}
+              className={`flex items-center justify-between rounded-lg border p-3 transition-colors ${
+                accessControl.allowFf
+                  ? "border-pink-500/50 bg-pink-500/10"
+                  : "border-border bg-secondary/30 hover:bg-secondary/50"
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <Heart className={`h-4 w-4 ${accessControl.allowFf ? "text-pink-500" : "text-muted-foreground"}`} />
+                <span className={`text-sm font-medium ${accessControl.allowFf ? "text-foreground" : "text-muted-foreground"}`}>
+                  Allow F&F
+                </span>
+              </div>
+              {accessControl.allowFf ? (
+                <ToggleRight className="h-5 w-5 text-pink-500" />
+              ) : (
+                <ToggleLeft className="h-5 w-5 text-muted-foreground" />
+              )}
+            </button>
+            
+            {/* Allow Beta */}
+            <button
+              onClick={() => updateAccessControl({ allowBeta: !accessControl.allowBeta })}
+              disabled={savingAccessControl}
+              className={`flex items-center justify-between rounded-lg border p-3 transition-colors ${
+                accessControl.allowBeta
+                  ? "border-purple-500/50 bg-purple-500/10"
+                  : "border-border bg-secondary/30 hover:bg-secondary/50"
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <FlaskConical className={`h-4 w-4 ${accessControl.allowBeta ? "text-purple-500" : "text-muted-foreground"}`} />
+                <span className={`text-sm font-medium ${accessControl.allowBeta ? "text-foreground" : "text-muted-foreground"}`}>
+                  Allow Beta
+                </span>
+              </div>
+              {accessControl.allowBeta ? (
+                <ToggleRight className="h-5 w-5 text-purple-500" />
+              ) : (
+                <ToggleLeft className="h-5 w-5 text-muted-foreground" />
+              )}
+            </button>
+            
+            {/* Allow All */}
+            <button
+              onClick={() => updateAccessControl({ allowAll: !accessControl.allowAll })}
+              disabled={savingAccessControl}
+              className={`flex items-center justify-between rounded-lg border p-3 transition-colors ${
+                accessControl.allowAll
+                  ? "border-green-500/50 bg-green-500/10"
+                  : "border-border bg-secondary/30 hover:bg-secondary/50"
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <UserCheck className={`h-4 w-4 ${accessControl.allowAll ? "text-green-500" : "text-muted-foreground"}`} />
+                <span className={`text-sm font-medium ${accessControl.allowAll ? "text-foreground" : "text-muted-foreground"}`}>
+                  Allow All
+                </span>
+              </div>
+              {accessControl.allowAll ? (
+                <ToggleRight className="h-5 w-5 text-green-500" />
+              ) : (
+                <ToggleLeft className="h-5 w-5 text-muted-foreground" />
+              )}
+            </button>
+          </div>
+        )}
+        
+        {/* Current Mode Indicator */}
+        <div className="mt-3 pt-3 border-t border-border">
+          <p className="text-xs text-muted-foreground">
+            Current mode:{" "}
+            <span className="font-medium text-foreground">
+              {accessControl.allowAll
+                ? "Open Access (Everyone)"
+                : accessControl.allowFf && accessControl.allowBeta
+                ? "F&F + Beta Users"
+                : accessControl.allowFf
+                ? "F&F Users Only"
+                : accessControl.allowBeta
+                ? "Beta Users Only"
+                : "Maintenance Mode (No Access)"}
+            </span>
+          </p>
+        </div>
       </div>
 
       {/* Filter Tabs */}
