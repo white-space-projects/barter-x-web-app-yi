@@ -302,8 +302,8 @@ export function OfferCard({
    */
   async function handleSimulateReserved(hookId: string) {
     try {
-      await updateHook(hookId, { status: "reserved" });
-      toast.success("Simulated: Hook status changed to Reserved.");
+      await updateHook(hookId, { lockLevel: 1 }); // Reserved = lockLevel 1
+      toast.success("Simulated: Hook lockLevel changed to Reserved.");
     } catch (error) {
       console.error("[v0] Failed to simulate:", error);
       toast.error("Failed to simulate.");

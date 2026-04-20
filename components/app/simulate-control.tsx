@@ -7,7 +7,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
-import type { LockLevel, HookStatus } from "@/lib/types";
+import type { LockLevel } from "@/lib/types";
 import { useBarterStore } from "@/lib/store";
 import { toast } from "sonner";
 
@@ -36,13 +36,6 @@ export function SimulateControl({ currentLockLevel, hookId, sourceOfferId, targe
   }, [showMenu]);
 
   const handleSimulate = async (lockLevel: LockLevel) => {
-    const statusMap: Record<LockLevel, HookStatus> = {
-      0: "searching",
-      1: "reserved",
-      2: "processing",
-      3: "exchanged",
-    };
-
     try {
       // Update BOTH offers' lockLevel (source = my offer, target = their offer)
       updateOffer(sourceOfferId, {
@@ -55,9 +48,9 @@ export function SimulateControl({ currentLockLevel, hookId, sourceOfferId, targe
         lockUpdatedAt: new Date().toISOString(),
       });
 
+      // Update hook lockLevel only (status is derived from lockLevel)
       await updateHook(hookId, {
         lockLevel,
-        status: statusMap[lockLevel],
       });
 
       // When setting to Reserved, send notification only (no chat message - chat enabled after both confirm)

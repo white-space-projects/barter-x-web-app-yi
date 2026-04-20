@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { sourceOfferId, targetOfferId, correlationId, userId } = body;
+    const { sourceOfferId, targetOfferId } = body;
 
     if (!sourceOfferId || !targetOfferId) {
       return NextResponse.json(
@@ -54,8 +54,6 @@ export async function POST(request: NextRequest) {
     const hook = await createHook({
       sourceOfferId,
       targetOfferId,
-      correlationId,
-      userId,
     });
 
     return NextResponse.json({ hook }, { status: 201 });

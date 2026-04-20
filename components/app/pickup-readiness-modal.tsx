@@ -196,14 +196,14 @@ export function PickupReadinessModal({ offerId, onClose }: Props) {
     // Find hooks that target this offer (inbound hooks from other users)
     const inboundHooks = hooks.filter((h) => h.toOfferId === offerId);
 
-    // Update all reserved hooks for this offer to "processing" (Committed)
+    // Update all reserved hooks for this offer to lockLevel 2 (Exchange initiated)
     const outboundHooks = getHooksByFromOffer(offerId);
     for (const hook of outboundHooks) {
-      if (hook.status === "reserved") {
+      if (hook.lockLevel === 1) { // Reserved
         try {
-          await updateHook(hook.hookId, { status: "processing" });
+          await updateHook(hook.hookId, { lockLevel: 2 }); // Exchange initiated
         } catch (error) {
-          console.error("[v0] Failed to update hook status:", error);
+          console.error("[v0] Failed to update hook lockLevel:", error);
         }
       }
     }

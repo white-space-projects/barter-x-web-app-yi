@@ -425,8 +425,6 @@ export function BarterProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify({
           sourceOfferId: hook.fromOfferId,
           targetOfferId: hook.toOfferId,
-          correlationId: hook.correlationId,
-          userId: auth.user?.userId,
         }),
       });
       

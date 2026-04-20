@@ -10,18 +10,20 @@
 import { query } from "../postgres";
 import type { Hook, HookStatus, LockLevel } from "@/lib/types";
 
+// DbHook interface - only columns that exist per config.yaml
 interface DbHook {
   hook_id: string;
   source_offer_id: string;
   target_offer_id: string;
-  correlation_id: string | null;
-  created_by_user_id: string | null;
-  status: string;
   lock_level: number;
-  cycle_id: string | null;
   is_active: boolean;
-  created_at: string;
-  updated_at: string;
+  // Optional columns that may or may not exist
+  correlation_id?: string | null;
+  created_by_user_id?: string | null;
+  status?: string;
+  cycle_id?: string | null;
+  created_at?: string;
+  updated_at?: string;
 }
 
 /**
@@ -46,14 +48,23 @@ function parseHookStatus(value: string | null): HookStatus {
 
 /**
  * Map database row to Hook type
+ * Status is derived from lock_level per config.yaml
  */
 function mapToHook(row: DbHook): Hook {
+  // Map lock_level to status: 0=searching, 1=reserved, 2=processing, 3=exchanged
+  const lockLevelToStatus: Record<number, HookStatus> = {
+    0: "searching",
+    1: "reserved",
+    2: "processing",
+    3: "exchanged",
+  };
+  
   return {
     hookId: row.hook_id,
     correlationId: row.correlation_id || "",
     fromOfferId: row.source_offer_id,
     toOfferId: row.target_offer_id,
-    status: parseHookStatus(row.status),
+    status: lockLevelToStatus[row.lock_level] || "searching",
     reservedCycleId: row.cycle_id || undefined,
     lockLevel: parseLockLevel(row.lock_level),
     isActive: row.is_active,
@@ -121,25 +132,23 @@ export async function fetchHooks(
 
 /**
  * Create a new hook
+ * Note: Only using columns that exist in the database per config.yaml:
+ * source_offer_id, target_offer_id, lock_level, is_active
  */
 export async function createHook(data: {
   sourceOfferId: string;
   targetOfferId: string;
-  correlationId?: string;
   userId?: string;
 }): Promise<Hook> {
   const result = await query<DbHook>(
     `INSERT INTO application.hooks (
-      source_offer_id, target_offer_id, correlation_id, created_by_user_id,
-      status, lock_level, is_active, created_at, updated_at
+      source_offer_id, target_offer_id, lock_level, is_active
     ) VALUES (
-      $1, $2, $3, $4, 'searching', 0, true, NOW(), NOW()
+      $1, $2, 0, true
     ) RETURNING *`,
     [
       data.sourceOfferId,
       data.targetOfferId,
-      data.correlationId || null,
-      data.userId || null,
     ]
   );
 
@@ -152,13 +161,12 @@ export async function createHook(data: {
 
 /**
  * Update a hook
+ * Note: Only lock_level and is_active are confirmed to exist per config.yaml
  */
 export async function updateHook(
   hookId: string,
   data: Partial<{
-    status: HookStatus;
     lockLevel: LockLevel;
-    cycleId: string;
     isActive: boolean;
   }>
 ): Promise<Hook | null> {
@@ -166,17 +174,9 @@ export async function updateHook(
   const values: unknown[] = [];
   let paramIndex = 1;
 
-  if (data.status !== undefined) {
-    updates.push(`status = $${paramIndex++}`);
-    values.push(data.status);
-  }
   if (data.lockLevel !== undefined) {
     updates.push(`lock_level = $${paramIndex++}`);
     values.push(data.lockLevel);
-  }
-  if (data.cycleId !== undefined) {
-    updates.push(`cycle_id = $${paramIndex++}`);
-    values.push(data.cycleId);
   }
   if (data.isActive !== undefined) {
     updates.push(`is_active = $${paramIndex++}`);
@@ -190,8 +190,6 @@ export async function updateHook(
     );
     return result[0] ? mapToHook(result[0]) : null;
   }
-
-  updates.push(`updated_at = NOW()`);
   values.push(hookId);
 
   const result = await query<DbHook>(
@@ -207,7 +205,7 @@ export async function updateHook(
  */
 export async function deleteHook(hookId: string): Promise<boolean> {
   await query(
-    `UPDATE application.hooks SET is_active = false, updated_at = NOW() WHERE hook_id = $1`,
+    `UPDATE application.hooks SET is_active = false WHERE hook_id = $1`,
     [hookId]
   );
   return true;
