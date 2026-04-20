@@ -337,6 +337,7 @@ export function ProductsTab({ productType = "goods", onAddOfferWithProduct, onHe
     if (!headerChange) return;
     
     if (selectedProduct && panelViewMode === "list") {
+      // When viewing offers list for a product, set the header with product info
       headerChange({
         backAction: () => setSelectedProduct(null),
         title: `Offers for ${selectedProduct.title}`,
@@ -353,9 +354,13 @@ export function ProductsTab({ productType = "goods", onAddOfferWithProduct, onHe
           },
         },
       });
-    } else {
+    } else if (!selectedProduct) {
+      // Only clear header when no product is selected (back to product list)
+      // When panelViewMode is "details", let ViewOfferDetails set its own header
       headerChange(null);
     }
+    // Note: When panelViewMode === "details", we don't clear the header
+    // ViewOfferDetails will set its own header via onHeaderChange prop
     
     // Cleanup: clear header when unmounting
     return () => {
