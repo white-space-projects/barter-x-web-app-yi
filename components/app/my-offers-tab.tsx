@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect } from "react";
 import { Package, ChevronDown, ChevronUp, MapPin, MessageSquare, Pencil, X, Link2Off, Eye, Trash2 } from "lucide-react";
 import { useBarterStore } from "@/lib/store";
 import { useBarterData } from "@/lib/data-provider";
-import type { HookStatus, LockLevel, Offer, Product } from "@/lib/types";
+import type { LockLevel, Offer, Product } from "@/lib/types";
 import { OfferCardShimmer } from "./offer-card-shimmer";
 import { LOCK_LEVEL_LABELS, LOCK_LEVEL_COLORS, LOCK_LEVEL_BG_COLORS, LOCK_LEVEL_HELPER_TEXT } from "@/lib/types";
 import { PickupReadinessModal } from "./pickup-readiness-modal";
@@ -33,34 +33,29 @@ import {
  * - POST /api/conversations - Get or create conversation
  */
 
-// Hook status display colors
-const HOOK_STATUS_COLORS: Record<HookStatus, string> = {
-  searching: "text-muted-foreground",
-  cycle_found: "text-primary",
-  reserved: "text-primary",
-  processing: "text-[#3b82f6]",
-  exchanged: "text-muted-foreground",
-  expired: "text-destructive",
+// Hook status labels based on lock_level (per config.yaml)
+// 0=Awaiting, 1=Reserved, 2=Exchange initiated, 3=Exchange complete
+const HOOK_LOCK_LEVEL_LABELS: Record<LockLevel, string> = {
+  0: "Awaiting",
+  1: "Reserved",
+  2: "Exchange initiated",
+  3: "Exchange complete",
 };
 
-// Hook status display labels
-const HOOK_STATUS_LABELS: Record<HookStatus, string> = {
-  searching: "Searching",
-  cycle_found: "Cycle Found",
-  reserved: "Reserved",
-  processing: "Committed",
-  exchanged: "Exchanged",
-  expired: "Expired",
+// Hook status colors based on lock_level
+const HOOK_LOCK_LEVEL_COLORS: Record<LockLevel, string> = {
+  0: "text-blue-400",
+  1: "text-primary",
+  2: "text-blue-500",
+  3: "text-green-500",
 };
 
-// Hook status background colors
-const HOOK_STATUS_BG_COLORS: Record<HookStatus, string> = {
-  searching: "bg-blue-500/10",
-  cycle_found: "bg-purple-500/10",
-  reserved: "bg-yellow-500/10",
-  processing: "bg-orange-500/10",
-  exchanged: "bg-green-500/10",
-  expired: "bg-muted/50",
+// Hook status background colors based on lock_level
+const HOOK_LOCK_LEVEL_BG_COLORS: Record<LockLevel, string> = {
+  0: "bg-blue-500/10",
+  1: "bg-primary/20",
+  2: "bg-blue-500/20",
+  3: "bg-green-500/20",
 };
 
 // My Offer status labels based on lock_level (per design spec)
@@ -559,12 +554,8 @@ return (
                             ? products.find((p) => p.productId === targetOffer.productId)
                             : null;
 
-                          // Map hook status to display labels
-                          const hookStatusLabel = hook.status === "reserved" ? "RESERVED" : 
-                                                   hook.status === "processing" ? "PROCESSING" :
-                                                   hook.status === "searching" ? "AWAITING" :
-                                                   hook.status === "cycle_found" ? "CYCLE FOUND" :
-                                                   hook.status === "exchanged" ? "EXCHANGED" : "EXPIRED";
+                          // Map hook lock_level to display labels (per config.yaml)
+                          const hookStatusLabel = HOOK_LOCK_LEVEL_LABELS[hook.lockLevel];
 
                           return (
                             <div
@@ -582,21 +573,16 @@ return (
                                     alt={targetOffer?.title || "Hooked offer"}
                                   />
 
-                                  {/* Offer info: Title + Status pill + Location */}
+                                  {/* Offer info: Title + Status pill */}
                                   <div className="flex-1 min-w-0">
                                     <p className="text-sm font-medium text-foreground truncate">
                                       {targetOffer?.title || "Unknown Offer"}
                                     </p>
                                     <div className="flex items-center gap-2 mt-1">
-                                      {/* Status pill */}
+                                      {/* Status pill based on lock_level */}
                                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium uppercase ${
-                                        hook.status === "reserved" ? "bg-primary/20 text-primary" :
-                                        hook.status === "processing" ? "bg-blue-500/20 text-blue-500" :
-                                        hook.status === "searching" ? "bg-blue-500/10 text-blue-400" :
-                                        hook.status === "cycle_found" ? "bg-purple-500/20 text-purple-400" :
-                                        hook.status === "exchanged" ? "bg-green-500/20 text-green-500" :
-                                        "bg-muted text-muted-foreground"
-                                      }`}>
+                                        HOOK_LOCK_LEVEL_BG_COLORS[hook.lockLevel]
+                                      } ${HOOK_LOCK_LEVEL_COLORS[hook.lockLevel]}`}>
                                         {hookStatusLabel}
                                       </span>
                                     </div>
