@@ -27,15 +27,23 @@ import {
 import { ViewOffersPanel } from "./view-offers-panel";
 import { AddOfferFlow } from "./add-offer-flow";
 import { ProductImage } from "./product-image";
-import { ArrowLeft } from "lucide-react";
+
 import type { Product, ProductType } from "@/lib/types";
 import { useProducts } from "@/hooks/use-products";
 import { ProductShimmer } from "./product-shimmer";
 import { getProductTypeCategories, getSubcategories as getTypeSubcategories, getCategoryByName, isOfferCreationEnabled, getAvailabilityNote, getProductType, type CategoryDefinition, type SubcategoryDefinition } from "@/lib/product-types";
 
+type HeaderContent = {
+  backAction?: () => void;
+  title?: string;
+  subtitle?: string;
+  rightAction?: { label: string; icon?: React.ReactNode; onClick: () => void };
+};
+
 type Props = {
   productType?: ProductType;
   onAddOfferWithProduct?: (product: Product) => void;
+  onHeaderChange?: (content: HeaderContent | null) => void;
 };
 
 // Icon mapping for categories
@@ -88,7 +96,7 @@ const SUBCATEGORY_ICONS: Record<string, React.ComponentType<{ className?: string
   Cpu,
 };
 
-export function ProductsTab({ productType = "goods", onAddOfferWithProduct }: Props) {
+export function ProductsTab({ productType = "goods", onAddOfferWithProduct, onHeaderChange }: Props) {
   const {
     auth,
     productFilters,
@@ -314,45 +322,52 @@ export function ProductsTab({ productType = "goods", onAddOfferWithProduct }: Pr
     }
   }
 
+  // Sync header content with parent component when product is selected
+  // Store callbacks in refs to avoid infinite loops in useEffect
+  const onHeaderChangeRef = useRef(onHeaderChange);
+  const onAddOfferWithProductRef = useRef(onAddOfferWithProduct);
+  
+  useEffect(() => {
+    onHeaderChangeRef.current = onHeaderChange;
+    onAddOfferWithProductRef.current = onAddOfferWithProduct;
+  });
+  
+  useEffect(() => {
+    const headerChange = onHeaderChangeRef.current;
+    if (!headerChange) return;
+    
+    if (selectedProduct && panelViewMode === "list") {
+      headerChange({
+        backAction: () => setSelectedProduct(null),
+        title: `Offers for ${selectedProduct.title}`,
+        subtitle: `${selectedProduct.subcategory} / ${selectedProduct.brand}`,
+        rightAction: {
+          label: "Add Offer",
+          icon: <Plus className="h-3.5 w-3.5" />,
+          onClick: () => {
+            if (onAddOfferWithProductRef.current) {
+              onAddOfferWithProductRef.current(selectedProduct);
+            } else {
+              setInlineAddProduct(selectedProduct);
+            }
+          },
+        },
+      });
+    } else {
+      headerChange(null);
+    }
+    
+    // Cleanup: clear header when unmounting
+    return () => {
+      headerChange(null);
+    };
+  }, [selectedProduct, panelViewMode]);
+
   // If a product is selected, show ViewOffersPanel instead of product list
   if (selectedProduct) {
     return (
       <div className="w-full">
-        {/* Header with back button - only show when in list mode */}
-        {panelViewMode === "list" && (
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3 min-w-0">
-              <button
-                onClick={() => setSelectedProduct(null)}
-                className="flex h-8 w-8 items-center justify-center rounded-md text-primary hover:text-primary/80 hover:bg-primary/10 transition-colors"
-                aria-label="Go back"
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </button>
-              <div className="min-w-0">
-                <h2 className="text-sm font-semibold text-foreground truncate">
-                  Offers for {selectedProduct.title}
-                </h2>
-                <p className="text-xs text-muted-foreground truncate">
-                  {selectedProduct.subcategory} / {selectedProduct.brand}
-                </p>
-              </div>
-            </div>
-            <button 
-              onClick={() => {
-                if (onAddOfferWithProduct) {
-                  onAddOfferWithProduct(selectedProduct);
-                } else {
-                  setInlineAddProduct(selectedProduct);
-                }
-              }} 
-              className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              Add Offer
-            </button>
-          </div>
-        )}
+        {/* Header content is now managed by parent via onHeaderChange callback */}
         
         {/* ViewOffersPanel content */}
         <ViewOffersPanel 

@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, X, User } from "lucide-react";
+import { Menu, X, MapPin } from "lucide-react";
 import { useBarterStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 
 // Global navigation component for the app
 
@@ -19,6 +19,16 @@ export function GlobalNav() {
   const { auth } = useBarterStore();
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  // User location from profile (City, Country)
+  const userLocation = useMemo(() => {
+    const city = auth.user?.profileAddress?.city || auth.user?.city || "";
+    const country = auth.user?.profileAddress?.country || auth.user?.country || "";
+    if (city && country) {
+      return `${city}, ${country}`;
+    }
+    return city || country || "";
+  }, [auth.user]);
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border bg-background/80 backdrop-blur-md">
@@ -69,21 +79,13 @@ export function GlobalNav() {
           )}
         </nav>
 
-        {/* Right: Auth area - shows user name, links to profile in workspace */}
+        {/* Right: Auth area - shows user location (City, Country) when logged in */}
         <div className="hidden items-center gap-3 md:flex">
           {auth.isAuthenticated ? (
-            <Link
-              href="/workspace?tab=profile"
-              className={cn(
-                "flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-                pathname.startsWith("/workspace")
-                  ? "text-primary"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <User className="h-4 w-4" />
-              {auth.user?.name || "Profile"}
-            </Link>
+            <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+              <MapPin className="h-3.5 w-3.5" />
+              {userLocation || "Set location"}
+            </span>
           ) : (
             <Link
               href="/login"
@@ -140,19 +142,10 @@ export function GlobalNav() {
           </nav>
           <div className="mt-3 border-t border-border pt-3">
             {auth.isAuthenticated ? (
-              <Link
-                href="/workspace?tab=profile"
-                onClick={() => setMobileOpen(false)}
-                className={cn(
-                  "flex items-center gap-2 rounded-md px-3 py-2.5 text-sm font-medium",
-                  pathname.startsWith("/workspace")
-                    ? "text-primary"
-                    : "text-muted-foreground"
-                )}
-              >
-                <User className="h-4 w-4" />
-                {auth.user?.name || "Profile"}
-              </Link>
+              <span className="flex items-center gap-2 rounded-md px-3 py-2.5 text-sm text-muted-foreground">
+                <MapPin className="h-4 w-4" />
+                {userLocation || "Set location"}
+              </span>
             ) : (
               <Link
                 href="/login"

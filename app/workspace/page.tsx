@@ -33,7 +33,7 @@ import { SidebarNav } from "@/components/app/sidebar-nav";
 import { BottomNav } from "@/components/app/bottom-nav";
 import { NavigationConfirmDialog } from "@/components/app/navigation-confirm-dialog";
 import { NavigationGuardProvider, useNavigationGuard } from "@/lib/navigation-guard";
-import { Loader2, ShieldCheck } from "lucide-react";
+import { Loader2, ShieldCheck, ArrowLeft, Plus, X } from "lucide-react";
 import type { ProductType, Product } from "@/lib/types";
 
 // Tab type definition - profile is now a utility tab shown in tab content
@@ -66,6 +66,14 @@ function WorkspaceContent() {
   const addOfferCancelHandlerRef = useRef<(() => void) | null>(null);
   const [pickupModalOfferId, setPickupModalOfferId] = useState<string | null>(null);
   
+  // Dynamic header content - set by child components (e.g., ProductsTab when viewing product detail)
+  const [headerContent, setHeaderContent] = useState<{
+    backAction?: () => void;
+    title?: string;
+    subtitle?: string;
+    rightAction?: { label: string; icon?: React.ReactNode; onClick: () => void };
+  } | null>(null);
+  
   // Ref for scrollable content area - used to reset scroll on tab change
   const contentScrollRef = useRef<HTMLDivElement>(null);
 
@@ -85,6 +93,7 @@ function WorkspaceContent() {
     }
     setActiveProductType(type);
     setActiveUtilityTab(null);
+    setHeaderContent(null); // Clear dynamic header when switching
   }, [hasBlocker, addOfferOpen, setPendingNavigation, setShowConfirmDialog]);
 
   const handleSelectUtilityTab = useCallback((tab: UtilityTab | null) => {
@@ -99,6 +108,7 @@ function WorkspaceContent() {
       setAddOfferOpen(false);
     }
     setActiveUtilityTab(tab);
+    setHeaderContent(null); // Clear dynamic header when switching
   }, [hasBlocker, addOfferOpen, setPendingNavigation, setShowConfirmDialog]);
 
   // Handle confirmed navigation (after user confirms discard/save)
@@ -154,15 +164,9 @@ function WorkspaceContent() {
    * On login, we auto-detect location from IP address.
    * If profile city/country differs from auto-detected, re-fetch products.
    * Products API: GET /api/products?country={country}&city={city}
+   * 
+   * User location is now displayed in GlobalNav (moved from header bar).
    */
-  const userLocation = useMemo(() => {
-    const city = auth.user?.profileAddress?.city || auth.user?.city || "";
-    const country = auth.user?.profileAddress?.country || auth.user?.country || "";
-    if (city && country) {
-      return `${city}, ${country}`;
-    }
-    return city || country || "";
-  }, [auth.user]);
 
   // ---------------------------------------------------------------------------
   // EFFECTS (all hooks must be before conditional returns)
@@ -262,37 +266,96 @@ function WorkspaceContent() {
 
         {/* Main content area with fixed header bar */}
         <main className="flex-1 flex flex-col overflow-hidden">
-          {/* Fixed Header bar - shows current context */}
+          {/* Fixed Header bar - shows current context or dynamic content from child components */}
           <div className="flex-shrink-0 border-b border-border bg-card/95 backdrop-blur-md z-10">
             <div className="flex h-12 items-center justify-between px-4 lg:px-6">
-              {/* Current view title */}
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-foreground">
-                  {addOfferOpen && `Add New Offer - Step ${addOfferStep}`}
-                  {!addOfferOpen && activeUtilityTab === "my-offers" && "My Offers"}
-                  {!addOfferOpen && activeUtilityTab === "chat" && "Chat"}
-                  {!addOfferOpen && activeUtilityTab === "admin" && "Admin Panel"}
-                  {!addOfferOpen && activeUtilityTab === "simulate" && "Simulate"}
-                  {!addOfferOpen && activeUtilityTab === "profile" && "Profile"}
-                  {!addOfferOpen && !activeUtilityTab && activeProductType === "goods" && "General Goods Barter"}
-                  {!addOfferOpen && !activeUtilityTab && activeProductType === "automobile" && "Automobile Barter"}
-                  {!addOfferOpen && !activeUtilityTab && activeProductType === "home-spaces" && "Homes & Spaces Barter"}
-                  {!addOfferOpen && !activeUtilityTab && activeProductType === "rentals" && "Rentals"}
-                  {!addOfferOpen && !activeUtilityTab && activeProductType === "mini-jobs" && "Mini Jobs"}
-                  {!addOfferOpen && !activeUtilityTab && activeProductType === "ownership" && "Ownership"}
-                </span>
+              {/* Left side: Back button + Title OR default title */}
+              <div className="flex items-center gap-3 min-w-0 flex-1">
+                {/* Dynamic header from child component (e.g., product detail view) */}
+                {headerContent?.backAction ? (
+                  <>
+                    <button
+                      onClick={headerContent.backAction}
+                      className="flex h-8 w-8 items-center justify-center rounded-md text-primary hover:text-primary/80 hover:bg-primary/10 transition-colors flex-shrink-0"
+                      aria-label="Go back"
+                    >
+                      <ArrowLeft className="h-5 w-5" />
+                    </button>
+                    <div className="min-w-0">
+                      <h2 className="text-sm font-semibold text-foreground truncate">
+                        {headerContent.title}
+                      </h2>
+                      {headerContent.subtitle && (
+                        <p className="text-xs text-muted-foreground truncate">
+                          {headerContent.subtitle}
+                        </p>
+                      )}
+                    </div>
+                  </>
+                ) : addOfferOpen ? (
+                  /* Add Offer flow header */
+                  <>
+                    <button
+                      onClick={() => addOfferCancelHandlerRef.current?.()}
+                      className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors flex-shrink-0"
+                      aria-label="Close"
+                    >
+                      <ArrowLeft className="h-5 w-5" />
+                    </button>
+                    <div className="min-w-0">
+                      <h2 className="text-sm font-semibold text-foreground truncate">
+                        Add New Offer
+                      </h2>
+                      <p className="text-xs text-muted-foreground truncate">
+                        Step {addOfferStep}: {addOfferStep === 1 ? "Choose Product" : addOfferStep === 2 ? "Add Images" : addOfferStep === 3 ? "Offer Details" : "Pickup Address"}
+                      </p>
+                    </div>
+                  </>
+                ) : (
+                  /* Default titles for utility tabs and product types */
+                  <span className="text-sm font-medium text-foreground truncate">
+                    {activeUtilityTab === "my-offers" && "My Offers"}
+                    {activeUtilityTab === "chat" && "Chat"}
+                    {activeUtilityTab === "admin" && "Admin Panel"}
+                    {activeUtilityTab === "simulate" && "Simulate"}
+                    {activeUtilityTab === "profile" && "Profile"}
+                    {!activeUtilityTab && activeProductType === "goods" && "General Goods Barter"}
+                    {!activeUtilityTab && activeProductType === "automobile" && "Automobile Barter"}
+                    {!activeUtilityTab && activeProductType === "home-spaces" && "Homes & Spaces Barter"}
+                    {!activeUtilityTab && activeProductType === "rentals" && "Rentals"}
+                    {!activeUtilityTab && activeProductType === "mini-jobs" && "Mini Jobs"}
+                    {!activeUtilityTab && activeProductType === "ownership" && "Ownership"}
+                  </span>
+                )}
               </div>
               
-              {/* User location from profile (City, Country) */}
-              <span className="text-sm text-muted-foreground flex items-center gap-2">
-                {userLocation || "Set location in Profile"}
-                {isAdmin && (
+              {/* Right side: Dynamic action button OR admin badge */}
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {headerContent?.rightAction ? (
+                  <button
+                    onClick={headerContent.rightAction.onClick}
+                    className="flex items-center gap-1.5 rounded-lg border border-primary bg-transparent px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/10"
+                  >
+                    {headerContent.rightAction.icon}
+                    {headerContent.rightAction.label}
+                  </button>
+                ) : addOfferOpen ? (
+                  <button
+                    onClick={() => addOfferCancelHandlerRef.current?.()}
+                    className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+                    aria-label="Close"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                ) : null}
+                
+                {isAdmin && !headerContent?.rightAction && !addOfferOpen && (
                   <span className="inline-flex items-center gap-1 rounded-md bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary">
                     <ShieldCheck className="h-3 w-3" />
                     Admin
                   </span>
                 )}
-              </span>
+              </div>
             </div>
           </div>
 
@@ -346,6 +409,7 @@ function WorkspaceContent() {
                     setAddOfferStep(2); // Start from step 2 since product is pre-selected
                     setAddOfferOpen(true);
                   }}
+                  onHeaderChange={setHeaderContent}
                 />
               )}
             </div>
