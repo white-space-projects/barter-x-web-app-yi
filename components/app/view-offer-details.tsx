@@ -638,10 +638,15 @@ export function ViewOfferDetails({ offerId, onClose, onEdit, onAddOfferToProduct
   // Handler functions
   const handleUnhook = useCallback(async (hookId: string) => {
     setUnhookingId(hookId);
-    await new Promise((r) => setTimeout(r, 400));
-    removeHook(hookId);
-    setUnhookingId(null);
-    toast.success("Offer unhooked successfully");
+    try {
+      await removeHook(hookId);
+      toast.success("Offer unhooked successfully");
+    } catch (error) {
+      console.error("[v0] Failed to unhook:", error);
+      toast.error("Failed to unhook. Please try again.");
+    } finally {
+      setUnhookingId(null);
+    }
   }, [removeHook]);
 
   const handleDelete = useCallback(async () => {

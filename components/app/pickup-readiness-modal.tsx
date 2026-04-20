@@ -198,11 +198,15 @@ export function PickupReadinessModal({ offerId, onClose }: Props) {
 
     // Update all reserved hooks for this offer to "processing" (Committed)
     const outboundHooks = getHooksByFromOffer(offerId);
-    outboundHooks.forEach((hook) => {
+    for (const hook of outboundHooks) {
       if (hook.status === "reserved") {
-        updateHook(hook.hookId, { status: "processing" });
+        try {
+          await updateHook(hook.hookId, { status: "processing" });
+        } catch (error) {
+          console.error("[v0] Failed to update hook status:", error);
+        }
       }
-    });
+    }
 
     // Update the offer with address, selected date, and verified phone
     // IMPORTANT: Set readyState: true so UI shows "Pickup Confirmed" instead of "Confirm Pickup Readiness"

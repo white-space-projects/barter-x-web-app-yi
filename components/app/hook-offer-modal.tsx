@@ -93,10 +93,15 @@ export function HookOfferModal({ targetOfferId, onClose }: Props) {
   const handleUnhook = useCallback(async (hookId: string) => {
     setShowUnhookDialog(null);
     setUnhookingId(hookId);
-    await new Promise((r) => setTimeout(r, 400));
-    removeHook(hookId);
-    setUnhookingId(null);
-    toast.success("Offer unhooked successfully");
+    try {
+      await removeHook(hookId);
+      toast.success("Offer unhooked successfully");
+    } catch (error) {
+      console.error("[v0] Failed to unhook:", error);
+      toast.error("Failed to unhook. Please try again.");
+    } finally {
+      setUnhookingId(null);
+    }
   }, [removeHook]);
 
   async function handleConfirm() {
@@ -110,7 +115,6 @@ export function HookOfferModal({ targetOfferId, onClose }: Props) {
     }
     
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 600));
 
     const hook = {
       hookId: generateGuid(),
@@ -122,12 +126,18 @@ export function HookOfferModal({ targetOfferId, onClose }: Props) {
       isActive: true,
     };
 
-    addHook(hook);
-    setLoading(false);
-    toast.success(
-      "You've entered the trade engine. We'll notify you if someone picks your offer in exchange."
-    );
-    onClose();
+    try {
+      await addHook(hook);
+      toast.success(
+        "You've entered the trade engine. We'll notify you if someone picks your offer in exchange."
+      );
+      onClose();
+    } catch (error) {
+      console.error("[v0] Failed to create hook:", error);
+      toast.error("Failed to create hook. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (

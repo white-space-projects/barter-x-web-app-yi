@@ -229,13 +229,18 @@ export function MyOffersTab({ onHeaderChange }: Props) {
   const displayedOffers = activeSubTab === "open" ? openOffers : closedOffers;
 
   // Handle unhook action - check lock level first
-  function handleUnhook(hookId: string, hook: { lockLevel: LockLevel; isActive: boolean }) {
+  async function handleUnhook(hookId: string, hook: { lockLevel: LockLevel; isActive: boolean }) {
     if (!canRemoveHook(hook)) {
       toast.error("Cannot remove this hook - it is locked in a trade process");
       return;
     }
-    removeHook(hookId);
-    toast.success("Hook removed successfully");
+    try {
+      await removeHook(hookId);
+      toast.success("Hook removed successfully");
+    } catch (error) {
+      console.error("[v0] Failed to unhook:", error);
+      toast.error("Failed to remove hook. Please try again.");
+    }
   }
 
   // Handle deactivate/delete offer - soft delete using isActive

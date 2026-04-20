@@ -286,19 +286,28 @@ export function OfferCard({
    */
   async function handleUnhook(hookId: string) {
     setUnhookingId(hookId);
-    // TODO: Replace with actual API call
-    await new Promise((r) => setTimeout(r, 400)); // Simulated delay
-    removeHook(hookId);
-    setUnhookingId(null);
-    toast.success("Hook removed. You can now hook a different offer.");
+    try {
+      await removeHook(hookId);
+      toast.success("Hook removed. You can now hook a different offer.");
+    } catch (error) {
+      console.error("[v0] Failed to unhook:", error);
+      toast.error("Failed to unhook. Please try again.");
+    } finally {
+      setUnhookingId(null);
+    }
   }
 
   /**
    * Simulate status change (TESTING ONLY - remove in production)
    */
-  function handleSimulateReserved(hookId: string) {
-    updateHook(hookId, { status: "reserved", targetUserDistance: 12 });
-    toast.success("Simulated: Hook status changed to Reserved.");
+  async function handleSimulateReserved(hookId: string) {
+    try {
+      await updateHook(hookId, { status: "reserved" });
+      toast.success("Simulated: Hook status changed to Reserved.");
+    } catch (error) {
+      console.error("[v0] Failed to simulate:", error);
+      toast.error("Failed to simulate.");
+    }
   }
 
   /**

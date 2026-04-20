@@ -35,7 +35,7 @@ export function SimulateControl({ currentLockLevel, hookId, sourceOfferId, targe
     }
   }, [showMenu]);
 
-  const handleSimulate = (lockLevel: LockLevel) => {
+  const handleSimulate = async (lockLevel: LockLevel) => {
     const statusMap: Record<LockLevel, HookStatus> = {
       0: "searching",
       1: "reserved",
@@ -43,38 +43,42 @@ export function SimulateControl({ currentLockLevel, hookId, sourceOfferId, targe
       3: "exchanged",
     };
 
-    // Update BOTH offers' lockLevel (source = my offer, target = their offer)
-    updateOffer(sourceOfferId, {
-      lockLevel,
-      lockUpdatedAt: new Date().toISOString(),
-    });
-    
-    updateOffer(targetOfferId, {
-      lockLevel,
-      lockUpdatedAt: new Date().toISOString(),
-    });
-
-    updateHook(hookId, {
-      lockLevel,
-      status: statusMap[lockLevel],
-      lockUpdatedAt: new Date().toISOString(),
-    });
-
-    // When setting to Reserved, send notification only (no chat message - chat enabled after both confirm)
-    if (lockLevel === 1) {
-      addNotification({
-        type: "cycle_found",
-        title: "Barter Cycle Found!",
-        message: "A cycle has been matched. Confirm your pickup readiness to proceed.",
-        offerId: sourceOfferId,
-        hookId: hookId,
-        actionType: "confirm_pickup",
-        actionLabel: "Confirm Pickup",
+    try {
+      // Update BOTH offers' lockLevel (source = my offer, target = their offer)
+      updateOffer(sourceOfferId, {
+        lockLevel,
+        lockUpdatedAt: new Date().toISOString(),
       });
-    }
+      
+      updateOffer(targetOfferId, {
+        lockLevel,
+        lockUpdatedAt: new Date().toISOString(),
+      });
 
-    const labels = ["Available", "Reserved", "Processing", "Exchanged"];
-    toast.success(`[DEV] Simulated: ${labels[lockLevel]} for both offers`);
+      await updateHook(hookId, {
+        lockLevel,
+        status: statusMap[lockLevel],
+      });
+
+      // When setting to Reserved, send notification only (no chat message - chat enabled after both confirm)
+      if (lockLevel === 1) {
+        addNotification({
+          type: "cycle_found",
+          title: "Barter Cycle Found!",
+          message: "A cycle has been matched. Confirm your pickup readiness to proceed.",
+          offerId: sourceOfferId,
+          hookId: hookId,
+          actionType: "confirm_pickup",
+          actionLabel: "Confirm Pickup",
+        });
+      }
+
+      const labels = ["Available", "Reserved", "Processing", "Exchanged"];
+      toast.success(`[DEV] Simulated: ${labels[lockLevel]} for both offers`);
+    } catch (error) {
+      console.error("[v0] Failed to simulate:", error);
+      toast.error("Failed to simulate. Please try again.");
+    }
     setShowMenu(false);
   };
 

@@ -404,7 +404,8 @@ export function BarterProvider({ children }: { children: ReactNode }) {
   // ---------------------------------------------------------------------------
   // HOOK ACTIONS
   // ---------------------------------------------------------------------------
-  const addHook = useCallback((hook: Hook) => {
+  const addHook = useCallback(async (hook: Hook) => {
+    // Optimistically update local state
     setHooks((prev) => [...prev, hook]);
     setOffers((prev) =>
       prev.map((o) =>
@@ -415,12 +416,60 @@ export function BarterProvider({ children }: { children: ReactNode }) {
             : o
       )
     );
+    
+    // Persist to Supabase via API
+    try {
+      const response = await fetch("/api/data/hooks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sourceOfferId: hook.fromOfferId,
+          targetOfferId: hook.toOfferId,
+          correlationId: hook.correlationId,
+          userId: auth.user?.userId,
+        }),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: "Unknown error" }));
+        console.error("[v0] Failed to create hook in DB:", error);
+        // Rollback optimistic update on error
+        setHooks((prev) => prev.filter((h) => h.hookId !== hook.hookId));
+        setOffers((prev) =>
+          prev.map((o) =>
+            o.offerId === hook.toOfferId
+              ? { ...o, hookedCount: Math.max(0, o.hookedCount - 1) }
+              : o.offerId === hook.fromOfferId
+                ? { ...o, outgoingHookCount: Math.max(0, o.outgoingHookCount - 1) }
+                : o
+          )
+        );
+        throw new Error(error.error || "Failed to create hook");
+      }
+      
+      const data = await response.json();
+      console.log("[v0] Hook created in DB:", data.hook);
+      
+      // Update local hook with DB-generated hookId if different
+      if (data.hook && data.hook.hookId !== hook.hookId) {
+        setHooks((prev) =>
+          prev.map((h) => (h.hookId === hook.hookId ? { ...h, hookId: data.hook.hookId } : h))
+        );
+      }
+    } catch (error) {
+      console.error("[v0] Error creating hook:", error);
+      throw error;
+    }
+    
     // Trigger SWR revalidation
     mutateHooks();
     mutateOffers();
-  }, [mutateHooks, mutateOffers]);
+  }, [mutateHooks, mutateOffers, auth.user?.userId]);
 
-  const removeHook = useCallback((hookId: string) => {
+  const removeHook = useCallback(async (hookId: string) => {
+    const hookToRemove = hooks.find((h) => h.hookId === hookId);
+    
+    // Optimistically update local state
     setHooks((prev) => {
       const hook = prev.find((h) => h.hookId === hookId);
       if (hook) {
@@ -436,15 +485,77 @@ export function BarterProvider({ children }: { children: ReactNode }) {
       }
       return prev.filter((h) => h.hookId !== hookId);
     });
+    
+    // Persist to Supabase via API
+    try {
+      const response = await fetch(`/api/data/hooks?hookId=${hookId}`, {
+        method: "DELETE",
+      });
+      
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: "Unknown error" }));
+        console.error("[v0] Failed to delete hook in DB:", error);
+        // Rollback optimistic update on error
+        if (hookToRemove) {
+          setHooks((prev) => [...prev, hookToRemove]);
+          setOffers((prev) =>
+            prev.map((o) =>
+              o.offerId === hookToRemove.toOfferId
+                ? { ...o, hookedCount: o.hookedCount + 1 }
+                : o.offerId === hookToRemove.fromOfferId
+                  ? { ...o, outgoingHookCount: o.outgoingHookCount + 1 }
+                  : o
+            )
+          );
+        }
+        throw new Error(error.error || "Failed to delete hook");
+      }
+      
+      console.log("[v0] Hook deleted from DB:", hookId);
+    } catch (error) {
+      console.error("[v0] Error deleting hook:", error);
+      throw error;
+    }
+    
     // Trigger SWR revalidation
     mutateHooks();
     mutateOffers();
-  }, [mutateHooks, mutateOffers]);
+  }, [mutateHooks, mutateOffers, hooks]);
 
-  const updateHook = useCallback((hookId: string, updates: Partial<Hook>) => {
+  const updateHook = useCallback(async (hookId: string, updates: Partial<Hook>) => {
+    const previousHook = hooks.find((h) => h.hookId === hookId);
+    
+    // Optimistically update local state
     setHooks((prev) =>
       prev.map((h) => (h.hookId === hookId ? { ...h, ...updates } : h))
     );
+    
+    // Persist to Supabase via API
+    try {
+      const response = await fetch("/api/data/hooks", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ hookId, ...updates }),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: "Unknown error" }));
+        console.error("[v0] Failed to update hook in DB:", error);
+        // Rollback optimistic update on error
+        if (previousHook) {
+          setHooks((prev) =>
+            prev.map((h) => (h.hookId === hookId ? previousHook : h))
+          );
+        }
+        throw new Error(error.error || "Failed to update hook");
+      }
+      
+      console.log("[v0] Hook updated in DB:", hookId);
+    } catch (error) {
+      console.error("[v0] Error updating hook:", error);
+      throw error;
+    }
+    
     // Trigger SWR revalidation
     mutateHooks();
   }, [mutateHooks]);

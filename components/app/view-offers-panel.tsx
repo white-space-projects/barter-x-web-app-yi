@@ -641,10 +641,15 @@ export function ViewOffersPanel({ product, onAddOffer, onViewModeChange, onHeade
   const handleUnhook = useCallback(async (hookId: string) => {
     setShowUnhookDialog(null);
     setUnhookingId(hookId);
-    await new Promise((r) => setTimeout(r, 400));
-    removeHook(hookId);
-    setUnhookingId(null);
-    toast.success("Offer unhooked successfully");
+    try {
+      await removeHook(hookId);
+      toast.success("Offer unhooked successfully");
+    } catch (error) {
+      console.error("[v0] Failed to unhook:", error);
+      toast.error("Failed to unhook. Please try again.");
+    } finally {
+      setUnhookingId(null);
+    }
   }, [removeHook]);
 
   function handleRequestDirectExchange(targetOffer: typeof offers[0], myMatchingOffer: typeof myOffers[0]) {
