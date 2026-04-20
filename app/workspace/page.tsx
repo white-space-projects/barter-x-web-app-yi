@@ -384,7 +384,7 @@ function WorkspaceContent() {
               )}
 
               {/* Utility tabs - hidden when Add Offer is open */}
-              {!addOfferOpen && activeUtilityTab === "my-offers" && <MyOffersTab />}
+              {!addOfferOpen && activeUtilityTab === "my-offers" && <MyOffersTab onHeaderChange={setHeaderContent} />}
               {!addOfferOpen && activeUtilityTab === "chat" && <ChatTab onOpenPickupModal={setPickupModalOfferId} />}
               {/* Admin Panel removed - product image management moved to Back Office Catalog Assets */}
               {!addOfferOpen && activeUtilityTab === "simulate" && isAdmin && <SimulateTab />}

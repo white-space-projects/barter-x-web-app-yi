@@ -122,7 +122,18 @@ function HookedOfferImage({
   );
 }
 
-export function MyOffersTab() {
+type HeaderContent = {
+  backAction?: () => void;
+  title?: string;
+  subtitle?: string;
+  rightAction?: { label: string; icon?: React.ReactNode; onClick: () => void };
+};
+
+type Props = {
+  onHeaderChange?: (content: HeaderContent | null) => void;
+};
+
+export function MyOffersTab({ onHeaderChange }: Props) {
   const { getMyOffers, getHooksByFromOffer, getOfferById, removeHook, updateHook, updateOffer, products, addNotification, getOrCreateConversation } =
     useBarterStore();
   
@@ -271,17 +282,18 @@ export function MyOffersTab() {
   if (viewOffer) {
     return (
       <div className="w-full">
-        <ViewOfferDetails
-          offerId={viewOffer}
-          onClose={() => setViewOffer(null)}
-          onEdit={(offer) => {
-            setViewOffer(null);
-            setEditOffer(offer.offerId);
-          }}
-          onAddOfferToProduct={(product) => {
-            setViewOffer(null);
-            setAddOfferToProduct(product);
-          }}
+<ViewOfferDetails
+        offerId={viewOffer}
+        onClose={() => setViewOffer(null)}
+        onEdit={(offer) => {
+          setViewOffer(null);
+          setEditOffer(offer.offerId);
+        }}
+        onAddOfferToProduct={(product) => {
+          setViewOffer(null);
+          setAddOfferToProduct(product);
+        }}
+        onHeaderChange={onHeaderChange}
         />
       </div>
     );

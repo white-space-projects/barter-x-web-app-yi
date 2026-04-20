@@ -11,7 +11,7 @@
  * 2. Viewing another user's offer - shows linked products, add offer action
  */
 
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { 
   X, Package, MapPin, ChevronLeft, ChevronRight, ChevronDown, ChevronUp,
   Pencil, Trash2, Plus, Link2Off, AlertTriangle, Loader2, Info, ArrowRightLeft
@@ -33,11 +33,19 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+type HeaderContent = {
+  backAction?: () => void;
+  title?: string;
+  subtitle?: string;
+  rightAction?: { label: string; icon?: React.ReactNode; onClick: () => void };
+};
+
 type Props = {
   offerId: string;
   onClose: () => void;
   onEdit?: (offer: Offer) => void;
   onAddOfferToProduct?: (product: Product) => void;
+  onHeaderChange?: (content: HeaderContent | null) => void;
 };
 
 // =============================================================================
@@ -418,7 +426,7 @@ function LinkedProductCard({
 // =============================================================================
 // MAIN COMPONENT
 // =============================================================================
-export function ViewOfferDetails({ offerId, onClose, onEdit, onAddOfferToProduct }: Props) {
+export function ViewOfferDetails({ offerId, onClose, onEdit, onAddOfferToProduct, onHeaderChange }: Props) {
   const { 
     auth, 
     getOfferById, 
@@ -440,6 +448,33 @@ export function ViewOfferDetails({ offerId, onClose, onEdit, onAddOfferToProduct
   const [unhookingId, setUnhookingId] = useState<string | null>(null);
   const [showHookModal, setShowHookModal] = useState(false);
   const [productSpecs, setProductSpecs] = useState<{ fieldName: string; value: string }[]>([]);
+
+  // Sync header content with parent component
+  const onHeaderChangeRef = useRef(onHeaderChange);
+  const onCloseRef = useRef(onClose);
+  
+  useEffect(() => {
+    onHeaderChangeRef.current = onHeaderChange;
+    onCloseRef.current = onClose;
+  });
+  
+  useEffect(() => {
+    const headerChange = onHeaderChangeRef.current;
+    if (!headerChange) return;
+    
+    if (offer && product) {
+      headerChange({
+        backAction: () => onCloseRef.current(),
+        title: "Offer Details",
+        subtitle: `${product.subcategory} / ${product.brand}`,
+      });
+    }
+    
+    // Cleanup: clear header when unmounting
+    return () => {
+      headerChange(null);
+    };
+  }, [offer, product]);
   
   // Fetch and resolve product specifications from database
   // FIX: Defensive normalization for all possible productInfo formats
@@ -635,18 +670,7 @@ export function ViewOfferDetails({ offerId, onClose, onEdit, onAddOfferToProduct
   return (
     <>
       <div className="pb-6 xl:max-w-5xl xl:mx-auto">
-        {/* Back button / Header */}
-        <div className="flex items-center gap-3 mb-6">
-          <button
-            onClick={onClose}
-            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <ChevronLeft className="h-4 w-4" />
-            Back
-          </button>
-          <span className="text-muted-foreground/50">|</span>
-          <h2 className="text-base font-semibold text-foreground">Offer Details</h2>
-        </div>
+        {/* Header content is now managed by parent via onHeaderChange callback */}
 
         {/* Main content - responsive layout */}
         {/* Desktop: Image left, info right | Mobile: Info above image, description below */}

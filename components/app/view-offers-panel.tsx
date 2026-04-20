@@ -526,16 +526,25 @@ const HOOK_STATUS_BG_COLORS: Record<HookStatus, string> = {
 
 type ViewMode = "list" | "details" | "edit" | "add";
 
+type HeaderContent = {
+  backAction?: () => void;
+  title?: string;
+  subtitle?: string;
+  rightAction?: { label: string; icon?: React.ReactNode; onClick: () => void };
+};
+
 type Props = {
   product: Product;
   onAddOffer?: () => void;
   /** Callback when view mode changes - parent can hide its header when not in 'list' mode */
   onViewModeChange?: (mode: ViewMode) => void;
+  /** Callback to update workspace header content (for offer details view) */
+  onHeaderChange?: (content: HeaderContent | null) => void;
 };
 
 // VIEW OFFERS PANEL - Displays all offers within a product (inline content, not overlay)
 // Shows different actions based on ownership (owner vs other users)
-export function ViewOffersPanel({ product, onAddOffer, onViewModeChange }: Props) {
+export function ViewOffersPanel({ product, onAddOffer, onViewModeChange, onHeaderChange }: Props) {
   const { getOffersByProduct, auth, products, hooks, getOfferById, getProductById, addNotification, getHooksByFromOffer, getMyOffers, removeHook } = useBarterStore();
   const { offersLoading } = useBarterData();
   const offers = getOffersByProduct(product.productId);
@@ -667,6 +676,7 @@ export function ViewOffersPanel({ product, onAddOffer, onViewModeChange }: Props
             setViewDetailsOfferId(null);
             setAddOfferToProduct(productToAdd);
           }}
+          onHeaderChange={onHeaderChange}
         />
       </div>
     );

@@ -380,6 +380,7 @@ export function ProductsTab({ productType = "goods", onAddOfferWithProduct, onHe
             }
           }}
           onViewModeChange={setPanelViewMode}
+          onHeaderChange={onHeaderChange}
         />
         
         {/* Fallback AddOfferFlow if workspace doesn't provide callback */}
