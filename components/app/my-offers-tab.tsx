@@ -65,8 +65,8 @@ const HOOK_STATUS_BG_COLORS: Record<HookStatus, string> = {
 
 // My Offer status labels based on lock_level (per design spec)
 const MY_OFFER_STATUS_LABELS: Record<LockLevel, string | null> = {
-  0: null,              // No status label for lock_level 0
-  1: "Cycle formed",    // lock_level 1
+  0: "Waiting",           // Waiting for hooks/cycle
+  1: "Cycle formed",      // lock_level 1
   2: "Exchange initiated", // lock_level 2  
   3: "Exchange complete",  // lock_level 3
 };
@@ -406,17 +406,21 @@ return (
                               >
                                 {/* MY OFFER CARD - UPDATED STRUCTURE */}
                                 <div className="p-4">
-                                  {/* STATUS LABEL - only when lock_level > 0 */}
-                                  {statusLabel && (
-                                    <div className="flex items-center justify-between mb-3">
-                                      <span className="text-xs font-semibold uppercase tracking-wider text-primary">
-                                        {statusLabel}
-                                      </span>
-                                      <span className="px-2 py-1 rounded-lg bg-primary/20 text-primary text-xs font-medium">
-                                        L{offer.lockLevel}
-                                      </span>
-                                    </div>
-                                  )}
+                                  {/* STATUS LABEL - always visible, gray when lockLevel 0 */}
+                                  <div className="flex items-center justify-between mb-3">
+                                    <span className={`text-xs font-semibold uppercase tracking-wider ${
+                                      offer.lockLevel === 0 ? "text-muted-foreground" : "text-primary"
+                                    }`}>
+                                      {statusLabel}
+                                    </span>
+                                    <span className={`px-2 py-1 rounded-lg text-xs font-medium ${
+                                      offer.lockLevel === 0 
+                                        ? "bg-muted text-muted-foreground" 
+                                        : "bg-primary/20 text-primary"
+                                    }`}>
+                                      L{offer.lockLevel}
+                                    </span>
+                                  </div>
 
                                   {/* TOP ROW: 64x64 image + Title + Subcategory/Brand (NO description) */}
                                   <div 
@@ -449,45 +453,57 @@ return (
                                     </div>
                                   </div>
 
-                                  {/* PROGRESS BAR - 3 segments, shown when lock_level > 0 */}
-                                  {progressStage > 0 && (
-                                    <div className="mt-4">
-                                      <div className="flex items-center justify-end mb-2">
-                                        <span className="text-xs font-medium text-primary">
-                                          {progressStage} / 3
-                                        </span>
-                                      </div>
-                                      <div className="flex gap-1.5">
-                                        {[1, 2, 3].map((stage) => (
-                                          <div
-                                            key={stage}
-                                            className={`h-2 flex-1 rounded-full transition-colors ${
-                                              stage <= progressStage ? "bg-primary" : "bg-muted"
-                                            }`}
-                                          />
-                                        ))}
-                                      </div>
+                                  {/* PROGRESS BAR - 3 segments, always visible */}
+                                  <div className="mt-4">
+                                    <div className="flex items-center justify-between mb-2">
+                                      <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                                        Lock Level
+                                      </span>
+                                      <span className={`text-xs font-medium ${
+                                        progressStage === 0 ? "text-muted-foreground" : "text-primary"
+                                      }`}>
+                                        {progressStage} / 3
+                                      </span>
                                     </div>
-                                  )}
+                                    <div className="flex gap-1.5">
+                                      {[1, 2, 3].map((stage) => (
+                                        <div
+                                          key={stage}
+                                          className={`h-2 flex-1 rounded-full transition-colors ${
+                                            stage <= progressStage ? "bg-primary" : "bg-muted"
+                                          }`}
+                                        />
+                                      ))}
+                                    </div>
+                                  </div>
 
-                                  {/* CONFIRM PICKUP BUTTON - highest priority action */}
-                                  {showConfirmPickup && (
-                                    <button
-                                      onClick={(e) => { e.stopPropagation(); setPickupOffer(offer.offerId); }}
-                                      className="w-full mt-4 py-3 text-sm font-semibold uppercase tracking-wider rounded-lg bg-primary/20 text-primary border border-primary/30 hover:bg-primary/30 transition-colors"
-                                    >
-                                      Confirm Pickup Readiness
-                                    </button>
-                                  )}
-                                  
-                                  {/* PICKUP CONFIRMED indicator */}
-                                  {showReadyLabel && !showConfirmPickup && (
+                                  {/* CONFIRM PICKUP BUTTON - always visible, disabled until reserved */}
+                                  {showReadyLabel && !showConfirmPickup ? (
+                                    /* PICKUP CONFIRMED indicator - clickable to edit */
                                     <button
                                       onClick={(e) => { e.stopPropagation(); setPickupOffer(offer.offerId); }}
                                       className="w-full mt-4 py-3 text-sm font-semibold uppercase tracking-wider rounded-lg bg-green-500/20 text-green-500 border border-green-500/30 hover:bg-green-500/30 transition-colors flex items-center justify-center gap-2"
                                     >
                                       <span>Pickup Confirmed</span>
                                       <Pencil className="h-4 w-4" />
+                                    </button>
+                                  ) : (
+                                    /* CONFIRM PICKUP READINESS button - always shown, disabled when not eligible */
+                                    <button
+                                      onClick={(e) => { 
+                                        e.stopPropagation(); 
+                                        if (showConfirmPickup) {
+                                          setPickupOffer(offer.offerId); 
+                                        }
+                                      }}
+                                      disabled={!showConfirmPickup}
+                                      className={`w-full mt-4 py-3 text-sm font-semibold uppercase tracking-wider rounded-lg border transition-colors ${
+                                        showConfirmPickup
+                                          ? "bg-primary/20 text-primary border-primary/30 hover:bg-primary/30 cursor-pointer"
+                                          : "bg-muted/30 text-muted-foreground/50 border-muted cursor-not-allowed"
+                                      }`}
+                                    >
+                                      Confirm Pickup Readiness
                                     </button>
                                   )}
                                 </div>
