@@ -444,7 +444,7 @@ return (
                                         progressStage === 0 ? "text-muted-foreground" : "text-primary"
                                       }`}>
                                         {progressStage === 0 
-                                          ? (hookedOffers.length > 0 ? "Hooks pending" : "No hooks") 
+                                          ? (hooks.length > 0 ? "Hooks pending" : "No hooks") 
                                           : statusLabel}
                                       </span>
                                       <span className={`text-xs font-medium ${
