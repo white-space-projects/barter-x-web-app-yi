@@ -399,7 +399,7 @@ export default function ProfilePage() {
   }
 
   // ---------------------------------------------------------------------------
-  // SECTIONS
+  // SECTIONS - Settings tab contains Notification Settings + Referral Settings
   // ---------------------------------------------------------------------------
   const sections = [
     { id: "basic-info", label: "Basic Info", icon: User },
