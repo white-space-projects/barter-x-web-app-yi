@@ -480,82 +480,58 @@ export function ViewOfferDetails({ offerId, onClose, onEdit, onAddOfferToProduct
   // FIX: Defensive normalization for all possible productInfo formats
   useEffect(() => {
     async function loadProductSpecs() {
-      // DEBUG: Log raw productInfo to understand runtime format
-      console.log("[v0] PRODUCT_SPECS raw type:", typeof product?.productInfo);
-      console.log("[v0] PRODUCT_SPECS raw value:", product?.productInfo);
-      console.log("[v0] PRODUCT_SPECS is array:", Array.isArray(product?.productInfo));
-      
       if (!product?.productInfo) {
-        console.log("[v0] PRODUCT_SPECS: No productInfo, setting empty");
         setProductSpecs([]);
         return;
       }
       
       // Normalize productInfo to array format: [{ fieldName, value }]
       let parsedInfo: { fieldName: string; value: string }[] = [];
-      const rawInfo = product.productInfo;
+      let rawInfo: unknown = product.productInfo;
       
-      // Case 1: Already an array - validate structure
-      if (Array.isArray(rawInfo)) {
-        console.log("[v0] PRODUCT_SPECS: Input is array");
-        // Check if array items have correct shape
-        if (rawInfo.length > 0 && typeof rawInfo[0] === 'object' && 'fieldName' in rawInfo[0]) {
-          parsedInfo = rawInfo.map(item => ({
-            fieldName: String(item.fieldName || ''),
-            value: String(item.value || '')
-          }));
-        } else {
-          // Array but wrong shape - try to recover
-          console.log("[v0] PRODUCT_SPECS: Array with wrong shape, attempting recovery");
-        }
-      }
-      // Case 2: String - needs JSON parsing (possibly double-stringified)
-      else if (typeof rawInfo === 'string') {
-        console.log("[v0] PRODUCT_SPECS: Input is string, parsing...");
+      // CRITICAL FIX: If rawInfo is a string, parse it repeatedly until we get an object/array
+      // This handles double/triple stringified JSON from the database
+      while (typeof rawInfo === 'string') {
         try {
-          let parsed: unknown = rawInfo;
-          
-          // Parse up to 3 times to handle triple-stringified edge case
-          for (let i = 0; i < 3 && typeof parsed === 'string'; i++) {
-            parsed = JSON.parse(parsed as string);
-            console.log(`[v0] PRODUCT_SPECS: After parse ${i + 1}:`, typeof parsed);
-          }
-          
-          // Now convert to array format
-          if (Array.isArray(parsed)) {
-            if (parsed.length > 0 && typeof parsed[0] === 'object' && 'fieldName' in (parsed[0] as object)) {
-              parsedInfo = (parsed as Array<{fieldName: unknown; value: unknown}>).map(item => ({
-                fieldName: String(item.fieldName || ''),
-                value: String(item.value || '')
-              }));
-            }
-          } else if (parsed && typeof parsed === 'object') {
-            // Object - convert keys/values to array
-            parsedInfo = Object.entries(parsed as Record<string, unknown>).map(([key, value]) => ({
-              fieldName: key,
-              value: String(value ?? '')
-            }));
-          }
-        } catch (e) {
-          console.error("[v0] PRODUCT_SPECS: JSON parse error:", e);
+          rawInfo = JSON.parse(rawInfo);
+        } catch {
+          // If parsing fails, it's not valid JSON - skip
           setProductSpecs([]);
           return;
         }
       }
-      // Case 3: Object - convert to array format
-      else if (typeof rawInfo === 'object' && rawInfo !== null) {
-        console.log("[v0] PRODUCT_SPECS: Input is object");
-        parsedInfo = Object.entries(rawInfo as Record<string, unknown>).map(([key, value]) => ({
+      
+      // Now rawInfo should be an object or array (not a string)
+      // Case 1: Already an array with correct shape [{ fieldName, value }]
+      if (Array.isArray(rawInfo)) {
+        // Check if array items have correct shape
+        if (rawInfo.length > 0 && typeof rawInfo[0] === 'object' && rawInfo[0] !== null && 'fieldName' in rawInfo[0]) {
+          parsedInfo = rawInfo.map(item => ({
+            fieldName: String((item as Record<string, unknown>).fieldName || ''),
+            value: String((item as Record<string, unknown>).value || '')
+          }));
+        }
+        // Array of some other format - skip
+      }
+      // Case 2: Plain object { key: value } - convert to array format
+      else if (rawInfo && typeof rawInfo === 'object') {
+        // Filter out numeric keys (which would indicate it was treated as string characters)
+        const entries = Object.entries(rawInfo as Record<string, unknown>);
+        const hasNumericKeys = entries.length > 0 && entries.every(([key]) => /^\d+$/.test(key));
+        
+        if (hasNumericKeys) {
+          // This looks like string-iteration artifact, skip it
+          setProductSpecs([]);
+          return;
+        }
+        
+        parsedInfo = entries.map(([key, value]) => ({
           fieldName: key,
           value: String(value ?? '')
         }));
       }
       
-      console.log("[v0] PRODUCT_SPECS: Final parsedInfo:", parsedInfo);
-      console.log("[v0] PRODUCT_SPECS: Final length:", parsedInfo.length);
-      
       if (parsedInfo.length === 0) {
-        console.log("[v0] PRODUCT_SPECS: Empty after parsing");
         setProductSpecs([]);
         return;
       }
