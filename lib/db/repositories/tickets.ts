@@ -304,6 +304,67 @@ export async function createSupportTicket(data: {
   return { ticketId: result[0].ticket_id };
 }
 
+// Create a product review ticket when user creates a new brand/model
+export async function createProductReviewTicket(data: {
+  userId?: string;
+  userEmail?: string;
+  barterType: string;
+  category: string;
+  subcategory: string;
+  brand: string;
+  model: string;
+}): Promise<{ ticketId: string }> {
+  const description = `
+New Product Submission - Requires Review
+
+**Barter Type:** ${data.barterType}
+**Category:** ${data.category}
+**Subcategory:** ${data.subcategory}
+**Brand:** ${data.brand}
+**Model/Title:** ${data.model}
+
+---
+User ID: ${data.userId || 'N/A'}
+User Email: ${data.userEmail || 'N/A'}
+Submitted At: ${new Date().toISOString()}
+
+**Action Required:**
+1. Review and approve/reject the new product entry
+2. Add product specifications if approved
+3. Optionally add product image
+`.trim();
+
+  const result = await query<{ ticket_id: string }>(
+    `INSERT INTO application.tickets (
+      user_id,
+      subject,
+      description,
+      status,
+      priority,
+      category,
+      created_at,
+      updated_at
+    ) VALUES (
+      $1,
+      $2,
+      $3,
+      'open',
+      'high',
+      'product_review',
+      NOW(),
+      NOW()
+    )
+    RETURNING ticket_id`,
+    [
+      data.userId || null,
+      `New Product Review: ${data.brand} - ${data.model}`,
+      description,
+    ]
+  );
+
+  return { ticketId: result[0].ticket_id };
+}
+
 export async function getTicketStats(): Promise<{
   total: number;
   open: number;
