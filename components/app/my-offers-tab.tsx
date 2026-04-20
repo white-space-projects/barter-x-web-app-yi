@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { Package, ChevronDown, ChevronUp, MapPin, MessageSquare, Pencil, MoreHorizontal, X, Link2Off, Eye, Trash2 } from "lucide-react";
+import { Package, ChevronDown, ChevronUp, MapPin, MessageSquare, Pencil, X, Link2Off, Eye, Trash2 } from "lucide-react";
 import { useBarterStore } from "@/lib/store";
 import { useBarterData } from "@/lib/data-provider";
 import type { HookStatus, LockLevel, Offer, Product } from "@/lib/types";
@@ -406,22 +406,6 @@ return (
                               >
                                 {/* MY OFFER CARD - UPDATED STRUCTURE */}
                                 <div className="p-4">
-                                  {/* STATUS LABEL - always visible, gray when lockLevel 0 */}
-                                  <div className="flex items-center justify-between mb-3">
-                                    <span className={`text-xs font-semibold uppercase tracking-wider ${
-                                      offer.lockLevel === 0 ? "text-muted-foreground" : "text-primary"
-                                    }`}>
-                                      {statusLabel}
-                                    </span>
-                                    <span className={`px-2 py-1 rounded-lg text-xs font-medium ${
-                                      offer.lockLevel === 0 
-                                        ? "bg-muted text-muted-foreground" 
-                                        : "bg-primary/20 text-primary"
-                                    }`}>
-                                      L{offer.lockLevel}
-                                    </span>
-                                  </div>
-
                                   {/* TOP ROW: 64x64 image + Title + Subcategory/Brand (NO description) */}
                                   <div 
                                     className="flex gap-3 cursor-pointer"
@@ -456,8 +440,12 @@ return (
                                   {/* PROGRESS BAR - 3 segments, always visible */}
                                   <div className="mt-4">
                                     <div className="flex items-center justify-between mb-2">
-                                      <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                                        Lock Level
+                                      <span className={`text-xs font-medium uppercase tracking-wider ${
+                                        progressStage === 0 ? "text-muted-foreground" : "text-primary"
+                                      }`}>
+                                        {progressStage === 0 
+                                          ? (hookedOffers.length > 0 ? "Hooks pending" : "No hooks") 
+                                          : statusLabel}
                                       </span>
                                       <span className={`text-xs font-medium ${
                                         progressStage === 0 ? "text-muted-foreground" : "text-primary"
@@ -535,13 +523,6 @@ return (
                                       <Trash2 className="h-3.5 w-3.5" />
                                       Delete
                                     </button>
-                                    <button
-                                      onClick={(e) => { e.stopPropagation(); setMobileMenuOffer(offer.offerId); }}
-                                      className="p-2 text-muted-foreground hover:text-foreground transition-colors rounded-lg hover:bg-secondary"
-                                      aria-label="More options"
-                                    >
-                                      <MoreHorizontal className="h-5 w-5" />
-                                    </button>
                                   </div>
                                 </div>
 
@@ -613,15 +594,6 @@ return (
                                       }`}>
                                         {hookStatusLabel}
                                       </span>
-                                      {/* Location */}
-                                      {targetOffer?.pickupAddress?.city && (
-                                        <>
-                                          <span className="text-muted-foreground">·</span>
-                                          <span className="text-xs text-muted-foreground">
-                                            {targetOffer.pickupAddress.city}, {targetOffer.pickupAddress.country?.substring(0, 2).toUpperCase() || ""}
-                                          </span>
-                                        </>
-                                      )}
                                     </div>
                                   </div>
 
