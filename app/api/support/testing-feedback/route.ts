@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { query } from "@/lib/db/postgres";
+import { createFeedbackAttachments, getTestingFeedbackTickets } from "@/lib/db/repositories/tickets";
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,8 +12,7 @@ export async function POST(request: NextRequest) {
       screenArea, 
       featureFlow, 
       message,
-      hasAttachments,
-      attachmentCount
+      attachments, // Array of { storagePath, originalFilename, fileSize, mimeType }
     } = body;
 
     // Validate required fields
@@ -32,6 +32,8 @@ export async function POST(request: NextRequest) {
       general: "General Feedback",
     };
 
+    const hasAttachments = attachments && attachments.length > 0;
+
     // Build description with structured metadata
     const description = `
 **Feedback Type:** ${feedbackTypeLabels[feedbackType] || feedbackType}
@@ -46,7 +48,7 @@ ${message}
 **Metadata:**
 - User ID: ${userId || "N/A"}
 - User Email: ${userEmail || "N/A"}
-- Has Attachments: ${hasAttachments ? `Yes (${attachmentCount} images)` : "No"}
+- Has Attachments: ${hasAttachments ? `Yes (${attachments.length} images)` : "No"}
 - Testing Phase: F&F Beta
 - Submitted At: ${new Date().toISOString()}
 `.trim();
@@ -98,15 +100,50 @@ ${message}
       ]
     );
 
+    const ticketId = result[0]?.ticket_id;
+
+    // Create attachment records if any
+    if (ticketId && hasAttachments) {
+      await createFeedbackAttachments(ticketId, attachments);
+    }
+
     return NextResponse.json({ 
       success: true, 
-      ticketId: result[0]?.ticket_id 
+      ticketId,
     }, { status: 201 });
 
   } catch (error) {
     console.error("[API] Testing feedback error:", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Failed to submit feedback" },
+      { status: 500 }
+    );
+  }
+}
+
+// GET - Fetch testing feedback tickets (for backoffice)
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const status = searchParams.get("status") || undefined;
+    const priority = searchParams.get("priority") || undefined;
+    const search = searchParams.get("search") || undefined;
+    const limit = parseInt(searchParams.get("limit") || "50", 10);
+    const offset = parseInt(searchParams.get("offset") || "0", 10);
+
+    const result = await getTestingFeedbackTickets({
+      status,
+      priority,
+      search,
+      limit,
+      offset,
+    });
+
+    return NextResponse.json(result);
+  } catch (error) {
+    console.error("[API] Get testing feedback error:", error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Failed to fetch feedback" },
       { status: 500 }
     );
   }

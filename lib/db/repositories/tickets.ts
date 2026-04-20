@@ -408,3 +408,172 @@ export async function getTicketStats(): Promise<{
     high: parseInt(stats?.high || "0", 10),
   };
 }
+
+// ========== Feedback Attachments ==========
+
+export interface FeedbackAttachment {
+  attachmentId: string;
+  ticketId: string;
+  storagePath: string;
+  originalFilename: string | null;
+  fileSize: number | null;
+  mimeType: string | null;
+  createdAt: Date;
+}
+
+interface DbFeedbackAttachment {
+  attachment_id: string;
+  ticket_id: string;
+  storage_path: string;
+  original_filename: string | null;
+  file_size: number | null;
+  mime_type: string | null;
+  created_at: Date;
+}
+
+function mapToFeedbackAttachment(row: DbFeedbackAttachment): FeedbackAttachment {
+  return {
+    attachmentId: row.attachment_id,
+    ticketId: row.ticket_id,
+    storagePath: row.storage_path,
+    originalFilename: row.original_filename,
+    fileSize: row.file_size,
+    mimeType: row.mime_type,
+    createdAt: row.created_at,
+  };
+}
+
+// Create feedback attachment records for a ticket
+export async function createFeedbackAttachments(
+  ticketId: string,
+  attachments: Array<{
+    storagePath: string;
+    originalFilename?: string;
+    fileSize?: number;
+    mimeType?: string;
+  }>
+): Promise<FeedbackAttachment[]> {
+  if (attachments.length === 0) return [];
+
+  const values: string[] = [];
+  const params: unknown[] = [];
+  let paramIndex = 1;
+
+  for (const att of attachments) {
+    values.push(`($${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++})`);
+    params.push(ticketId, att.storagePath, att.originalFilename || null, att.fileSize || null, att.mimeType || null);
+  }
+
+  const result = await query<DbFeedbackAttachment>(
+    `INSERT INTO application.feedback_attachments (ticket_id, storage_path, original_filename, file_size, mime_type)
+     VALUES ${values.join(", ")}
+     RETURNING *`,
+    params
+  );
+
+  return result.map(mapToFeedbackAttachment);
+}
+
+// Get attachments for a ticket
+export async function getFeedbackAttachments(ticketId: string): Promise<FeedbackAttachment[]> {
+  const result = await query<DbFeedbackAttachment>(
+    `SELECT * FROM application.feedback_attachments WHERE ticket_id = $1 ORDER BY created_at`,
+    [ticketId]
+  );
+  return result.map(mapToFeedbackAttachment);
+}
+
+// Get testing feedback tickets with user info and attachments
+export interface TestingFeedbackTicket extends Ticket {
+  attachments: FeedbackAttachment[];
+}
+
+export async function getTestingFeedbackTickets(options?: {
+  status?: string;
+  priority?: string;
+  search?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<{ tickets: TestingFeedbackTicket[]; total: number }> {
+  const conditions: string[] = ["t.category = 'testing_feedback'"];
+  const params: unknown[] = [];
+  let paramIndex = 1;
+
+  if (options?.status) {
+    conditions.push(`t.status = $${paramIndex++}`);
+    params.push(options.status);
+  }
+
+  if (options?.priority) {
+    conditions.push(`t.priority = $${paramIndex++}`);
+    params.push(options.priority);
+  }
+
+  if (options?.search) {
+    conditions.push(`(t.subject ILIKE $${paramIndex} OR t.description ILIKE $${paramIndex})`);
+    params.push(`%${options.search}%`);
+    paramIndex++;
+  }
+
+  const whereClause = `WHERE ${conditions.join(" AND ")}`;
+  const limit = options?.limit || 50;
+  const offset = options?.offset || 0;
+
+  // Get total count
+  const countResult = await query<{ count: string }>(
+    `SELECT COUNT(*) as count FROM application.tickets t ${whereClause}`,
+    params
+  );
+
+  // Get tickets with user info
+  const ticketParams = [...params, limit, offset];
+  const tickets = await query<DbTicket>(
+    `SELECT t.*, 
+            u.name as user_name, 
+            u.email as user_email
+     FROM application.tickets t
+     LEFT JOIN application.users u ON t.user_id = u.user_id
+     ${whereClause}
+     ORDER BY 
+       CASE t.priority 
+         WHEN 'urgent' THEN 1 
+         WHEN 'high' THEN 2 
+         WHEN 'medium' THEN 3 
+         ELSE 4 
+       END,
+       t.created_at DESC
+     LIMIT $${paramIndex++} OFFSET $${paramIndex++}`,
+    ticketParams
+  );
+
+  // Get attachments for all tickets
+  const ticketIds = tickets.map(t => t.ticket_id);
+  let attachmentsMap: Map<string, FeedbackAttachment[]> = new Map();
+
+  if (ticketIds.length > 0) {
+    const attachments = await query<DbFeedbackAttachment>(
+      `SELECT * FROM application.feedback_attachments 
+       WHERE ticket_id = ANY($1)
+       ORDER BY created_at`,
+      [ticketIds]
+    );
+
+    for (const att of attachments) {
+      const mapped = mapToFeedbackAttachment(att);
+      if (!attachmentsMap.has(att.ticket_id)) {
+        attachmentsMap.set(att.ticket_id, []);
+      }
+      attachmentsMap.get(att.ticket_id)!.push(mapped);
+    }
+  }
+
+  const mappedTickets: TestingFeedbackTicket[] = tickets.map(t => ({
+    ...mapToTicket(t),
+    attachments: attachmentsMap.get(t.ticket_id) || [],
+  }));
+
+  return {
+    tickets: mappedTickets,
+    total: parseInt(countResult[0]?.count || "0", 10),
+  };
+}

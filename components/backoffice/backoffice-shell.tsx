@@ -11,7 +11,7 @@
 import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
-import { FileText, LogOut, Menu, X, Package, Ticket, Users } from "lucide-react";
+import { FileText, LogOut, Menu, X, Package, Ticket, Users, MessageCircle } from "lucide-react";
 import { useBackOfficeAuth } from "@/lib/backoffice/auth-store";
 
 interface NavItem {
@@ -41,6 +41,12 @@ const navItems: NavItem[] = [
     label: "Tickets",
     icon: Ticket,
     href: "/backoffice/tickets",
+  },
+  {
+    id: "testing-feedback",
+    label: "Testing Feedback",
+    icon: MessageCircle,
+    href: "/backoffice/testing-feedback",
   },
   {
     id: "users",

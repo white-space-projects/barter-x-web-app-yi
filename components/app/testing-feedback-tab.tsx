@@ -79,48 +79,85 @@ export function TestingFeedbackTab() {
   const [screenArea, setScreenArea] = useState<string>("");
   const [featureFlow, setFeatureFlow] = useState<string>("");
   const [message, setMessage] = useState("");
-  const [attachments, setAttachments] = useState<{ id: string; url: string; name: string }[]>([]);
+  const [attachments, setAttachments] = useState<{ 
+    id: string; 
+    previewUrl: string; 
+    storagePath: string;
+    originalFilename: string;
+    fileSize: number;
+    mimeType: string;
+  }[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   
   // Refs
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  // Handle file selection
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Handle file selection and upload
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
     
-    // Max 3 attachments
-    const remaining = 3 - attachments.length;
-    if (remaining <= 0) {
-      toast.error("Maximum 3 images allowed");
-      return;
-    }
+    // No limit on attachments anymore
+    const filesToProcess = Array.from(files);
     
-    const filesToProcess = Array.from(files).slice(0, remaining);
-    
-    filesToProcess.forEach(file => {
+    // Validate all files first
+    for (const file of filesToProcess) {
       if (!file.type.startsWith("image/")) {
-        toast.error("Only images are allowed");
+        toast.error(`${file.name} is not an image`);
         return;
       }
-      
-      // Convert to data URL for preview and storage
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const dataUrl = event.target?.result as string;
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error(`${file.name} is too large (max 5MB)`);
+        return;
+      }
+    }
+    
+    setIsUploading(true);
+    
+    try {
+      for (const file of filesToProcess) {
+        // Upload to server
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("userId", auth.user?.userId || "");
+        
+        const response = await fetch("/api/support/testing-feedback/upload", {
+          method: "POST",
+          body: formData,
+        });
+        
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || "Failed to upload image");
+        }
+        
+        const result = await response.json();
+        
         setAttachments(prev => [
           ...prev,
-          { id: crypto.randomUUID(), url: dataUrl, name: file.name }
+          {
+            id: crypto.randomUUID(),
+            previewUrl: result.previewUrl,
+            storagePath: result.storagePath,
+            originalFilename: result.originalFilename,
+            fileSize: result.fileSize,
+            mimeType: result.mimeType,
+          }
         ]);
-      };
-      reader.readAsDataURL(file);
-    });
-    
-    // Reset input
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+      }
+      
+      toast.success(`${filesToProcess.length} image(s) uploaded`);
+    } catch (error) {
+      console.error("Failed to upload images:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to upload images");
+    } finally {
+      setIsUploading(false);
+      // Reset input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     }
   };
   
@@ -153,9 +190,13 @@ export function TestingFeedbackTab() {
           screenArea: screenArea || undefined,
           featureFlow: featureFlow || undefined,
           message: message.trim(),
-          attachmentCount: attachments.length,
-          // Store attachment references (data URLs are too large for DB, we'll note the count)
-          hasAttachments: attachments.length > 0,
+          // Include attachment storage paths for database persistence
+          attachments: attachments.map(a => ({
+            storagePath: a.storagePath,
+            originalFilename: a.originalFilename,
+            fileSize: a.fileSize,
+            mimeType: a.mimeType,
+          })),
         }),
       });
       
@@ -319,7 +360,7 @@ export function TestingFeedbackTab() {
       {/* Attachments */}
       <div className="mb-6">
         <label className="block text-sm font-medium text-foreground mb-2">
-          Screenshots <span className="text-muted-foreground font-normal">(optional, max 3)</span>
+          Screenshots <span className="text-muted-foreground font-normal">(optional)</span>
         </label>
         
         <div className="flex flex-wrap gap-3">
@@ -330,8 +371,8 @@ export function TestingFeedbackTab() {
               className="relative w-20 h-20 rounded-lg overflow-hidden border border-border bg-secondary"
             >
               <img
-                src={attachment.url}
-                alt={attachment.name}
+                src={attachment.previewUrl}
+                alt={attachment.originalFilename}
                 className="w-full h-full object-cover"
               />
               <button
@@ -343,16 +384,24 @@ export function TestingFeedbackTab() {
             </div>
           ))}
           
-          {/* Add button */}
-          {attachments.length < 3 && (
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="w-20 h-20 rounded-lg border-2 border-dashed border-border hover:border-primary/50 bg-card flex flex-col items-center justify-center gap-1 transition-colors"
-            >
-              <ImageIcon className="w-5 h-5 text-muted-foreground" />
-              <span className="text-[10px] text-muted-foreground">Add</span>
-            </button>
-          )}
+          {/* Add button / Upload indicator */}
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploading}
+            className="w-20 h-20 rounded-lg border-2 border-dashed border-border hover:border-primary/50 bg-card flex flex-col items-center justify-center gap-1 transition-colors disabled:opacity-50"
+          >
+            {isUploading ? (
+              <>
+                <div className="w-5 h-5 border-2 border-muted-foreground/30 border-t-muted-foreground rounded-full animate-spin" />
+                <span className="text-[10px] text-muted-foreground">Uploading</span>
+              </>
+            ) : (
+              <>
+                <ImageIcon className="w-5 h-5 text-muted-foreground" />
+                <span className="text-[10px] text-muted-foreground">Add</span>
+              </>
+            )}
+          </button>
         </div>
         
         <input
@@ -368,7 +417,7 @@ export function TestingFeedbackTab() {
       {/* Submit Button */}
       <button
         onClick={handleSubmit}
-        disabled={isSubmitting || !feedbackType || !message.trim()}
+        disabled={isSubmitting || isUploading || !feedbackType || !message.trim()}
         className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground font-medium py-3 px-4 rounded-xl transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {isSubmitting ? (
