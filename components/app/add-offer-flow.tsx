@@ -1828,40 +1828,14 @@ export function AddOfferFlow({
     
     return (
       <>
-        {/* Desktop: Header with back/close button */}
-        <div className="hidden lg:flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={currentStep > minStep ? prevStep : onClose}
-              className="p-2 -ml-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
-              aria-label={currentStep > minStep ? "Go back" : "Close"}
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </button>
-            <div>
-              <h1 className="text-lg font-semibold text-foreground">{isEditMode ? "Edit Offer" : "Add New Offer"}</h1>
-              <p className="text-sm text-muted-foreground">
-                Step {currentStep}: {currentStep === 1 ? "Choose Product" : currentStep === 2 ? "Add Images" : currentStep === 3 ? "Offer Details" : "Pickup Address"}
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={handleCloseAttempt}
-            className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
-            aria-label="Close"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
+        {/* Header is now rendered in workspace page header bar */}
+        
         {/* Mobile: Show progress indicator - back arrow always exits flow with confirmation */}
         <div className="lg:hidden mb-4">
           <MobileProgressIndicator currentStep={currentStep} onBack={handleCloseAttempt} />
         </div>
 
-        {/* Step content - same as overlay mode but without wrapper */}
+        {/* Step content */}
         <div className="max-w-3xl mx-auto space-y-6">
           {/* STEP 1: Choose Product */}
           {currentStep === 1 && (
