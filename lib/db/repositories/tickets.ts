@@ -264,6 +264,46 @@ export async function createLoginIssueTicket(data: {
   return { ticketId: result[0].ticket_id };
 }
 
+// Create a general support ticket (for logged-in users)
+export async function createSupportTicket(data: {
+  userId?: string;
+  email: string;
+  phone?: string;
+  message: string;
+}): Promise<{ ticketId: string }> {
+  const fullDescription = `${data.message}\n\n---\nContact Email: ${data.email}${data.phone ? `\nPhone: ${data.phone}` : ''}\nSubmitted At: ${new Date().toISOString()}`;
+
+  const result = await query<{ ticket_id: string }>(
+    `INSERT INTO application.tickets (
+      user_id,
+      subject,
+      description,
+      status,
+      priority,
+      category,
+      created_at,
+      updated_at
+    ) VALUES (
+      $1,
+      $2,
+      $3,
+      'open',
+      'medium',
+      'general',
+      NOW(),
+      NOW()
+    )
+    RETURNING ticket_id`,
+    [
+      data.userId || null,
+      `Support Request: ${data.email}`,
+      fullDescription,
+    ]
+  );
+
+  return { ticketId: result[0].ticket_id };
+}
+
 export async function getTicketStats(): Promise<{
   total: number;
   open: number;

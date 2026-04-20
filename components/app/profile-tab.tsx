@@ -514,19 +514,47 @@ export function ProfileTab({ onProfileComplete }: ProfileTabProps) {
     }
   }
 
-  async function handleSubmitSupport() {
-    if (!supportMessage.trim()) {
-      toast.error("Please enter a message");
-      return;
+async function handleSubmitSupport() {
+  if (!supportMessage.trim()) {
+    toast.error("Please enter a message");
+    return;
+  }
+  
+  const emailToUse = supportEmail.trim() || auth.user?.email || "";
+  if (!emailToUse) {
+    toast.error("Please enter your email address");
+    return;
+  }
+  
+  setSupportSubmitting(true);
+  
+  try {
+    const response = await fetch("/api/support/ticket", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId: auth.user?.userId,
+        email: emailToUse,
+        phone: supportPhone.trim() || undefined,
+        message: supportMessage.trim(),
+      }),
+    });
+    
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: "Unknown error" }));
+      throw new Error(error.error || "Failed to submit support request");
     }
-
-    setSupportSubmitting(true);
-    await new Promise((r) => setTimeout(r, 1000));
     
     toast.success("Support request submitted. We'll get back to you soon.");
     setSupportMessage("");
+    setSupportPhone("");
+  } catch (error) {
+    console.error("[v0] Support ticket error:", error);
+    toast.error(error instanceof Error ? error.message : "Failed to submit support request");
+  } finally {
     setSupportSubmitting(false);
   }
+}
 
   function handleLogout() {
     logout();
