@@ -132,6 +132,8 @@ export async function getBackofficeUserByInviteToken(token: string): Promise<Bac
  * Create a new backoffice user (invite)
  * Note: invitedBy should be a backoffice_user_id (UUID) or email
  * If email is provided, we'll look up the UUID
+ * If invitedBy is a UUID that doesn't exist in backoffice_users (e.g. app user),
+ * it will be set to null (FK constraint)
  */
 export async function createBackofficeUser(data: {
   email: string;
@@ -141,12 +143,18 @@ export async function createBackofficeUser(data: {
   userType?: ManagedUserType; // Defaults to 'bo'
 }): Promise<BackofficeUser> {
   // If invitedBy is an email, look up the backoffice_user_id
+  // If it's a UUID, verify it exists in backoffice_users (FK constraint)
   let invitedByUuid: string | null = null;
   if (data.invitedBy) {
     // Check if it's already a UUID format
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(data.invitedBy);
     if (isUuid) {
-      invitedByUuid = data.invitedBy;
+      // Verify this UUID exists in backoffice_users (FK constraint requires this)
+      const existingUser = await query<{ backoffice_user_id: string }>(
+        `SELECT backoffice_user_id FROM application.backoffice_users WHERE backoffice_user_id = $1`,
+        [data.invitedBy]
+      );
+      invitedByUuid = existingUser.length > 0 ? data.invitedBy : null;
     } else {
       // It's an email, look up the UUID
       const inviter = await getBackofficeUserByEmail(data.invitedBy);

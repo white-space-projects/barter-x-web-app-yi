@@ -89,6 +89,15 @@ export default function ProfilePage() {
   const [supportSubmitting, setSupportSubmitting] = useState(false);
 
   // ---------------------------------------------------------------------------
+  // STATE - Referral Settings
+  // ---------------------------------------------------------------------------
+  const [referralEmail, setReferralEmail] = useState("");
+  const [referralSubmitting, setReferralSubmitting] = useState(false);
+  const [referralMessage, setReferralMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [accessControlLoaded, setAccessControlLoaded] = useState(false);
+  const [accessControl, setAccessControl] = useState({ allowFf: true, allowBeta: false, allowAll: false });
+
+  // ---------------------------------------------------------------------------
   // STATE - Shipping Addresses
   // ---------------------------------------------------------------------------
   const [expandedOfferId, setExpandedOfferId] = useState<string | null>(null);
@@ -211,6 +220,30 @@ export default function ProfilePage() {
   }, [authReady, auth.isAuthenticated, router]);
 
   // ---------------------------------------------------------------------------
+  // FETCH ACCESS CONTROL (for referral feature)
+  // ---------------------------------------------------------------------------
+  useEffect(() => {
+    async function fetchAccessControl() {
+      try {
+        const response = await fetch("/api/app-access-control");
+        if (response.ok) {
+          const data = await response.json();
+          setAccessControl({
+            allowFf: data.allowFf ?? true,
+            allowBeta: data.allowBeta ?? false,
+            allowAll: data.allowAll ?? false,
+          });
+        }
+      } catch (error) {
+        console.error("Failed to fetch access control:", error);
+      } finally {
+        setAccessControlLoaded(true);
+      }
+    }
+    fetchAccessControl();
+  }, []);
+
+  // ---------------------------------------------------------------------------
   // HANDLERS
   // ---------------------------------------------------------------------------
   async function handleSaveProfile() {
@@ -257,6 +290,58 @@ export default function ProfilePage() {
   function handleLogout() {
     logout();
     router.push("/login");
+  }
+
+  async function handleReferralSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setReferralMessage(null);
+
+    // Validate email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(referralEmail.trim())) {
+      setReferralMessage({ type: "error", text: "Please enter a valid email address." });
+      return;
+    }
+
+    // Check if invitations are available (maintenance mode = all toggles off)
+    const isMaintenanceMode = !accessControl.allowFf && !accessControl.allowBeta && !accessControl.allowAll;
+    if (isMaintenanceMode) {
+      setReferralMessage({ type: "error", text: "Invitations are currently unavailable." });
+      return;
+    }
+
+    setReferralSubmitting(true);
+
+    try {
+      const response = await fetch("/api/referrals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: referralEmail.trim().toLowerCase(),
+          referredBy: auth.user?.userId,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (data.error === "duplicate") {
+          setReferralMessage({ type: "error", text: "This email has already been invited." });
+        } else {
+          setReferralMessage({ type: "error", text: data.error || "Failed to send invitation." });
+        }
+        return;
+      }
+
+      // Success
+      setReferralMessage({ type: "success", text: "Invitation sent successfully!" });
+      setReferralEmail("");
+    } catch (error) {
+      console.error("Referral error:", error);
+      setReferralMessage({ type: "error", text: "Something went wrong. Please try again." });
+    } finally {
+      setReferralSubmitting(false);
+    }
   }
 
   function handleOfferAddressChange(offerId: string, field: keyof ProfileAddress, value: string) {
@@ -319,7 +404,7 @@ export default function ProfilePage() {
   const sections = [
     { id: "basic-info", label: "Basic Info", icon: User },
     { id: "shipping", label: "Shipping", icon: Package },
-    { id: "notifications", label: "Notifications", icon: Bell },
+    { id: "settings", label: "Settings", icon: Bell },
     { id: "support", label: "Support", icon: HelpCircle },
   ];
 
@@ -721,8 +806,8 @@ export default function ProfilePage() {
             </section>
           )}
 
-          {/* Notifications Section */}
-          {activeSection === "notifications" && (
+          {/* Settings Section */}
+          {activeSection === "settings" && (
             <section className="rounded-xl border border-border bg-card p-5">
               <h2 className="text-base font-semibold text-foreground mb-4">Notification Settings</h2>
 
@@ -787,6 +872,73 @@ export default function ProfilePage() {
                   </button>
                 </div>
               </div>
+            </section>
+
+            {/* Referral Settings Block */}
+            <section className="rounded-xl border border-border bg-card p-5">
+              <h2 className="text-base font-semibold text-foreground mb-2">Referral Settings</h2>
+              <p className="text-xs text-muted-foreground mb-4">
+                Invite someone to access Barter-X using their email address.
+              </p>
+
+              {/* Check if invitations are available */}
+              {(() => {
+                const isMaintenanceMode = !accessControl.allowFf && !accessControl.allowBeta && !accessControl.allowAll;
+                
+                if (isMaintenanceMode && accessControlLoaded) {
+                  return (
+                    <p className="text-sm text-muted-foreground italic">
+                      Invitations are currently unavailable.
+                    </p>
+                  );
+                }
+
+                return (
+                  <form onSubmit={handleReferralSubmit} className="space-y-3">
+                    <div>
+                      <label className="mb-1.5 block text-sm font-medium text-foreground">
+                        Email Address
+                      </label>
+                      <input
+                        type="email"
+                        value={referralEmail}
+                        onChange={(e) => {
+                          setReferralEmail(e.target.value);
+                          setReferralMessage(null);
+                        }}
+                        placeholder="friend@example.com"
+                        className="h-11 w-full rounded-lg border border-input bg-secondary px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                        disabled={referralSubmitting}
+                      />
+                    </div>
+
+                    {/* Message feedback */}
+                    {referralMessage && (
+                      <p className={`text-sm ${referralMessage.type === "success" ? "text-green-500" : "text-destructive"}`}>
+                        {referralMessage.text}
+                      </p>
+                    )}
+
+                    <button
+                      type="submit"
+                      disabled={referralSubmitting || !referralEmail.trim()}
+                      className="h-11 w-full rounded-lg bg-primary text-primary-foreground font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      {referralSubmitting ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Sending...
+                        </>
+                      ) : (
+                        <>
+                          <Send className="h-4 w-4" />
+                          Invite User
+                        </>
+                      )}
+                    </button>
+                  </form>
+                );
+              })()}
             </section>
           )}
 
