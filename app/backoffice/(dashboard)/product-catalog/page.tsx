@@ -1319,6 +1319,8 @@ export default function ProductCatalogPage() {
           )}
         </>
       )}
+        </>
+      )}
 
       {/* Pending Review Tab Content */}
       {activeTab === "pending" && (
