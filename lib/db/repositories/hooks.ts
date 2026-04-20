@@ -12,8 +12,8 @@ import type { Hook, HookStatus, LockLevel } from "@/lib/types";
 
 interface DbHook {
   hook_id: string;
-  from_offer_id: string;
-  to_offer_id: string;
+  source_offer_id: string;
+  target_offer_id: string;
   correlation_id: string | null;
   created_by_user_id: string | null;
   status: string;
@@ -51,8 +51,8 @@ function mapToHook(row: DbHook): Hook {
   return {
     hookId: row.hook_id,
     correlationId: row.correlation_id || "",
-    fromOfferId: row.from_offer_id,
-    toOfferId: row.to_offer_id,
+    fromOfferId: row.source_offer_id,
+    toOfferId: row.target_offer_id,
     status: parseHookStatus(row.status),
     reservedCycleId: row.cycle_id || undefined,
     lockLevel: parseLockLevel(row.lock_level),
@@ -87,13 +87,13 @@ export async function fetchHooks(
   }
 
   if (sourceOfferId) {
-    conditions.push(`h.from_offer_id = $${paramIndex}`);
+    conditions.push(`h.source_offer_id = $${paramIndex}`);
     params.push(sourceOfferId);
     paramIndex++;
   }
 
   if (targetOfferId) {
-    conditions.push(`h.to_offer_id = $${paramIndex}`);
+    conditions.push(`h.target_offer_id = $${paramIndex}`);
     params.push(targetOfferId);
     paramIndex++;
   }
@@ -130,7 +130,7 @@ export async function createHook(data: {
 }): Promise<Hook> {
   const result = await query<DbHook>(
     `INSERT INTO application.hooks (
-      from_offer_id, to_offer_id, correlation_id, created_by_user_id,
+      source_offer_id, target_offer_id, correlation_id, created_by_user_id,
       status, lock_level, is_active, created_at, updated_at
     ) VALUES (
       $1, $2, $3, $4, 'searching', 0, true, NOW(), NOW()
