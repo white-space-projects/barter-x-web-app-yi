@@ -14,6 +14,7 @@ import {
   User,
   Building2,
   Briefcase,
+  MessageCircle,
 } from "lucide-react";
 import type { ProductType } from "@/lib/types";
 
@@ -84,6 +85,12 @@ export function BottomNav({
       icon: MessageSquare,
       type: "utility" as const,
       badge: unreadCount,
+    },
+    {
+      id: "testing-feedback",
+      label: "Feedback",
+      icon: MessageCircle,
+      type: "utility" as const,
     },
     {
       id: "profile",

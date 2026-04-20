@@ -28,6 +28,7 @@ import { AddOfferFlow } from "@/components/app/add-offer-flow";
 // AdminPanel removed - product image management moved to Back Office Catalog Assets
 import { SimulateTab } from "@/components/app/simulate-tab";
 import { ProfileTab } from "@/components/app/profile-tab";
+import { TestingFeedbackTab } from "@/components/app/testing-feedback-tab";
 import { PickupReadinessModal } from "@/components/app/pickup-readiness-modal";
 import { SidebarNav } from "@/components/app/sidebar-nav";
 import { BottomNav } from "@/components/app/bottom-nav";
@@ -37,7 +38,7 @@ import { Loader2, ShieldCheck, ArrowLeft, Plus, X } from "lucide-react";
 import type { ProductType, Product } from "@/lib/types";
 
 // Tab type definition - profile is now a utility tab shown in tab content
-type UtilityTab = "my-offers" | "chat" | "admin" | "simulate" | "profile";
+type UtilityTab = "my-offers" | "chat" | "admin" | "simulate" | "profile" | "testing-feedback";
 
 // Inner component that uses the navigation guard
 function WorkspaceContent() {
@@ -386,6 +387,7 @@ function WorkspaceContent() {
               {/* Utility tabs - hidden when Add Offer is open */}
               {!addOfferOpen && activeUtilityTab === "my-offers" && <MyOffersTab onHeaderChange={setHeaderContent} />}
               {!addOfferOpen && activeUtilityTab === "chat" && <ChatTab onOpenPickupModal={setPickupModalOfferId} />}
+              {!addOfferOpen && activeUtilityTab === "testing-feedback" && <TestingFeedbackTab />}
               {/* Admin Panel removed - product image management moved to Back Office Catalog Assets */}
               {!addOfferOpen && activeUtilityTab === "simulate" && isAdmin && <SimulateTab />}
               {!addOfferOpen && activeUtilityTab === "profile" && (

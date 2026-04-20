@@ -17,6 +17,7 @@ import {
   Building2,
   Briefcase,
   Key,
+  MessageCircle,
 } from "lucide-react";
 import type { ProductType } from "@/lib/types";
 
@@ -117,6 +118,12 @@ const NAV_ITEMS: NavItem[] = [
     id: "chat",
     label: "Chat",
     icon: MessageSquare,
+    type: "utility",
+  },
+  {
+    id: "testing-feedback",
+    label: "Testing Feedback",
+    icon: MessageCircle,
     type: "utility",
   },
   // Admin tab removed - product image management moved to Back Office
