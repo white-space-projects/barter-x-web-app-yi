@@ -627,13 +627,29 @@ export function ViewOfferDetails({ offerId, onClose, onEdit, onAddOfferToProduct
     }).filter((item) => item.offer);
   }, [myHooks, getOfferById, products]);
 
-  // Get linked products (products this offer's hooks target - for other user view)
+  // Get linked products (products from offers that have hooked THIS offer - incoming hooks)
+  // This shows which products are "interested" in this offer (have hooked it)
   const linkedProducts = useMemo(() => {
-    if (isMyOffer || !offer) return [];
-    // For another user's offer, show the product this offer belongs to
-    // and any related products (simplified - just show the main product for now)
-    return product ? [product] : [];
-  }, [isMyOffer, offer, product]);
+    if (!offer) return [];
+    // Find all hooks where this offer is the TARGET (incoming hooks from other offers)
+    const incomingHooks = hooks.filter((h) => h.toOfferId === offer.offerId && h.isActive);
+    // Get unique products from the source offers of those hooks
+    const linkedProductIds = new Set<string>();
+    const linkedProductsList: Product[] = [];
+    
+    for (const hook of incomingHooks) {
+      const sourceOffer = getOfferById(hook.fromOfferId);
+      if (sourceOffer && sourceOffer.productId && !linkedProductIds.has(sourceOffer.productId)) {
+        linkedProductIds.add(sourceOffer.productId);
+        const sourceProduct = products.find((p) => p.productId === sourceOffer.productId);
+        if (sourceProduct) {
+          linkedProductsList.push(sourceProduct);
+        }
+      }
+    }
+    
+    return linkedProductsList;
+  }, [offer, hooks, getOfferById, products]);
 
   // Handler functions
   const handleUnhook = useCallback(async (hookId: string) => {
