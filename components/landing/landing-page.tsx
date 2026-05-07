@@ -155,6 +155,9 @@ export function LandingPage() {
               <Link href="/chat" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                 Chat
               </Link>
+              <Link href="/offer/demo" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                Offer Details
+              </Link>
             </nav>
 
             {/* Desktop CTA */}
@@ -217,6 +220,13 @@ export function LandingPage() {
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Chat
+              </Link>
+              <Link 
+                href="/offer/demo" 
+                className="block text-sm text-muted-foreground hover:text-foreground"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Offer Details
               </Link>
               <div className="pt-3 border-t border-border space-y-3">
                 <div className="flex gap-3">
