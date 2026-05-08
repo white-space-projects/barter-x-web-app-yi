@@ -95,51 +95,65 @@ function NewUserNotification() {
       </div>
 
       {/* Instructional Offer Card with Arrows */}
-      <div className="relative w-full max-w-md">
-        {/* STEP 1 Arrow - Points to Subcategory/Brand */}
-        <div className="absolute -right-4 top-[140px] translate-x-full hidden lg:flex items-start gap-2">
-          <svg width="60" height="30" className="text-primary" viewBox="0 0 60 30">
-            <path d="M60 15 L20 15 L20 5 L0 15 L20 25 L20 15" fill="none" stroke="currentColor" strokeWidth="2" />
+      <div className="relative w-full max-w-[420px]">
+        
+        {/* STEP 1 Arrow - Points to Subcategory/Brand/Model row */}
+        <div className="absolute right-0 top-[340px] translate-x-[calc(100%+16px)] hidden xl:flex items-center gap-3">
+          <svg width="50" height="2" className="text-primary">
+            <line x1="0" y1="1" x2="50" y2="1" stroke="currentColor" strokeWidth="2" />
           </svg>
-          <div className="bg-primary/10 border border-primary/30 rounded-lg px-3 py-2 max-w-[180px]">
+          <div className="bg-primary/10 border border-primary/30 rounded-lg px-4 py-3 w-[200px]">
             <span className="text-primary font-bold text-xs">STEP 1</span>
-            <p className="text-xs text-foreground mt-1">Choose product model</p>
+            <p className="text-xs text-foreground mt-1">
+              <span className="text-primary">SubCategory</span>
+              <span className="inline-block w-1 h-1 rounded-full bg-primary mx-1.5 align-middle" />
+              <span className="text-primary">Brand</span>
+              <span className="inline-block w-1 h-1 rounded-full bg-primary mx-1.5 align-middle" />
+              <span className="text-primary">Model</span>
+            </p>
           </div>
         </div>
 
-        {/* STEP 2 Arrow - Points to Image */}
-        <div className="absolute -left-4 top-[80px] -translate-x-full hidden lg:flex items-start gap-2 flex-row-reverse">
-          <svg width="60" height="30" className="text-primary" viewBox="0 0 60 30">
-            <path d="M0 15 L40 15 L40 5 L60 15 L40 25 L40 15" fill="none" stroke="currentColor" strokeWidth="2" />
+        {/* STEP 2 Arrow - Points to Image area */}
+        <div className="absolute left-0 top-[140px] -translate-x-[calc(100%+16px)] hidden xl:flex items-center gap-3 flex-row-reverse">
+          <svg width="50" height="2" className="text-primary">
+            <line x1="0" y1="1" x2="50" y2="1" stroke="currentColor" strokeWidth="2" />
           </svg>
-          <div className="bg-primary/10 border border-primary/30 rounded-lg px-3 py-2 max-w-[180px] text-right">
+          <div className="bg-primary/10 border border-primary/30 rounded-lg px-4 py-3 w-[200px] text-right">
             <span className="text-primary font-bold text-xs">STEP 2</span>
             <p className="text-xs text-foreground mt-1">Add up to 7 images of your offer</p>
           </div>
         </div>
 
-        {/* STEP 3 Arrow - Points to Title/Description/Condition */}
-        <div className="absolute -right-4 top-[40px] translate-x-full hidden lg:flex items-start gap-2">
-          <svg width="80" height="60" className="text-primary" viewBox="0 0 80 60">
-            {/* Main arrow */}
-            <path d="M80 30 L40 30 L40 10 L20 30 L40 50 L40 30" fill="none" stroke="currentColor" strokeWidth="2" />
-            {/* Branch to condition badge */}
-            <path d="M30 30 L30 10 L10 10" fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="4 2" />
-            {/* Branch to title */}
-            <path d="M30 30 L10 30" fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="4 2" />
+        {/* STEP 3 Arrow - Multi-arrow pointing to Title, Description, and Condition */}
+        <div className="absolute right-0 top-[60px] translate-x-[calc(100%+16px)] hidden xl:block">
+          <svg width="80" height="260" className="text-primary absolute left-0 top-0">
+            {/* Vertical line */}
+            <line x1="10" y1="30" x2="10" y2="230" stroke="currentColor" strokeWidth="2" />
+            {/* Arrow to Condition badge (top) */}
+            <line x1="0" y1="30" x2="10" y2="30" stroke="currentColor" strokeWidth="2" />
+            <polygon points="0,30 6,26 6,34" fill="currentColor" />
+            {/* Arrow to Title (middle-top) */}
+            <line x1="0" y1="130" x2="10" y2="130" stroke="currentColor" strokeWidth="2" />
+            <polygon points="0,130 6,126 6,134" fill="currentColor" />
+            {/* Arrow to Description (middle-bottom) */}
+            <line x1="0" y1="180" x2="10" y2="180" stroke="currentColor" strokeWidth="2" />
+            <polygon points="0,180 6,176 6,184" fill="currentColor" />
+            {/* Horizontal line to label */}
+            <line x1="10" y1="130" x2="50" y2="130" stroke="currentColor" strokeWidth="2" />
           </svg>
-          <div className="bg-primary/10 border border-primary/30 rounded-lg px-3 py-2 max-w-[200px]">
+          <div className="bg-primary/10 border border-primary/30 rounded-lg px-4 py-3 w-[200px] ml-[60px] mt-[100px]">
             <span className="text-primary font-bold text-xs">STEP 3</span>
             <p className="text-xs text-foreground mt-1">Add Offer Title, Description and Condition</p>
           </div>
         </div>
 
         {/* STEP 4 Arrow - Points to Address */}
-        <div className="absolute -left-4 top-[200px] -translate-x-full hidden lg:flex items-start gap-2 flex-row-reverse">
-          <svg width="60" height="30" className="text-primary" viewBox="0 0 60 30">
-            <path d="M0 15 L40 15 L40 5 L60 15 L40 25 L40 15" fill="none" stroke="currentColor" strokeWidth="2" />
+        <div className="absolute left-0 top-[420px] -translate-x-[calc(100%+16px)] hidden xl:flex items-center gap-3 flex-row-reverse">
+          <svg width="50" height="2" className="text-primary">
+            <line x1="0" y1="1" x2="50" y2="1" stroke="currentColor" strokeWidth="2" />
           </svg>
-          <div className="bg-primary/10 border border-primary/30 rounded-lg px-3 py-2 max-w-[180px] text-right">
+          <div className="bg-primary/10 border border-primary/30 rounded-lg px-4 py-3 w-[200px] text-right">
             <span className="text-primary font-bold text-xs">STEP 4</span>
             <p className="text-xs text-foreground mt-1">Add your pickup address</p>
           </div>
@@ -148,10 +162,10 @@ function NewUserNotification() {
         {/* The Empty Offer Card */}
         <div className="rounded-xl border border-border bg-card overflow-hidden w-full">
           {/* Image Area with Condition Badge */}
-          <div className="relative aspect-[4/3] bg-secondary flex items-center justify-center">
+          <div className="relative aspect-[4/3] bg-secondary flex items-center justify-center" id="image-area">
             {/* Condition Badge - Top Left */}
-            <div className="absolute top-3 left-3">
-              <span className="inline-block px-3 py-1 rounded-full bg-card/80 backdrop-blur-sm text-xs font-semibold text-muted-foreground border border-dashed border-muted-foreground/50">
+            <div className="absolute top-3 left-3" id="condition-badge">
+              <span className="inline-block px-3 py-1.5 rounded-full bg-card/80 backdrop-blur-sm text-xs font-semibold text-muted-foreground border border-dashed border-muted-foreground/50">
                 Condition
               </span>
             </div>
@@ -159,45 +173,49 @@ function NewUserNotification() {
             {/* Placeholder Icon */}
             <div className="flex flex-col items-center gap-3 text-muted-foreground/50">
               <Package className="h-16 w-16" />
-              <span className="text-sm">Product Image</span>
+              <span className="text-sm">Product Images</span>
             </div>
           </div>
 
           {/* Content Area */}
           <div className="p-4 space-y-3">
             {/* Title Placeholder */}
-            <div className="h-6 rounded bg-secondary/80 border border-dashed border-muted-foreground/30 flex items-center px-3">
-              <span className="text-xs text-muted-foreground/60">Offer Title</span>
+            <div className="h-7 rounded-md bg-secondary/80 border border-dashed border-muted-foreground/30 flex items-center px-3" id="title-area">
+              <span className="text-sm text-muted-foreground/60">Offer Title</span>
             </div>
 
-            {/* Subcategory / Brand Placeholder */}
-            <div className="flex items-center gap-2">
-              <div className="h-4 w-20 rounded bg-secondary/80 border border-dashed border-muted-foreground/30 flex items-center justify-center">
-                <span className="text-[10px] text-muted-foreground/60">Subcategory</span>
+            {/* Subcategory / Brand / Model Placeholder */}
+            <div className="flex items-center gap-1.5" id="subcategory-brand-model">
+              <div className="h-5 px-2 rounded bg-secondary/80 border border-dashed border-muted-foreground/30 flex items-center">
+                <span className="text-[11px] text-muted-foreground/60">SubCategory</span>
               </div>
-              <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary/50" />
-              <div className="h-4 w-16 rounded bg-secondary/80 border border-dashed border-muted-foreground/30 flex items-center justify-center">
-                <span className="text-[10px] text-muted-foreground/60">Brand</span>
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary" />
+              <div className="h-5 px-2 rounded bg-secondary/80 border border-dashed border-muted-foreground/30 flex items-center">
+                <span className="text-[11px] text-muted-foreground/60">Brand</span>
+              </div>
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary" />
+              <div className="h-5 px-2 rounded bg-secondary/80 border border-dashed border-muted-foreground/30 flex items-center">
+                <span className="text-[11px] text-muted-foreground/60">Model</span>
               </div>
             </div>
 
             {/* Description Placeholder */}
-            <div className="space-y-1.5">
-              <div className="h-3 w-full rounded bg-secondary/60 border border-dashed border-muted-foreground/20" />
-              <div className="h-3 w-3/4 rounded bg-secondary/60 border border-dashed border-muted-foreground/20" />
+            <div className="space-y-1.5 py-1" id="description-area">
+              <div className="h-3.5 w-full rounded bg-secondary/60 border border-dashed border-muted-foreground/20" />
+              <div className="h-3.5 w-4/5 rounded bg-secondary/60 border border-dashed border-muted-foreground/20" />
+              <div className="h-3.5 w-3/5 rounded bg-secondary/60 border border-dashed border-muted-foreground/20" />
             </div>
 
             {/* Address Placeholder */}
-            <div className="flex items-center gap-1 text-primary/60">
-              <div className="h-4 w-28 rounded bg-primary/10 border border-dashed border-primary/30 flex items-center justify-center">
-                <span className="text-[10px] text-primary/70">Pickup Address</span>
+            <div className="flex items-center gap-1 pt-1" id="address-area">
+              <div className="h-5 px-3 rounded bg-primary/10 border border-dashed border-primary/40 flex items-center">
+                <span className="text-[11px] text-primary">Pickup Address</span>
               </div>
             </div>
 
             {/* Bottom Actions */}
-            <div className="flex items-center justify-between pt-3 border-t border-border/50">
-              <div className="flex-1" />
-              <button className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors">
+            <div className="flex items-center justify-end pt-4 border-t border-border/50">
+              <button className="flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors">
                 <Plus className="h-4 w-4" />
                 Add Offer
               </button>
@@ -206,15 +224,15 @@ function NewUserNotification() {
         </div>
 
         {/* Mobile Steps - Shown below card on smaller screens */}
-        <div className="lg:hidden mt-8 space-y-3">
+        <div className="xl:hidden mt-8 space-y-3">
           {[
-            { step: 1, text: "Choose product model", target: "Subcategory & Brand" },
-            { step: 2, text: "Add up to 7 images of your offer", target: "Image Area" },
-            { step: 3, text: "Add Offer Title, Description and Condition", target: "Title & Condition" },
-            { step: 4, text: "Add your pickup address", target: "Address" },
+            { step: 1, text: "Choose SubCategory, Brand & Model", target: "Product model" },
+            { step: 2, text: "Add up to 7 images of your offer", target: "Product images" },
+            { step: 3, text: "Add Offer Title, Description and Condition", target: "Offer details" },
+            { step: 4, text: "Add your pickup address", target: "Location" },
           ].map((item) => (
             <div key={item.step} className="flex items-start gap-3 bg-card/50 rounded-lg p-3 border border-border">
-              <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center">
+              <span className="flex-shrink-0 w-7 h-7 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center">
                 {item.step}
               </span>
               <div>
