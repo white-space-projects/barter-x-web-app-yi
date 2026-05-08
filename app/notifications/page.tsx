@@ -94,72 +94,38 @@ function NewUserNotification() {
         <p className="text-muted-foreground">Follow 4 easy steps to list what you want to trade</p>
       </div>
 
-      {/* Instructional Offer Card with Arrows */}
-      <div className="relative w-full max-w-[420px]">
-        
-        {/* STEP 1 Arrow - Points to Subcategory/Brand/Model row */}
-        <div className="absolute right-0 top-[340px] translate-x-[calc(100%+16px)] hidden xl:flex items-center gap-3">
-          <svg width="50" height="2" className="text-primary">
-            <line x1="0" y1="1" x2="50" y2="1" stroke="currentColor" strokeWidth="2" />
-          </svg>
-          <div className="bg-primary/10 border border-primary/30 rounded-lg px-4 py-3 w-[200px]">
-            <span className="text-primary font-bold text-xs">STEP 1</span>
-            <p className="text-xs text-foreground mt-1">
-              <span className="text-primary">SubCategory</span>
-              <span className="inline-block w-1 h-1 rounded-full bg-primary mx-1.5 align-middle" />
-              <span className="text-primary">Brand</span>
-              <span className="inline-block w-1 h-1 rounded-full bg-primary mx-1.5 align-middle" />
-              <span className="text-primary">Model</span>
-            </p>
+      {/* Instructional Offer Card with Arrows - Desktop Layout */}
+      <div className="hidden lg:flex items-start justify-center gap-6 w-full max-w-5xl">
+        {/* Left Side Arrows (Steps 2 & 4) */}
+        <div className="flex flex-col items-end pt-4 w-[220px] flex-shrink-0">
+          {/* STEP 2 - Points to Image area */}
+          <div className="flex items-center gap-3 mb-[120px]">
+            <div className="bg-primary/10 border border-primary/30 rounded-lg px-4 py-3 text-right">
+              <span className="text-primary font-bold text-xs">STEP 2</span>
+              <p className="text-xs text-foreground mt-1">Add up to 7 images of your offer</p>
+            </div>
+            <svg width="40" height="20" className="text-primary flex-shrink-0">
+              <line x1="0" y1="10" x2="30" y2="10" stroke="currentColor" strokeWidth="2" />
+              <polygon points="30,10 24,6 24,14" fill="currentColor" />
+            </svg>
+          </div>
+          
+          {/* STEP 4 - Points to Address */}
+          <div className="flex items-center gap-3 mt-[80px]">
+            <div className="bg-primary/10 border border-primary/30 rounded-lg px-4 py-3 text-right">
+              <span className="text-primary font-bold text-xs">STEP 4</span>
+              <p className="text-xs text-foreground mt-1">Add your pickup address</p>
+            </div>
+            <svg width="40" height="20" className="text-primary flex-shrink-0">
+              <line x1="0" y1="10" x2="30" y2="10" stroke="currentColor" strokeWidth="2" />
+              <polygon points="30,10 24,6 24,14" fill="currentColor" />
+            </svg>
           </div>
         </div>
 
-        {/* STEP 2 Arrow - Points to Image area */}
-        <div className="absolute left-0 top-[140px] -translate-x-[calc(100%+16px)] hidden xl:flex items-center gap-3 flex-row-reverse">
-          <svg width="50" height="2" className="text-primary">
-            <line x1="0" y1="1" x2="50" y2="1" stroke="currentColor" strokeWidth="2" />
-          </svg>
-          <div className="bg-primary/10 border border-primary/30 rounded-lg px-4 py-3 w-[200px] text-right">
-            <span className="text-primary font-bold text-xs">STEP 2</span>
-            <p className="text-xs text-foreground mt-1">Add up to 7 images of your offer</p>
-          </div>
-        </div>
-
-        {/* STEP 3 Arrow - Multi-arrow pointing to Title, Description, and Condition */}
-        <div className="absolute right-0 top-[60px] translate-x-[calc(100%+16px)] hidden xl:block">
-          <svg width="80" height="260" className="text-primary absolute left-0 top-0">
-            {/* Vertical line */}
-            <line x1="10" y1="30" x2="10" y2="230" stroke="currentColor" strokeWidth="2" />
-            {/* Arrow to Condition badge (top) */}
-            <line x1="0" y1="30" x2="10" y2="30" stroke="currentColor" strokeWidth="2" />
-            <polygon points="0,30 6,26 6,34" fill="currentColor" />
-            {/* Arrow to Title (middle-top) */}
-            <line x1="0" y1="130" x2="10" y2="130" stroke="currentColor" strokeWidth="2" />
-            <polygon points="0,130 6,126 6,134" fill="currentColor" />
-            {/* Arrow to Description (middle-bottom) */}
-            <line x1="0" y1="180" x2="10" y2="180" stroke="currentColor" strokeWidth="2" />
-            <polygon points="0,180 6,176 6,184" fill="currentColor" />
-            {/* Horizontal line to label */}
-            <line x1="10" y1="130" x2="50" y2="130" stroke="currentColor" strokeWidth="2" />
-          </svg>
-          <div className="bg-primary/10 border border-primary/30 rounded-lg px-4 py-3 w-[200px] ml-[60px] mt-[100px]">
-            <span className="text-primary font-bold text-xs">STEP 3</span>
-            <p className="text-xs text-foreground mt-1">Add Offer Title, Description and Condition</p>
-          </div>
-        </div>
-
-        {/* STEP 4 Arrow - Points to Address */}
-        <div className="absolute left-0 top-[420px] -translate-x-[calc(100%+16px)] hidden xl:flex items-center gap-3 flex-row-reverse">
-          <svg width="50" height="2" className="text-primary">
-            <line x1="0" y1="1" x2="50" y2="1" stroke="currentColor" strokeWidth="2" />
-          </svg>
-          <div className="bg-primary/10 border border-primary/30 rounded-lg px-4 py-3 w-[200px] text-right">
-            <span className="text-primary font-bold text-xs">STEP 4</span>
-            <p className="text-xs text-foreground mt-1">Add your pickup address</p>
-          </div>
-        </div>
-
-        {/* The Empty Offer Card */}
+        {/* The Offer Card */}
+        <div className="relative w-[380px] flex-shrink-0">
+          {/* The Empty Offer Card */}
         <div className="rounded-xl border border-border bg-card overflow-hidden w-full">
           {/* Image Area with Condition Badge */}
           <div className="relative aspect-[4/3] bg-secondary flex items-center justify-center" id="image-area">
@@ -222,9 +188,106 @@ function NewUserNotification() {
             </div>
           </div>
         </div>
+        </div>
 
-        {/* Mobile Steps - Shown below card on smaller screens */}
-        <div className="xl:hidden mt-8 space-y-3">
+        {/* Right Side Arrows (Steps 1 & 3) */}
+        <div className="flex flex-col items-start pt-4 w-[220px] flex-shrink-0">
+          {/* STEP 3 - Points to Condition, Title, Description */}
+          <div className="flex items-start gap-3 mb-[40px]">
+            <svg width="60" height="200" className="text-primary flex-shrink-0">
+              {/* Vertical connector line */}
+              <line x1="8" y1="20" x2="8" y2="180" stroke="currentColor" strokeWidth="2" />
+              {/* Arrow to Condition (top) */}
+              <line x1="8" y1="20" x2="0" y2="20" stroke="currentColor" strokeWidth="2" />
+              <polygon points="0,20 6,16 6,24" fill="currentColor" />
+              {/* Arrow to Title (middle) */}
+              <line x1="8" y1="100" x2="0" y2="100" stroke="currentColor" strokeWidth="2" />
+              <polygon points="0,100 6,96 6,104" fill="currentColor" />
+              {/* Arrow to Description (bottom) */}
+              <line x1="8" y1="150" x2="0" y2="150" stroke="currentColor" strokeWidth="2" />
+              <polygon points="0,150 6,146 6,154" fill="currentColor" />
+              {/* Horizontal line to label */}
+              <line x1="8" y1="100" x2="50" y2="100" stroke="currentColor" strokeWidth="2" />
+            </svg>
+            <div className="bg-primary/10 border border-primary/30 rounded-lg px-4 py-3 mt-[70px]">
+              <span className="text-primary font-bold text-xs">STEP 3</span>
+              <p className="text-xs text-foreground mt-1">Add Offer Title, Description and Condition</p>
+            </div>
+          </div>
+          
+          {/* STEP 1 - Points to SubCategory/Brand/Model */}
+          <div className="flex items-center gap-3 mt-[20px]">
+            <svg width="40" height="20" className="text-primary flex-shrink-0">
+              <polygon points="0,10 6,6 6,14" fill="currentColor" />
+              <line x1="6" y1="10" x2="40" y2="10" stroke="currentColor" strokeWidth="2" />
+            </svg>
+            <div className="bg-primary/10 border border-primary/30 rounded-lg px-4 py-3">
+              <span className="text-primary font-bold text-xs">STEP 1</span>
+              <p className="text-xs text-foreground mt-1">
+                <span className="text-primary">SubCategory</span>
+                <span className="inline-block w-1 h-1 rounded-full bg-primary mx-1 align-middle" />
+                <span className="text-primary">Brand</span>
+                <span className="inline-block w-1 h-1 rounded-full bg-primary mx-1 align-middle" />
+                <span className="text-primary">Model</span>
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile Layout - Steps listed below card */}
+      <div className="lg:hidden w-full max-w-[380px]">
+        {/* The Empty Offer Card for Mobile */}
+        <div className="rounded-xl border border-border bg-card overflow-hidden w-full mb-6">
+          {/* Image Area with Condition Badge */}
+          <div className="relative aspect-[4/3] bg-secondary flex items-center justify-center">
+            <div className="absolute top-3 left-3">
+              <span className="inline-block px-3 py-1.5 rounded-full bg-card/80 backdrop-blur-sm text-xs font-semibold text-muted-foreground border border-dashed border-muted-foreground/50">
+                Condition
+              </span>
+            </div>
+            <div className="flex flex-col items-center gap-3 text-muted-foreground/50">
+              <Package className="h-16 w-16" />
+              <span className="text-sm">Product Images</span>
+            </div>
+          </div>
+          <div className="p-4 space-y-3">
+            <div className="h-7 rounded-md bg-secondary/80 border border-dashed border-muted-foreground/30 flex items-center px-3">
+              <span className="text-sm text-muted-foreground/60">Offer Title</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="h-5 px-2 rounded bg-secondary/80 border border-dashed border-muted-foreground/30 flex items-center">
+                <span className="text-[11px] text-muted-foreground/60">SubCategory</span>
+              </div>
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary" />
+              <div className="h-5 px-2 rounded bg-secondary/80 border border-dashed border-muted-foreground/30 flex items-center">
+                <span className="text-[11px] text-muted-foreground/60">Brand</span>
+              </div>
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary" />
+              <div className="h-5 px-2 rounded bg-secondary/80 border border-dashed border-muted-foreground/30 flex items-center">
+                <span className="text-[11px] text-muted-foreground/60">Model</span>
+              </div>
+            </div>
+            <div className="space-y-1.5 py-1">
+              <div className="h-3.5 w-full rounded bg-secondary/60 border border-dashed border-muted-foreground/20" />
+              <div className="h-3.5 w-4/5 rounded bg-secondary/60 border border-dashed border-muted-foreground/20" />
+            </div>
+            <div className="flex items-center gap-1 pt-1">
+              <div className="h-5 px-3 rounded bg-primary/10 border border-dashed border-primary/40 flex items-center">
+                <span className="text-[11px] text-primary">Pickup Address</span>
+              </div>
+            </div>
+            <div className="flex items-center justify-end pt-4 border-t border-border/50">
+              <button className="flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground">
+                <Plus className="h-4 w-4" />
+                Add Offer
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile Steps List */}
+        <div className="space-y-3">
           {[
             { step: 1, text: "Choose SubCategory, Brand & Model", target: "Product model" },
             { step: 2, text: "Add up to 7 images of your offer", target: "Product images" },
