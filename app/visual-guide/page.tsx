@@ -105,6 +105,73 @@ export default function VisualGuidePage() {
         {/* Flow Arrow */}
         <FlowArrow />
 
+        {/* ===== SECTION 2.5: Browse Offers in Your Region ===== */}
+        <section className="flex flex-col items-center">
+          <h2 className="text-xl font-semibold text-foreground mb-2">Browse Nearby Offers</h2>
+          <p className="text-muted-foreground text-sm mb-8 text-center max-w-md">
+            Discover what others in your area want to trade
+          </p>
+          
+          <div className="relative w-full max-w-md">
+            {/* Map-like background with location pin */}
+            <div className="w-full h-48 rounded-xl bg-card border border-border overflow-hidden relative">
+              {/* Grid pattern to simulate map */}
+              <div className="absolute inset-0 opacity-10">
+                <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+                  <defs>
+                    <pattern id="grid" width="30" height="30" patternUnits="userSpaceOnUse">
+                      <path d="M 30 0 L 0 0 0 30" fill="none" stroke="currentColor" strokeWidth="0.5" className="text-muted-foreground" />
+                    </pattern>
+                  </defs>
+                  <rect width="100%" height="100%" fill="url(#grid)" />
+                </svg>
+              </div>
+              
+              {/* Center location pin (You) */}
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
+                <MapPin className="w-8 h-8 text-primary fill-primary/20" />
+                <span className="text-[10px] text-primary font-medium mt-0.5">You</span>
+              </div>
+              
+              {/* Radius circle */}
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 rounded-full border-2 border-dashed border-primary/30" />
+              
+              {/* Scattered offer dots around */}
+              <div className="absolute top-[25%] left-[20%] w-8 h-8 rounded-lg bg-secondary/80 border border-border flex items-center justify-center">
+                <Package className="w-4 h-4 text-muted-foreground" />
+              </div>
+              <div className="absolute top-[30%] right-[25%] w-8 h-8 rounded-lg bg-secondary/80 border border-border flex items-center justify-center">
+                <Laptop className="w-4 h-4 text-muted-foreground" />
+              </div>
+              <div className="absolute bottom-[25%] left-[30%] w-8 h-8 rounded-lg bg-secondary/80 border border-border flex items-center justify-center">
+                <Camera className="w-4 h-4 text-muted-foreground" />
+              </div>
+              <div className="absolute bottom-[30%] right-[20%] w-8 h-8 rounded-lg bg-secondary/80 border border-border flex items-center justify-center">
+                <Guitar className="w-4 h-4 text-muted-foreground" />
+              </div>
+              <div className="absolute top-[55%] left-[15%] w-8 h-8 rounded-lg bg-secondary/80 border border-border flex items-center justify-center">
+                <Bike className="w-4 h-4 text-muted-foreground" />
+              </div>
+            </div>
+            
+            {/* Search/Filter bar below */}
+            <div className="mt-4 flex items-center gap-3 px-4 py-3 rounded-xl bg-card border border-border">
+              <svg className="w-5 h-5 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="11" cy="11" r="8" />
+                <path d="m21 21-4.35-4.35" />
+              </svg>
+              <div className="flex-1 h-2 rounded-full bg-secondary/60" />
+              <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-primary/10">
+                <MapPin className="w-3.5 h-3.5 text-primary" />
+                <span className="text-[10px] text-primary font-medium">10 km</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Flow Arrow */}
+        <FlowArrow />
+
         {/* ===== SECTION 3: Hook up to 3 offers ===== */}
         <section className="flex flex-col items-center">
           <h2 className="text-xl font-semibold text-foreground mb-2">Hook What You Want</h2>
