@@ -174,12 +174,10 @@ export default function VisualGuidePage() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
               {/* Person 1: Has Laptop, Wants Cycle */}
               <div className="flex flex-col items-center">
-                <div className="w-12 h-12 rounded-full bg-card border-2 border-primary flex items-center justify-center mb-3">
-                  <svg viewBox="0 0 24 24" className="w-6 h-6 text-primary" fill="currentColor">
-                    <circle cx="12" cy="7" r="4" />
-                    <path d="M5.5 21a6.5 6.5 0 0 1 13 0" />
-                  </svg>
-                </div>
+                <svg viewBox="0 0 24 24" className="w-10 h-10 text-[#60A5FA] mb-3" fill="currentColor">
+                  <circle cx="12" cy="7" r="4" />
+                  <path d="M5.5 21a6.5 6.5 0 0 1 13 0" />
+                </svg>
                 <div className="flex flex-col items-center gap-1 p-3 rounded-xl bg-card border border-border w-full">
                   <Laptop className="w-8 h-8 text-primary" />
                   <span className="text-[10px] text-muted-foreground">HAS</span>
@@ -195,12 +193,10 @@ export default function VisualGuidePage() {
 
               {/* Person 2: Has Cycle, Wants Camera */}
               <div className="flex flex-col items-center">
-                <div className="w-12 h-12 rounded-full bg-card border-2 border-primary flex items-center justify-center mb-3">
-                  <svg viewBox="0 0 24 24" className="w-6 h-6 text-primary" fill="currentColor">
-                    <circle cx="12" cy="7" r="4" />
-                    <path d="M5.5 21a6.5 6.5 0 0 1 13 0" />
-                  </svg>
-                </div>
+                <svg viewBox="0 0 24 24" className="w-10 h-10 text-[#F472B6] mb-3" fill="currentColor">
+                  <circle cx="12" cy="7" r="4" />
+                  <path d="M5.5 21a6.5 6.5 0 0 1 13 0" />
+                </svg>
                 <div className="flex flex-col items-center gap-1 p-3 rounded-xl bg-card border border-border w-full">
                   <Bike className="w-8 h-8 text-primary" />
                   <span className="text-[10px] text-muted-foreground">HAS</span>
@@ -216,12 +212,10 @@ export default function VisualGuidePage() {
 
               {/* Person 3: Has Camera, Wants Guitar */}
               <div className="flex flex-col items-center">
-                <div className="w-12 h-12 rounded-full bg-card border-2 border-primary flex items-center justify-center mb-3">
-                  <svg viewBox="0 0 24 24" className="w-6 h-6 text-primary" fill="currentColor">
-                    <circle cx="12" cy="7" r="4" />
-                    <path d="M5.5 21a6.5 6.5 0 0 1 13 0" />
-                  </svg>
-                </div>
+                <svg viewBox="0 0 24 24" className="w-10 h-10 text-[#4ADE80] mb-3" fill="currentColor">
+                  <circle cx="12" cy="7" r="4" />
+                  <path d="M5.5 21a6.5 6.5 0 0 1 13 0" />
+                </svg>
                 <div className="flex flex-col items-center gap-1 p-3 rounded-xl bg-card border border-border w-full">
                   <Camera className="w-8 h-8 text-primary" />
                   <span className="text-[10px] text-muted-foreground">HAS</span>
@@ -237,12 +231,10 @@ export default function VisualGuidePage() {
 
               {/* Person 4: Has Guitar, Wants Laptop */}
               <div className="flex flex-col items-center">
-                <div className="w-12 h-12 rounded-full bg-card border-2 border-primary flex items-center justify-center mb-3">
-                  <svg viewBox="0 0 24 24" className="w-6 h-6 text-primary" fill="currentColor">
-                    <circle cx="12" cy="7" r="4" />
-                    <path d="M5.5 21a6.5 6.5 0 0 1 13 0" />
-                  </svg>
-                </div>
+                <svg viewBox="0 0 24 24" className="w-10 h-10 text-[#C084FC] mb-3" fill="currentColor">
+                  <circle cx="12" cy="7" r="4" />
+                  <path d="M5.5 21a6.5 6.5 0 0 1 13 0" />
+                </svg>
                 <div className="flex flex-col items-center gap-1 p-3 rounded-xl bg-card border border-border w-full">
                   <Guitar className="w-8 h-8 text-primary" />
                   <span className="text-[10px] text-muted-foreground">HAS</span>
