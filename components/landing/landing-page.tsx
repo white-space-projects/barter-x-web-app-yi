@@ -161,6 +161,9 @@ export function LandingPage() {
               <Link href="/notifications" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                 Notifications
               </Link>
+              <Link href="/visual-guide" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                Visual Guide
+              </Link>
             </nav>
 
             {/* Desktop CTA */}
@@ -237,6 +240,13 @@ export function LandingPage() {
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Notifications
+              </Link>
+              <Link 
+                href="/visual-guide" 
+                className="block text-sm text-muted-foreground hover:text-foreground"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Visual Guide
               </Link>
               <div className="pt-3 border-t border-border space-y-3">
                 <div className="flex gap-3">
