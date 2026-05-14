@@ -1,6 +1,6 @@
 "use client";
 
-import { Package, Home, ArrowRight, ArrowDown, Check, MessageCircle, MapPin, Link2, Users, RefreshCw, Sparkles } from "lucide-react";
+import { Package, Home, ArrowRight, ArrowDown, Check, MessageCircle, MapPin, Link2, Users, RefreshCw, Sparkles, ChevronDown, Laptop, Bike, Camera, Guitar } from "lucide-react";
 
 export default function VisualGuidePage() {
   return (
@@ -165,66 +165,121 @@ export default function VisualGuidePage() {
         <section className="flex flex-col items-center">
           <h2 className="text-xl font-semibold text-foreground mb-2">A Trade Loop Forms</h2>
           <p className="text-muted-foreground text-sm mb-8 text-center max-w-md">
-            When hooks connect in a circle, everyone can trade simultaneously
+            When hooks connect in a circle, everyone gets what they want
           </p>
           
-          {/* Circular Loop Visualization */}
-          <div className="relative w-72 h-72 md:w-80 md:h-80">
-            {/* Central Loop Icon */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center z-10">
-              <RefreshCw className="w-8 h-8 text-primary" />
+          {/* Loop Visualization - Each person with HAS and WANTS */}
+          <div className="relative w-full max-w-2xl">
+            {/* The Loop - Shows 4 people and their items */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+              {/* Person A: Has Laptop, Wants Cycle */}
+              <div className="flex flex-col items-center">
+                <div className="w-14 h-14 rounded-full bg-card border-2 border-primary flex items-center justify-center mb-2">
+                  <span className="text-sm font-bold text-primary">A</span>
+                </div>
+                <div className="flex flex-col items-center gap-1 p-3 rounded-xl bg-card border border-border w-full">
+                  <Laptop className="w-8 h-8 text-primary" />
+                  <span className="text-[10px] text-muted-foreground">HAS</span>
+                </div>
+                <ChevronDown className="w-4 h-4 text-primary/50 my-1" />
+                <div className="flex flex-col items-center gap-1 p-3 rounded-xl bg-primary/10 border border-primary/30 w-full">
+                  <Bike className="w-8 h-8 text-primary" />
+                  <span className="text-[10px] text-primary">WANTS</span>
+                </div>
+              </div>
+
+              {/* Person B: Has Cycle, Wants Camera */}
+              <div className="flex flex-col items-center">
+                <div className="w-14 h-14 rounded-full bg-card border-2 border-primary flex items-center justify-center mb-2">
+                  <span className="text-sm font-bold text-primary">B</span>
+                </div>
+                <div className="flex flex-col items-center gap-1 p-3 rounded-xl bg-card border border-border w-full">
+                  <Bike className="w-8 h-8 text-primary" />
+                  <span className="text-[10px] text-muted-foreground">HAS</span>
+                </div>
+                <ChevronDown className="w-4 h-4 text-primary/50 my-1" />
+                <div className="flex flex-col items-center gap-1 p-3 rounded-xl bg-primary/10 border border-primary/30 w-full">
+                  <Camera className="w-8 h-8 text-primary" />
+                  <span className="text-[10px] text-primary">WANTS</span>
+                </div>
+              </div>
+
+              {/* Person C: Has Camera, Wants Guitar */}
+              <div className="flex flex-col items-center">
+                <div className="w-14 h-14 rounded-full bg-card border-2 border-primary flex items-center justify-center mb-2">
+                  <span className="text-sm font-bold text-primary">C</span>
+                </div>
+                <div className="flex flex-col items-center gap-1 p-3 rounded-xl bg-card border border-border w-full">
+                  <Camera className="w-8 h-8 text-primary" />
+                  <span className="text-[10px] text-muted-foreground">HAS</span>
+                </div>
+                <ChevronDown className="w-4 h-4 text-primary/50 my-1" />
+                <div className="flex flex-col items-center gap-1 p-3 rounded-xl bg-primary/10 border border-primary/30 w-full">
+                  <Guitar className="w-8 h-8 text-primary" />
+                  <span className="text-[10px] text-primary">WANTS</span>
+                </div>
+              </div>
+
+              {/* Person D: Has Guitar, Wants Laptop */}
+              <div className="flex flex-col items-center">
+                <div className="w-14 h-14 rounded-full bg-card border-2 border-primary flex items-center justify-center mb-2">
+                  <span className="text-sm font-bold text-primary">D</span>
+                </div>
+                <div className="flex flex-col items-center gap-1 p-3 rounded-xl bg-card border border-border w-full">
+                  <Guitar className="w-8 h-8 text-primary" />
+                  <span className="text-[10px] text-muted-foreground">HAS</span>
+                </div>
+                <ChevronDown className="w-4 h-4 text-primary/50 my-1" />
+                <div className="flex flex-col items-center gap-1 p-3 rounded-xl bg-primary/10 border border-primary/30 w-full">
+                  <Laptop className="w-8 h-8 text-primary" />
+                  <span className="text-[10px] text-primary">WANTS</span>
+                </div>
+              </div>
             </div>
 
-            {/* Circular Dashed Path */}
-            <svg className="absolute inset-0 w-full h-full" viewBox="0 0 200 200">
-              <circle 
-                cx="100" 
-                cy="100" 
-                r="75" 
-                fill="none" 
-                stroke="hsl(45 65% 47% / 0.4)" 
-                strokeWidth="2"
-                strokeDasharray="10 6"
-              />
-              {/* Direction arrows on circle */}
-              <g>
-                <polygon points="175,100 167,94 167,106" fill="hsl(45 65% 47%)" />
-                <polygon points="100,25 94,33 106,33" fill="hsl(45 65% 47%)" />
-                <polygon points="25,100 33,106 33,94" fill="hsl(45 65% 47%)" />
-                <polygon points="100,175 106,167 94,167" fill="hsl(45 65% 47%)" />
-              </g>
-            </svg>
+            {/* Loop Connection Arrows */}
+            <div className="flex items-center justify-center mt-6 gap-2">
+              <div className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-success/10 border border-success/30">
+                <RefreshCw className="w-4 h-4 text-success" />
+                <span className="text-xs text-success font-medium">Loop Complete</span>
+              </div>
+            </div>
 
-            {/* Users/Offers around the loop */}
-            {[
-              { angle: -90, Icon: Package, label: "A" },
-              { angle: -18, Icon: Home, label: "B" },
-              { angle: 54, Icon: Package, label: "C" },
-              { angle: 126, Icon: Home, label: "D" },
-              { angle: 198, Icon: Package, label: "E" },
-            ].map(({ angle, Icon, label }, i) => {
-              const radians = angle * (Math.PI / 180);
-              const x = 50 + 40 * Math.cos(radians);
-              const y = 50 + 40 * Math.sin(radians);
-              return (
-                <div
-                  key={i}
-                  className="absolute w-12 h-12 md:w-14 md:h-14 rounded-full bg-card border-2 border-primary flex items-center justify-center shadow-lg"
-                  style={{
-                    left: `${x}%`,
-                    top: `${y}%`,
-                    transform: 'translate(-50%, -50%)',
-                  }}
-                >
-                  <Icon className="w-5 h-5 md:w-6 md:h-6 text-primary" />
-                </div>
-              );
-            })}
+            {/* Flow explanation */}
+            <div className="flex flex-wrap items-center justify-center gap-2 mt-4 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <span className="font-semibold text-foreground">A</span>
+                <ArrowRight className="w-3 h-3" />
+                <Laptop className="w-3 h-3" />
+                <ArrowRight className="w-3 h-3" />
+                <span className="font-semibold text-foreground">D</span>
+              </span>
+              <span className="text-muted-foreground/50">|</span>
+              <span className="flex items-center gap-1">
+                <span className="font-semibold text-foreground">B</span>
+                <ArrowRight className="w-3 h-3" />
+                <Bike className="w-3 h-3" />
+                <ArrowRight className="w-3 h-3" />
+                <span className="font-semibold text-foreground">A</span>
+              </span>
+              <span className="text-muted-foreground/50">|</span>
+              <span className="flex items-center gap-1">
+                <span className="font-semibold text-foreground">C</span>
+                <ArrowRight className="w-3 h-3" />
+                <Camera className="w-3 h-3" />
+                <ArrowRight className="w-3 h-3" />
+                <span className="font-semibold text-foreground">B</span>
+              </span>
+              <span className="text-muted-foreground/50">|</span>
+              <span className="flex items-center gap-1">
+                <span className="font-semibold text-foreground">D</span>
+                <ArrowRight className="w-3 h-3" />
+                <Guitar className="w-3 h-3" />
+                <ArrowRight className="w-3 h-3" />
+                <span className="font-semibold text-foreground">C</span>
+              </span>
+            </div>
           </div>
-          
-          <p className="text-xs text-muted-foreground mt-4 text-center max-w-xs">
-            A gives to B, B gives to C, C gives to D, D gives to E, E gives to A
-          </p>
         </section>
 
         {/* Flow Arrow */}
