@@ -1,6 +1,6 @@
 "use client";
 
-import { Package, Home, ArrowRight, ArrowDown, Check, MessageCircle, MapPin, Link2, Users, RefreshCw, Sparkles, ChevronDown, Laptop, Bike, Camera, Guitar } from "lucide-react";
+import { Package, Home, ArrowRight, ArrowDown, Check, MessageCircle, MapPin, Link2, Users, RefreshCw, Sparkles, Laptop, Bike, Camera, Guitar } from "lucide-react";
 
 export default function VisualGuidePage() {
   return (
@@ -172,64 +172,84 @@ export default function VisualGuidePage() {
           <div className="relative w-full max-w-2xl">
             {/* The Loop - Shows 4 people and their items */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-              {/* Person A: Has Laptop, Wants Cycle */}
+              {/* Person 1: Has Laptop, Wants Cycle */}
               <div className="flex flex-col items-center">
-                <div className="w-14 h-14 rounded-full bg-card border-2 border-primary flex items-center justify-center mb-2">
-                  <span className="text-sm font-bold text-primary">A</span>
+                <div className="w-12 h-12 rounded-full bg-card border-2 border-primary flex items-center justify-center mb-3">
+                  <svg viewBox="0 0 24 24" className="w-6 h-6 text-primary" fill="currentColor">
+                    <circle cx="12" cy="7" r="4" />
+                    <path d="M5.5 21a6.5 6.5 0 0 1 13 0" />
+                  </svg>
                 </div>
                 <div className="flex flex-col items-center gap-1 p-3 rounded-xl bg-card border border-border w-full">
                   <Laptop className="w-8 h-8 text-primary" />
                   <span className="text-[10px] text-muted-foreground">HAS</span>
                 </div>
-                <ChevronDown className="w-4 h-4 text-primary/50 my-1" />
+                <div className="my-1.5 w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center">
+                  <Link2 className="w-3.5 h-3.5 text-primary" />
+                </div>
                 <div className="flex flex-col items-center gap-1 p-3 rounded-xl bg-primary/10 border border-primary/30 w-full">
                   <Bike className="w-8 h-8 text-primary" />
                   <span className="text-[10px] text-primary">WANTS</span>
                 </div>
               </div>
 
-              {/* Person B: Has Cycle, Wants Camera */}
+              {/* Person 2: Has Cycle, Wants Camera */}
               <div className="flex flex-col items-center">
-                <div className="w-14 h-14 rounded-full bg-card border-2 border-primary flex items-center justify-center mb-2">
-                  <span className="text-sm font-bold text-primary">B</span>
+                <div className="w-12 h-12 rounded-full bg-card border-2 border-primary flex items-center justify-center mb-3">
+                  <svg viewBox="0 0 24 24" className="w-6 h-6 text-primary" fill="currentColor">
+                    <circle cx="12" cy="7" r="4" />
+                    <path d="M5.5 21a6.5 6.5 0 0 1 13 0" />
+                  </svg>
                 </div>
                 <div className="flex flex-col items-center gap-1 p-3 rounded-xl bg-card border border-border w-full">
                   <Bike className="w-8 h-8 text-primary" />
                   <span className="text-[10px] text-muted-foreground">HAS</span>
                 </div>
-                <ChevronDown className="w-4 h-4 text-primary/50 my-1" />
+                <div className="my-1.5 w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center">
+                  <Link2 className="w-3.5 h-3.5 text-primary" />
+                </div>
                 <div className="flex flex-col items-center gap-1 p-3 rounded-xl bg-primary/10 border border-primary/30 w-full">
                   <Camera className="w-8 h-8 text-primary" />
                   <span className="text-[10px] text-primary">WANTS</span>
                 </div>
               </div>
 
-              {/* Person C: Has Camera, Wants Guitar */}
+              {/* Person 3: Has Camera, Wants Guitar */}
               <div className="flex flex-col items-center">
-                <div className="w-14 h-14 rounded-full bg-card border-2 border-primary flex items-center justify-center mb-2">
-                  <span className="text-sm font-bold text-primary">C</span>
+                <div className="w-12 h-12 rounded-full bg-card border-2 border-primary flex items-center justify-center mb-3">
+                  <svg viewBox="0 0 24 24" className="w-6 h-6 text-primary" fill="currentColor">
+                    <circle cx="12" cy="7" r="4" />
+                    <path d="M5.5 21a6.5 6.5 0 0 1 13 0" />
+                  </svg>
                 </div>
                 <div className="flex flex-col items-center gap-1 p-3 rounded-xl bg-card border border-border w-full">
                   <Camera className="w-8 h-8 text-primary" />
                   <span className="text-[10px] text-muted-foreground">HAS</span>
                 </div>
-                <ChevronDown className="w-4 h-4 text-primary/50 my-1" />
+                <div className="my-1.5 w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center">
+                  <Link2 className="w-3.5 h-3.5 text-primary" />
+                </div>
                 <div className="flex flex-col items-center gap-1 p-3 rounded-xl bg-primary/10 border border-primary/30 w-full">
                   <Guitar className="w-8 h-8 text-primary" />
                   <span className="text-[10px] text-primary">WANTS</span>
                 </div>
               </div>
 
-              {/* Person D: Has Guitar, Wants Laptop */}
+              {/* Person 4: Has Guitar, Wants Laptop */}
               <div className="flex flex-col items-center">
-                <div className="w-14 h-14 rounded-full bg-card border-2 border-primary flex items-center justify-center mb-2">
-                  <span className="text-sm font-bold text-primary">D</span>
+                <div className="w-12 h-12 rounded-full bg-card border-2 border-primary flex items-center justify-center mb-3">
+                  <svg viewBox="0 0 24 24" className="w-6 h-6 text-primary" fill="currentColor">
+                    <circle cx="12" cy="7" r="4" />
+                    <path d="M5.5 21a6.5 6.5 0 0 1 13 0" />
+                  </svg>
                 </div>
                 <div className="flex flex-col items-center gap-1 p-3 rounded-xl bg-card border border-border w-full">
                   <Guitar className="w-8 h-8 text-primary" />
                   <span className="text-[10px] text-muted-foreground">HAS</span>
                 </div>
-                <ChevronDown className="w-4 h-4 text-primary/50 my-1" />
+                <div className="my-1.5 w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center">
+                  <Link2 className="w-3.5 h-3.5 text-primary" />
+                </div>
                 <div className="flex flex-col items-center gap-1 p-3 rounded-xl bg-primary/10 border border-primary/30 w-full">
                   <Laptop className="w-8 h-8 text-primary" />
                   <span className="text-[10px] text-primary">WANTS</span>
@@ -245,39 +265,19 @@ export default function VisualGuidePage() {
               </div>
             </div>
 
-            {/* Flow explanation */}
-            <div className="flex flex-wrap items-center justify-center gap-2 mt-4 text-xs text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <span className="font-semibold text-foreground">A</span>
+            {/* Flow explanation - simplified visual */}
+            <div className="flex flex-wrap items-center justify-center gap-3 mt-4">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Laptop className="w-4 h-4 text-primary" />
                 <ArrowRight className="w-3 h-3" />
-                <Laptop className="w-3 h-3" />
+                <Bike className="w-4 h-4 text-primary" />
                 <ArrowRight className="w-3 h-3" />
-                <span className="font-semibold text-foreground">D</span>
-              </span>
-              <span className="text-muted-foreground/50">|</span>
-              <span className="flex items-center gap-1">
-                <span className="font-semibold text-foreground">B</span>
+                <Camera className="w-4 h-4 text-primary" />
                 <ArrowRight className="w-3 h-3" />
-                <Bike className="w-3 h-3" />
+                <Guitar className="w-4 h-4 text-primary" />
                 <ArrowRight className="w-3 h-3" />
-                <span className="font-semibold text-foreground">A</span>
-              </span>
-              <span className="text-muted-foreground/50">|</span>
-              <span className="flex items-center gap-1">
-                <span className="font-semibold text-foreground">C</span>
-                <ArrowRight className="w-3 h-3" />
-                <Camera className="w-3 h-3" />
-                <ArrowRight className="w-3 h-3" />
-                <span className="font-semibold text-foreground">B</span>
-              </span>
-              <span className="text-muted-foreground/50">|</span>
-              <span className="flex items-center gap-1">
-                <span className="font-semibold text-foreground">D</span>
-                <ArrowRight className="w-3 h-3" />
-                <Guitar className="w-3 h-3" />
-                <ArrowRight className="w-3 h-3" />
-                <span className="font-semibold text-foreground">C</span>
-              </span>
+                <Laptop className="w-4 h-4 text-primary" />
+              </div>
             </div>
           </div>
         </section>
